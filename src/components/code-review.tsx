@@ -6,26 +6,42 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle2, MessageSquare, Code, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function AICodeReview({ githubUrl }: { githubUrl: string }) {
+export function AICodeReview({
+  githubUrl,
+  assignmentTitle,
+  assignmentDescription
+}: {
+  githubUrl: string;
+  assignmentTitle?: string;
+  assignmentDescription?: string;
+}) {
   const [status, setStatus] = useState<'analyzing' | 'completed'>('analyzing');
   const [feedback, setFeedback] = useState<string[]>([]);
 
   useEffect(() => {
-    const feedbacksList = [
-      "Your semantic structure looks solid. Great use of <main> and <section> tags.",
-      "The CSS logic is clean, though you could optimize your Flexbox containers by using fewer nested divs.",
-      "Code readability is high. Good variable naming conventions observed.",
-      "Performance check passed. Minimal DOM manipulation in the hot path.",
-      "Accessibility: Consider adding more aria-labels to your interactive elements.",
-      "GitHub repo structure is professional. README.md is informative."
-    ];
+    async function getReview() {
+      try {
+        const res = await fetch('/api/review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            githubUrl,
+            assignmentTitle,
+            assignmentDescription
+          })
+        });
+        const data = await res.json();
+        setFeedback(data.feedback);
+        setStatus('completed');
+      } catch (error) {
+        console.error("Review Error:", error);
+        setFeedback(["Unable to reach AI Reviewer. Please try again later."]);
+        setStatus('completed');
+      }
+    }
 
-    const timer = setTimeout(() => {
-      setStatus('completed');
-      setFeedback([...feedbacksList].sort(() => 0.5 - Math.random()).slice(0, 3));
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, []);
+    getReview();
+  }, [githubUrl, assignmentTitle, assignmentDescription]);
 
   return (
     <Card className="border-primary/20 bg-primary/5">

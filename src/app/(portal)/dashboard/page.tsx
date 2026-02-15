@@ -36,7 +36,8 @@ import {
   Lock,
   ArrowRight,
   Send,
-  BookOpen
+  BookOpen,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AICodeReview } from '@/components/code-review';
@@ -61,11 +62,13 @@ export default function DashboardPage() {
   const { setTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [punchInLoading, setPunchInLoading] = useState(false);
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
 
   const [githubUrl, setGithubUrl] = useState('');
+  const [lastSubmittedUrl, setLastSubmittedUrl] = useState('');
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [showReviewFor, setShowReviewFor] = useState<string | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<CurriculumItem | null>(null);
@@ -104,6 +107,16 @@ export default function DashboardPage() {
       .eq('student_id', user.id);
 
     setSubmissions((subs as unknown as Submission[]) || []);
+
+    const { data: focusData } = await supabase
+      .from('focus_sessions')
+      .select('duration_seconds')
+      .eq('student_id', user.id);
+
+    if (focusData) {
+      const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+      setTotalFocusMinutes(Math.round(totalSeconds / 60));
+    }
 
     if (profileData && !profileData.is_pro && subs && subs.length >= 5) {
       await supabase
@@ -151,6 +164,7 @@ export default function DashboardPage() {
     });
 
     if (!error) {
+      setLastSubmittedUrl(githubUrl);
       setGithubUrl('');
       setShowReviewFor(curriculumId);
       fetchData();
@@ -200,7 +214,15 @@ export default function DashboardPage() {
           {/* Header */}
           <header className="flex justify-between items-end">
             <div>
-              <h1 className="text-3xl font-bold">Welcome, {profile?.full_name}!</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold">Welcome, {profile?.full_name}!</h1>
+                {profile?.is_pro && (
+                  <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none animate-pulse">
+                    <Zap className="h-3 w-3 mr-1 fill-white" />
+                    PRO
+                  </Badge>
+                )}
+              </div>
               <p className="text-muted-foreground">Week {currentWeek} &bull; Day {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
             </div>
             <div className="flex gap-4">
@@ -223,7 +245,7 @@ export default function DashboardPage() {
           </header>
 
           {/* Progress Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className={`grid grid-cols-1 ${profile?.is_pro ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Overall Progress</CardTitle>
@@ -259,6 +281,21 @@ export default function DashboardPage() {
                 <div className="text-xs text-muted-foreground">Keep it up! Consistency is key.</div>
               </CardContent>
             </Card>
+
+            {profile?.is_pro && (
+              <Card className="border-purple-500/50 bg-purple-500/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Deep Work
+                  </CardTitle>
+                  <div className="text-2xl font-bold">{totalFocusMinutes} mins</div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xs text-muted-foreground">Total focused coding time.</div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Main Content Area */}
@@ -386,7 +423,11 @@ export default function DashboardPage() {
                 )}
 
                 {showReviewFor && (
-                  <AICodeReview githubUrl="Your last submission" />
+                  <AICodeReview
+                    githubUrl={lastSubmittedUrl}
+                    assignmentTitle={CURRICULUM.find(i => i.id === showReviewFor)?.title}
+                    assignmentDescription={CURRICULUM.find(i => i.id === showReviewFor)?.description}
+                  />
                 )}
               </div>
 

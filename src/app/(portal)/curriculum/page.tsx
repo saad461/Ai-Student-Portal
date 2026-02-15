@@ -6,7 +6,7 @@ import { CURRICULUM } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Lock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lock, CheckCircle2, AlertCircle, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   Dialog,
@@ -118,7 +118,6 @@ export default function CurriculumPage() {
                   <TabsTrigger
                     key={w}
                     value={w.toString()}
-                    className={w > currentWeek ? "opacity-50" : ""}
                   >
                     Week {w}
                   </TabsTrigger>
@@ -131,8 +130,8 @@ export default function CurriculumPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold">Week {w}: {w <= 4 ? 'Foundations' : w <= 8 ? 'Advanced JS' : w <= 12 ? 'React Mastery' : 'Fullstack Dev'}</h2>
                   {w > currentWeek && (
-                    <Badge variant="outline" className="flex items-center gap-2">
-                      <Lock className="h-3 w-3" /> Locked until Week {w}
+                    <Badge variant="outline" className="flex items-center gap-2 border-blue-500 text-blue-500">
+                      <BookOpen className="h-3 w-3" /> Preview: Week {w}
                     </Badge>
                   )}
                 </div>
@@ -143,7 +142,7 @@ export default function CurriculumPage() {
                     const isMissed = !isSubmitted && isDayPassed(w, item.day);
 
                     return (
-                      <Card key={item.id} className={`${w > currentWeek ? "opacity-50 grayscale" : ""} flex flex-col`}>
+                      <Card key={item.id} className="flex flex-col">
                         <CardHeader className="flex-none">
                           <div className="flex justify-between items-start">
                             <Badge variant="secondary" className="mb-2">{item.day}</Badge>
