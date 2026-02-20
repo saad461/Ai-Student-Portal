@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
-import { CurriculumItem, QuizQuestion } from '@/lib/curriculum';
+import { CurriculumItem, QuizQuestion, isDayUnlocked, isDayPassed } from '@/lib/curriculum';
 import { useTheme } from '@/components/theme-provider';
 import {
   Card,
@@ -356,20 +356,18 @@ export default function DashboardPage() {
                 ) : (
                   weekContent.map((item) => {
                     const isSubmitted = submissions.find(s => s.curriculum_id === item.id);
-                    const isToday = (
-                      (item.day === 'Monday' && new Date().getDay() === 1) ||
-                      (item.day === 'Wednesday' && new Date().getDay() === 3) ||
-                      (item.day === 'Friday' && new Date().getDay() === 5)
-                    );
+                    const isUnlocked = isDayUnlocked(currentWeek, item.day, currentWeek);
+                    const isToday = isUnlocked && !isDayPassed(currentWeek, item.day, currentWeek);
 
                     const isUnlockedByPenalty = extraTasks.some(t => t.description.includes(`[UNLOCKED: ${item.id}]`));
-                    const isMissed = !isToday && !isSubmitted && !isUnlockedByPenalty;
+                    const isMissed = !isSubmitted && isDayPassed(currentWeek, item.day, currentWeek) && !isUnlockedByPenalty;
 
                     return (
                       <Card key={item.id} className={cn(
                         "overflow-hidden transition-all",
                         isSubmitted && "opacity-75",
-                        isToday && "ring-2 ring-primary ring-offset-2"
+                        isToday && "ring-2 ring-primary ring-offset-2",
+                        !isUnlocked && "opacity-50 grayscale pointer-events-none"
                       )}>
                         <div className={cn(
                           "h-2",
@@ -381,11 +379,28 @@ export default function DashboardPage() {
                             <Badge variant="outline" className="mb-2">{item.type.replace('_', ' ')}</Badge>
                             {isSubmitted && <Badge className="bg-green-600">Completed</Badge>}
                           </div>
-                          <CardTitle>{item.title}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle>{item.title}</CardTitle>
+                            {!isUnlocked && <Lock className="h-4 w-4 text-muted-foreground" />}
+                          </div>
                           <CardDescription>{item.description}</CardDescription>
+
+                          {item.requirements && item.requirements.length > 0 && isUnlocked && (
+                            <div className="mt-4 space-y-2">
+                              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Requirements:</p>
+                              <ul className="text-xs space-y-1">
+                                {item.requirements.map((req, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <div className="h-1 w-1 rounded-full bg-primary mt-1.5" />
+                                    {req}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </CardHeader>
 
-                        {!isSubmitted && (
+                        {!isSubmitted && isUnlocked && (
                           <CardFooter className="flex flex-col gap-4 border-t bg-muted/20 p-6">
                             {isMissed && (
                               <div className="w-full space-y-4">
