@@ -162,29 +162,43 @@ export default function DashboardPage() {
 
   const handlePunchIn = async () => {
     setPunchInLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !profile) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !profile) {
+        setPunchInLoading(false);
+        return;
+      }
 
-    const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
 
-    // 1. Record in attendance table
-    const { error: attendanceError } = await supabase.from('attendance').insert({
-      student_id: user.id,
-      date: today
-    });
+      // 1. Record in attendance table
+      const { error: attendanceError } = await supabase.from('attendance').insert({
+        student_id: user.id,
+        date: today
+      });
 
-    if (!attendanceError) {
+      if (attendanceError) {
+        console.error('Attendance Error:', attendanceError);
+        alert('Failed to punch in: ' + attendanceError.message);
+        setPunchInLoading(false);
+        return;
+      }
+
       // 2. Calculate new streak
       let newStreak = 1;
       if (profile.last_punch_in) {
         const lastPunch = new Date(profile.last_punch_in);
+        const todayDate = new Date();
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
 
         const isConsecutive = lastPunch.toDateString() === yesterday.toDateString();
+        const isToday = lastPunch.toDateString() === todayDate.toDateString();
 
         if (isConsecutive) {
-          newStreak = profile.current_streak + 1;
+          newStreak = (profile.current_streak || 0) + 1;
+        } else if (isToday) {
+          newStreak = profile.current_streak || 1;
         }
       }
 
@@ -195,7 +209,10 @@ export default function DashboardPage() {
         last_punch_in: new Date().toISOString()
       }).eq('id', user.id);
 
-      if (!profileUpdateError) {
+      if (profileUpdateError) {
+        console.error('Profile Update Error:', profileUpdateError);
+        alert('Punch in recorded, but failed to update streak/points.');
+      } else {
         setHasPunchedInToday(true);
 
         // Effects
@@ -211,29 +228,45 @@ export default function DashboardPage() {
 
         fetchData();
       }
+    } catch (err) {
+      console.error('Punch In Exception:', err);
+      alert('An unexpected error occurred during punch in.');
+    } finally {
+      setPunchInLoading(false);
     }
-    setPunchInLoading(false);
   };
 
   const handleSubmitAssignment = async (curriculumId: string) => {
     setSubmittingId(curriculumId);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setSubmittingId(null);
+        return;
+      }
 
-    const { error } = await supabase.from('submissions').upsert({
-      student_id: user.id,
-      curriculum_id: curriculumId,
-      github_url: githubUrl,
-      status: 'submitted'
-    });
+      const { error } = await supabase.from('submissions').upsert({
+        student_id: user.id,
+        curriculum_id: curriculumId,
+        github_url: githubUrl,
+        status: 'submitted'
+      });
 
-    if (!error) {
-      setLastSubmittedUrl(githubUrl);
-      setGithubUrl('');
-      setShowReviewFor(curriculumId);
-      fetchData();
+      if (error) {
+        console.error('Submission Error:', error);
+        alert('Failed to submit assignment: ' + error.message);
+      } else {
+        setLastSubmittedUrl(githubUrl);
+        setGithubUrl('');
+        setShowReviewFor(curriculumId);
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Submission Exception:', err);
+      alert('An unexpected error occurred during submission.');
+    } finally {
+      setSubmittingId(null);
     }
-    setSubmittingId(null);
   };
 
   const getCurrentWeek = () => {
