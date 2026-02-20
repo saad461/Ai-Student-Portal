@@ -78,6 +78,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [punchInLoading, setPunchInLoading] = useState(false);
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
+  const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
 
   const [githubUrl, setGithubUrl] = useState('');
   const [lastSubmittedUrl, setLastSubmittedUrl] = useState('');
@@ -103,15 +104,27 @@ export default function DashboardPage() {
 
     setProfile(profileData as unknown as Profile);
 
-    const today = new Date().toISOString().split('T')[0];
-    const { data: attendance } = await supabase
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+    const { data: attendance, error: attError } = await supabase
       .from('attendance')
       .select('*')
       .eq('student_id', user.id)
-      .eq('date', today)
-      .single();
+      .eq('date', today);
 
-    if (attendance) setHasPunchedInToday(true);
+    if (attendance && attendance.length > 0) {
+      setHasPunchedInToday(true);
+    } else {
+      setHasPunchedInToday(false);
+    }
+
+    const { data: allAttendance } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('student_id', user.id)
+      .order('date', { ascending: false })
+      .limit(7);
+
+    setRecentAttendance(allAttendance || []);
 
     const { data: subs } = await supabase
       .from('submissions')
@@ -169,7 +182,7 @@ export default function DashboardPage() {
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA');
 
       // 1. Record in attendance table
       const { error: attendanceError } = await supabase.from('attendance').insert({
@@ -662,6 +675,30 @@ export default function DashboardPage() {
                     </CardContent>
                    </Card>
                  )}
+
+                 {/* Attendance History */}
+                 <Card>
+                   <CardHeader className="pb-2">
+                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                       <Clock className="h-4 w-4" />
+                       Recent Attendance
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                     {recentAttendance.length === 0 ? (
+                       <p className="text-xs text-muted-foreground italic">No attendance records found.</p>
+                     ) : (
+                       <div className="space-y-2">
+                         {recentAttendance.map((record) => (
+                           <div key={record.id} className="flex justify-between items-center text-xs p-2 rounded bg-muted/50">
+                             <span className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                             <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700 border-green-200">PRESENT</Badge>
+                           </div>
+                         ))}
+                       </div>
+                     )}
+                   </CardContent>
+                 </Card>
               </div>
             </div>
         </div>
