@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { seedCurriculum } from '@/lib/seed-curriculum';
+import { seedCurriculumAction } from './actions';
 import { CurriculumItem } from '@/lib/curriculum';
 
 interface StudentProfile {
@@ -174,9 +174,10 @@ export default function AdminDashboard() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={async () => {
-              const res = await seedCurriculum();
+              if(!confirm('This will update/overwrite the current curriculum. Continue?')) return;
+              const res = await seedCurriculumAction();
               if (res.success) alert('Curriculum seeded successfully!');
-              else alert('Error seeding curriculum: ' + JSON.stringify(res.error));
+              else alert('Error seeding curriculum: ' + (res.error as any)?.message || JSON.stringify(res.error));
             }}>
               <Database className="h-4 w-4 mr-2" /> Seed Curriculum
             </Button>
