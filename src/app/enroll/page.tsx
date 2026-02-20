@@ -35,17 +35,31 @@ export default function EnrollPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error('Enrollment failed');
 
+      if (!authData.session) {
+        // This usually means email confirmation is enabled
+        setError('Enrollment successful! Please check your email to confirm your account before logging in.');
+        setLoading(false);
+        return;
+      }
+
       // 2. Upload CV (if any)
       let cvUrl = '';
       if (formData.cv) {
-        const fileExt = formData.cv.name.split('.').pop();
-        const fileName = `${authData.user.id}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('cvs')
-          .upload(fileName, formData.cv);
+        try {
+          const fileExt = formData.cv.name.split('.').pop();
+          const fileName = `${authData.user.id}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from('cvs')
+            .upload(fileName, formData.cv);
 
-        if (!uploadError) {
-          cvUrl = fileName;
+          if (!uploadError) {
+            cvUrl = fileName;
+          } else {
+            console.warn('CV upload failed:', uploadError.message);
+            // We don't throw here to allow enrollment to continue even if CV upload fails
+          }
+        } catch (e) {
+          console.warn('CV upload exception:', e);
         }
       }
 
@@ -60,12 +74,9 @@ export default function EnrollPage() {
       if (profileError) throw profileError;
 
       router.push('/dashboard');
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred');
-      }
+    } catch (err: any) {
+      console.error('Enrollment error:', err);
+      setError(err.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
