@@ -89,12 +89,31 @@ alter table focus_sessions enable row level security;
 
 -- Policies
 create policy "Public curriculum is viewable by everyone" on curriculum for select using (true);
+
+-- Profiles policies
 create policy "Users can view their own profile" on profiles for select using (auth.uid() = id);
+create policy "Users can update their own profile" on profiles for update using (auth.uid() = id);
 create policy "Admins can view all profiles" on profiles for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+-- Submissions policies
 create policy "Users can view their own submissions" on submissions for select using (auth.uid() = student_id);
+create policy "Users can insert their own submissions" on submissions for insert with check (auth.uid() = student_id);
+create policy "Users can update their own submissions" on submissions for update using (auth.uid() = student_id);
+
+-- Attendance policies
 create policy "Users can view their own attendance" on attendance for select using (auth.uid() = student_id);
+create policy "Users can insert their own attendance" on attendance for insert with check (auth.uid() = student_id);
+
+-- Messages policies
 create policy "Users can view their own messages" on messages for select using (auth.uid() = student_id);
+create policy "Users can insert their own messages" on messages for insert with check (auth.uid() = student_id);
+
+-- Extra Tasks policies
 create policy "Users can view their own extra tasks" on extra_tasks for select using (auth.uid() = student_id);
+create policy "Users can insert their own extra tasks" on extra_tasks for insert with check (auth.uid() = student_id);
+create policy "Users can update their own extra tasks" on extra_tasks for update using (auth.uid() = student_id);
+
+-- Focus Sessions policies
 create policy "Users can view their own focus sessions" on focus_sessions for select using (auth.uid() = student_id);
 create policy "Users can insert their own focus sessions" on focus_sessions for insert with check (auth.uid() = student_id);
 
