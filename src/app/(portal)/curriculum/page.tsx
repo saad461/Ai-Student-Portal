@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/sidebar';
-import { CurriculumItem } from '@/lib/curriculum';
+import { CurriculumItem, isDayUnlocked, isDayPassed } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -91,17 +91,6 @@ export default function CurriculumPage() {
     }
   };
 
-  const isDayPassed = (week: number, day: string) => {
-    const today = new Date();
-    const dayMap: Record<string, number> = { 'Monday': 1, 'Wednesday': 3, 'Friday': 5, 'Monthly': 5, 'Final': 5 };
-
-    if (week < currentWeek) return true;
-    if (week > currentWeek) return false;
-
-    const targetDay = dayMap[day] || 0;
-    return today.getDay() > targetDay;
-  };
-
   const weeks = Array.from({ length: 24 }, (_, i) => i + 1);
 
   if (loading) return (
@@ -148,20 +137,41 @@ export default function CurriculumPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {curriculum.filter(item => item.week === w).map((item) => {
                     const isSubmitted = submissions.find(s => s.curriculum_id === item.id);
-                    const isMissed = !isSubmitted && isDayPassed(w, item.day);
+                    const isUnlocked = isDayUnlocked(w, item.day, currentWeek);
+                    const isMissed = !isSubmitted && isDayPassed(w, item.day, currentWeek);
 
                     return (
-                      <Card key={item.id} className="flex flex-col">
+                      <Card key={item.id} className={cn(
+                        "flex flex-col transition-all",
+                        !isUnlocked && "opacity-50 grayscale pointer-events-none"
+                      )}>
                         <CardHeader className="flex-none">
                           <div className="flex justify-between items-start">
-                            <Badge variant="secondary" className="mb-2">{item.day}</Badge>
+                            <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="mb-2">{item.day}</Badge>
+                                {!isUnlocked && <Lock className="h-3 w-3 text-muted-foreground mb-2" />}
+                            </div>
                             {isSubmitted && <CheckCircle2 className="h-5 w-5 text-green-500" />}
                             {isMissed && <AlertCircle className="h-5 w-5 text-destructive" />}
                           </div>
                           <CardTitle className="text-lg">{item.title}</CardTitle>
                         </CardHeader>
-                        <CardContent className="flex-grow">
+                        <CardContent className="flex-grow space-y-4">
                           <p className="text-sm text-muted-foreground">{item.description}</p>
+
+                          {item.requirements && item.requirements.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Requirements:</p>
+                              <ul className="text-xs space-y-1">
+                                {item.requirements.map((req, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <div className="h-1 w-1 rounded-full bg-primary mt-1.5" />
+                                    {req}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </CardContent>
                         {isMissed && (
                           <CardFooter className="pt-0 pb-6 px-6">

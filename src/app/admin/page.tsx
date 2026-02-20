@@ -409,7 +409,9 @@ export default function AdminDashboard() {
                     onChange={(e) => setEditingItem(prev => ({ ...prev!, day: e.target.value as CurriculumItem['day'] }))}
                   >
                     <option>Monday</option>
+                    <option>Tuesday</option>
                     <option>Wednesday</option>
+                    <option>Thursday</option>
                     <option>Friday</option>
                     <option>Monthly</option>
                     <option>Final</option>
@@ -448,7 +450,43 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {editingItem?.type === 'quiz' && (
+              <div className="space-y-2 border-t pt-4">
+                <Label className="flex justify-between items-center">
+                  Requirements
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const reqs = editingItem?.requirements || [];
+                    setEditingItem(prev => ({ ...prev!, requirements: [...reqs, ''] }));
+                  }}>
+                    <Plus className="h-3 w-3 mr-1" /> Add Requirement
+                  </Button>
+                </Label>
+                <div className="space-y-2">
+                  {(editingItem?.requirements || []).map((req, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <Input
+                        value={req}
+                        onChange={(e) => {
+                          const newReqs = [...(editingItem?.requirements || [])];
+                          newReqs[idx] = e.target.value;
+                          setEditingItem(prev => ({ ...prev!, requirements: newReqs }));
+                        }}
+                        placeholder={`Requirement ${idx + 1}`}
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        const newReqs = (editingItem?.requirements || []).filter((_, i) => i !== idx);
+                        setEditingItem(prev => ({ ...prev!, requirements: newReqs }));
+                      }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {(editingItem?.requirements || []).length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No requirements added.</p>
+                  )}
+                </div>
+              </div>
+
+              {(editingItem?.type === 'quiz' || editingItem?.type === 'grand_test') && (
                 <div className="space-y-2 border-t pt-4">
                   <Label>Quiz Content (JSON format)</Label>
                   <Textarea
