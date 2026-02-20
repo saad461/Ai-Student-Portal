@@ -3,14 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Play, Pause, RotateCcw, AlertTriangle, Maximize2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/lib/supabase';
+import { FocusRoom } from './focus-room';
 
 export function DeepWorkTimer() {
   const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 minutes
   const [isActive, setIsActive] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [isFocusRoomOpen, setIsFocusRoomOpen] = useState(false);
   const sessionStartTimeRef = useRef<number | null>(null);
 
   const formatTime = (seconds: number) => {
@@ -18,6 +20,18 @@ export function DeepWorkTimer() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const saveSession = useCallback(async (seconds: number) => {
+    if (seconds < 10) return; // Don't save sessions shorter than 10 seconds
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from('focus_sessions').insert({
+      student_id: user.id,
+      duration_seconds: seconds,
+    });
+  }, []);
 
   const handleVisibilityChange = useCallback(() => {
     if (document.hidden && isActive) {
@@ -57,18 +71,6 @@ export function DeepWorkTimer() {
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft, saveSession]);
-
-  const saveSession = useCallback(async (seconds: number) => {
-    if (seconds < 10) return; // Don't save sessions shorter than 10 seconds
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from('focus_sessions').insert({
-      student_id: user.id,
-      duration_seconds: seconds,
-    });
-  }, []);
 
   const toggleTimer = () => {
     if (isActive) {
@@ -130,7 +132,22 @@ export function DeepWorkTimer() {
         <div className="bg-muted p-4 rounded-md text-sm text-center">
           Goal: 60 minutes of uninterrupted coding.
         </div>
+
+        <Button
+          variant="outline"
+          className="w-full border-primary/50 text-primary hover:bg-primary/10"
+          onClick={() => setIsFocusRoomOpen(true)}
+        >
+          <Maximize2 className="mr-2 h-4 w-4" />
+          Enter Focus Room (Immersive)
+        </Button>
       </CardContent>
+
+      <FocusRoom
+        isOpen={isFocusRoomOpen}
+        onClose={() => setIsFocusRoomOpen(false)}
+        onSaveSession={saveSession}
+      />
     </Card>
   );
 }

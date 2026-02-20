@@ -11,6 +11,7 @@ export interface CurriculumItem {
   type: 'assignment' | 'task' | 'quiz' | 'grand_test' | 'final_project';
   title: string;
   description: string;
+  requirements?: string[];
   content?: QuizQuestion[] | string[];
 }
 
@@ -22,7 +23,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Semantic HTML & Personal Portfolio Structure',
-    description: 'Create a multi-page website structure using only semantic HTML5 tags (header, nav, main, section, article, aside, footer). Include a contact form with various input types.',
+    description: 'Create a multi-page website structure using only semantic HTML5 tags. This project focuses on the skeleton of a professional portfolio, ensuring high accessibility and SEO readiness.',
+    requirements: [
+        'Use at least 10 different semantic HTML5 tags (header, nav, main, section, article, etc.)',
+        'Implement a contact form with at least 5 different input types and proper labels',
+        'Create a navigation system between three separate HTML files',
+        'Ensure 100% Lighthouse accessibility score for the structure'
+    ]
   },
   {
     id: 'w1-wed',
@@ -30,7 +37,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'CSS Box Model & Flexbox Mastery',
-    description: 'Build a responsive navigation bar and a 3-column feature section using Flexbox. Ensure you understand padding, margin, borders, and content-box vs border-box.',
+    description: 'Build a responsive navigation bar and a 3-column feature section using Flexbox. Focus on precise spacing and understanding how elements behave within the flow.',
+    requirements: [
+        'Implement a "sticky" header that stays at the top on scroll',
+        'Create a 3-column feature section that stacks vertically on mobile devices',
+        'Demonstrate understanding of justify-content, align-items, and flex-grow',
+        'Use the "box-sizing: border-box" property globally'
+    ]
   },
   {
     id: 'w1-fri',
@@ -55,7 +68,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'CSS Grid Layout & Modern Landing Page',
-    description: 'Design a complex magazine-style layout using CSS Grid. It must be fully responsive without using too many media queries (use minmax, auto-fill).',
+    description: 'Design a complex magazine-style layout using CSS Grid. This project challenges you to create non-linear layouts that are elegant and responsive.',
+    requirements: [
+        'Use grid-template-areas to define the page layout',
+        'Implement a responsive grid using minmax() and auto-fill/auto-fit',
+        'Create a "hero" section with an overlaying text element',
+        'Zero media queries used for the primary grid structure'
+    ]
   },
   {
     id: 'w2-wed',
@@ -63,7 +82,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'CSS Variables & Dark Mode Toggle',
-    description: 'Implement a theme switching system using CSS variables (custom properties). Create a page that can toggle between light and dark themes manually.',
+    description: 'Implement a theme switching system using CSS variables. Learn how to manage design tokens like a professional engineer.',
+    requirements: [
+        'Define a set of at least 5 CSS variables for colors and spacing',
+        'Implement a manual toggle that switches the --theme-bg and --theme-text variables',
+        'Ensure the toggle state is visually indicated',
+        'Apply smooth CSS transitions for theme changes'
+    ]
   },
   {
     id: 'w2-fri',
@@ -88,7 +113,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Interactive Todo List with LocalStorage',
-    description: 'Build a Todo list where users can add, delete, and toggle completion. Data must persist after page refresh using localStorage.',
+    description: 'Build a high-performance Todo list. This project is the first step in learning state management and browser storage.',
+    requirements: [
+        'Functionality: Create, Read, Update (toggle), and Delete todos',
+        'Persist data in LocalStorage so it survives page refreshes',
+        'Implement filters (All, Active, Completed)',
+        'Use clean, modular JavaScript functions'
+    ]
   },
   {
     id: 'w3-wed',
@@ -96,7 +127,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Array Methods & Data Manipulation',
-    description: 'Given an array of user objects, write functions to filter by age, sort by name, and calculate the total age using map, filter, and reduce.',
+    description: 'Handle data like a pro. Use higher-order functions to transform a raw dataset into meaningful information.',
+    requirements: [
+        'Use .filter() to extract specific users from a mock dataset',
+        'Use .reduce() to calculate aggregate statistics (e.g., total revenue)',
+        'Use .sort() to order data by multiple criteria',
+        'Implement a search function using .includes()'
+    ]
   },
   {
     id: 'w3-fri',
@@ -121,7 +158,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Dynamic Quiz Application',
-    description: 'Build a quiz application that fetches questions from an object, tracks the score, and displays results at the end.',
+    description: 'Create an engine that renders quizzes dynamically. This project bridges the gap between static content and interactive applications.',
+    requirements: [
+        'Render questions dynamically from a JavaScript object',
+        'Implement a progress bar and score tracker',
+        'Show a "Results" screen with a breakdown of correct/incorrect answers',
+        'Ensure the UI is responsive and accessible'
+    ]
   },
   {
     id: 'w4-wed',
@@ -129,7 +172,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Event Delegation & Bubbling',
-    description: 'Create a dynamic list where clicking any item alerts its index. Use a single event listener on the parent.',
+    description: 'Master the DOM event model. Learn how to handle hundreds of items with a single event listener.',
+    requirements: [
+        'Implement a list where clicking an item triggers an action via delegation',
+        'Demonstrate stopping event propagation where necessary',
+        'Use data attributes to pass information from the DOM to JS',
+        'Implement a custom "context menu" on right-click'
+    ]
   },
   {
     id: 'w4-monthly',
@@ -154,7 +203,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Weather App with Fetch API',
-    description: 'Create a weather dashboard that fetches real-time data from OpenWeatherMap API and displays it beautifully.',
+    description: 'Connect your code to the real world. Fetch live weather data and display it in a beautiful dashboard.',
+    requirements: [
+        'Integrate with the OpenWeatherMap API using fetch()',
+        'Handle "Loading" and "Error" states gracefully',
+        'Implement a search bar for different cities',
+        'Display weather icons and dynamic backgrounds based on conditions'
+    ]
   },
   {
     id: 'w5-wed',
@@ -162,7 +217,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Promises & Async/Await',
-    description: 'Refactor a chain of nested callbacks into a clean async/await structure with proper error handling using try/catch.',
+    description: 'Master asynchronous flow control. Learn how to write clean, synchronous-looking code for async operations.',
+    requirements: [
+        'Refactor a "callback hell" scenario into clean Promises',
+        'Implement try/catch blocks for robust error handling',
+        'Execute multiple requests in parallel using Promise.all()',
+        'Create a "delay" utility function using Promises'
+    ]
   },
   {
     id: 'w5-fri',
@@ -187,7 +248,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Recipe Search Engine',
-    description: 'Build a search engine for recipes. Use modules to separate API logic, UI rendering, and state management.',
+    description: 'Build a complex, multi-module application. Organize your logic into specialized files for scalability.',
+    requirements: [
+        'Use ES Modules (import/export) to structure the project',
+        'Implement a "Favorite Recipes" feature using persistent state',
+        'Use the Spoonacular API for recipe data',
+        'Implement a custom "Spinner" component for loading states'
+    ]
   },
   {
     id: 'w6-wed',
@@ -195,7 +262,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Destructuring & Spread Operator',
-    description: 'Clean up a messy codebase by using object/array destructuring and the spread operator to merge configs and pass props.',
+    description: 'Write modern, expressive JavaScript. Learn the shorthand techniques used in professional React codebases.',
+    requirements: [
+        'Use object destructuring to extract deeply nested API data',
+        'Use the spread operator to merge configuration objects',
+        'Implement rest parameters for functions with variable arguments',
+        'Refactor old "ES5" code into modern "ES6+" syntax'
+    ]
   },
   {
     id: 'w6-fri',
@@ -220,7 +293,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'First React Component Library',
-    description: 'Build a set of reusable UI components (Button, Card, Input) using React and Props.',
+    description: 'Enter the world of React. Build a library of reusable, atomic components following best practices.',
+    requirements: [
+        'Create a Button, Input, Card, and Badge component',
+        'Implement component "variants" (e.g., Primary vs Secondary buttons)',
+        'Pass data using Props and handle events',
+        'Use CSS Modules or Tailwind for scoped styling'
+    ]
   },
   {
     id: 'w7-wed',
@@ -228,7 +307,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'React State with useState',
-    description: 'Create a counter and a text input mirror using the useState hook to manage local state.',
+    description: 'Make your UI come alive. Learn the fundamental hook for managing component reactivity.',
+    requirements: [
+        'Build a "Counter" with increment/decrement/reset',
+        'Implement a "Toggle" switch for visibility',
+        'Handle complex state (objects or arrays) with useState',
+        'Demonstrate "lifting state up" between components'
+    ]
   },
   {
     id: 'w7-fri',
@@ -253,7 +338,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'GitHub User Finder (React)',
-    description: 'Rebuild the GitHub finder using React and useEffect to fetch data on component mount.',
+    description: 'Build a production-ready search tool. Learn how to synchronize your UI with external data using useEffect.',
+    requirements: [
+        'Fetch user data from the GitHub API on mount and search',
+        'Display repositories, followers, and bio in a clean layout',
+        'Implement a "Debounce" feature for the search input',
+        'Handle API rate limits and "User Not Found" errors'
+    ]
   },
   {
     id: 'w8-wed',
@@ -261,7 +352,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'useEffect Dependency Array',
-    description: 'Demonstrate how to run an effect only when a specific state changes vs running it on every render.',
+    description: 'Master the most powerful and misunderstood React hook. Learn how to control exactly when effects run.',
+    requirements: [
+        'Implement a timer that starts/stops based on state',
+        'Demonstrate effect cleanup (removing event listeners)',
+        'Use the dependency array to trigger updates correctly',
+        'Prevent infinite re-render loops with proper dependencies'
+    ]
   },
   {
     id: 'w8-monthly',
@@ -286,7 +383,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Shopping Cart with Context API',
-    description: 'Build a store where items can be added to a cart that is accessible globally using React Context.',
+    description: 'Build a global state architecture. Solve the "prop drilling" problem like an architect.',
+    requirements: [
+        'Create a CartContext to manage global cart state',
+        'Implement "Add to Cart", "Remove", and "Clear" actions',
+        'Calculate total price and item count in real-time',
+        'Persist the cart state in LocalStorage via Context'
+    ]
   },
   {
     id: 'w9-wed',
@@ -294,7 +397,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'useReducer for Complex State',
-    description: 'Refactor a complex useState object into a useReducer pattern with actions and a reducer function.',
+    description: 'Learn the Redux pattern within React. Manage complex state transitions with predictable actions.',
+    requirements: [
+        'Implement a "Task Manager" using useReducer',
+        'Define a clear set of action types (ADD_TASK, TOGGLE_TASK, etc.)',
+        'Create a pure reducer function to handle state updates',
+        'Demonstrate why useReducer is better than multiple useStates'
+    ]
   },
   {
     id: 'w9-fri',
@@ -319,7 +428,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Multi-Page Blog with React Router',
-    description: 'Create a blog with Home, About, and dynamic Post Detail pages using React Router.',
+    description: 'Create a Single Page Application (SPA) with multiple routes. Master client-side navigation.',
+    requirements: [
+        'Set up Home, About, and Blog routes',
+        'Implement dynamic routing (e.g., /blog/:slug)',
+        'Create a "404 Not Found" catch-all route',
+        'Use nested routes for shared layouts'
+    ]
   },
   {
     id: 'w10-wed',
@@ -327,7 +442,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'URL Parameters & Search Params',
-    description: 'Implement a search filter that updates the URL query string using useSearchParams.',
+    description: 'Sync your UI with the URL. Learn how to build search and filter systems that users can bookmark.',
+    requirements: [
+        'Extract ID parameters from the URL using useParams',
+        'Implement a filter system using useSearchParams',
+        'Update the URL dynamically without page refreshes',
+        'Build a "Breadcrumbs" component based on the current path'
+    ]
   },
   {
     id: 'w10-fri',
@@ -352,7 +473,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Porting React App to Next.js',
-    description: 'Move your portfolio to Next.js using the App Router. Implement static and dynamic metadata.',
+    description: 'Upgrade to the industry standard. Move your React projects into the Next.js App Router framework.',
+    requirements: [
+        'Convert a React Router project to Next.js file-based routing',
+        'Implement a root Layout and nested layouts',
+        'Add SEO metadata (title, description, opengraph) to pages',
+        'Deploy the project to Vercel'
+    ]
   },
   {
     id: 'w11-wed',
@@ -360,7 +487,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Server vs Client Components',
-    description: 'Identify and demonstrate the difference between "use client" and default Server Components.',
+    description: 'Master the hybrid model. Learn when to use the power of the server and when to use the interactivity of the client.',
+    requirements: [
+        'Identify components that should be Server-only',
+        'Implement interactive elements using "use client"',
+        'Pass data from Server Components to Client Components',
+        'Understand the "serialization" boundary'
+    ]
   },
   {
     id: 'w11-fri',
@@ -385,7 +518,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'SEO-Optimized Movie Database',
-    description: 'Build a movie site using TMDB API. Use Server Side Rendering (SSR) for the movie detail pages.',
+    description: 'Build a high-performance media site. Leverage Next.js data fetching for perfect SEO and speed.',
+    requirements: [
+        'Fetch movie data on the server using async components',
+        'Implement dynamic routes for movie detail pages',
+        'Add "Suspense" boundaries for smooth loading states',
+        'Generate static metadata dynamically based on movie titles'
+    ]
   },
   {
     id: 'w12-wed',
@@ -393,7 +532,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Revalidation & Caching',
-    description: 'Implement Incremental Static Regeneration (ISR) to update your movie list every 60 seconds.',
+    description: 'Control the freshness of your data. Learn how to cache responses and revalidate them on a schedule.',
+    requirements: [
+        'Implement Time-based Revalidation (ISR)',
+        'Use the fetch() "cache" option (no-store, force-cache)',
+        'Demonstrate on-demand revalidation using revalidatePath',
+        'Implement a custom "loading.tsx" for the entire route'
+    ]
   },
   {
     id: 'w12-monthly',
@@ -418,7 +563,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'SaaS Landing Page with Tailwind',
-    description: 'Build a high-converting landing page using Tailwind CSS, including complex gradients and animations.',
+    description: 'Design a world-class SaaS landing page. Focus on high-fidelity UI and modern styling techniques.',
+    requirements: [
+        'Implement a responsive "bento grid" layout',
+        'Use Tailwind "arbitrary values" for precision design',
+        'Create complex gradients and backdrop-blur effects',
+        'Implement dark mode support throughout the page'
+    ]
   },
   {
     id: 'w13-wed',
@@ -426,7 +577,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Framer Motion Animations',
-    description: 'Add entrance and scroll animations to your SaaS landing page using Framer Motion.',
+    description: 'Add "soul" to your UI. Learn how to implement professional entrance and scroll-triggered animations.',
+    requirements: [
+        'Implement "AnimatePresence" for smooth exit transitions',
+        'Create scroll-linked animations using useScroll',
+        'Animate layouts between state changes using layoutId',
+        'Ensure animations are disabled for users with "prefers-reduced-motion"'
+    ]
   },
   {
     id: 'w13-fri',
@@ -451,7 +608,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'User Authentication System',
-    description: 'Implement Login, Signup, and Logout functionality using Supabase Auth.',
+    description: 'Secure your application. Implement a full authentication flow using Supabase and Next.js.',
+    requirements: [
+        'Implement Email/Password signup and login',
+        'Integrate OAuth providers (Google or GitHub)',
+        'Manage session persistence on the server and client',
+        'Create a "Profile" page where users can update their info'
+    ]
   },
   {
     id: 'w14-wed',
@@ -459,7 +622,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Protected Routes',
-    description: 'Use Next.js Middleware to protect private pages from unauthenticated users.',
+    description: 'Protect sensitive data. Learn how to use Middleware and Server Components to restrict access.',
+    requirements: [
+        'Write Next.js Middleware to redirect unauthenticated users',
+        'Implement server-side auth checks for individual pages',
+        'Show different navigation links based on auth state',
+        'Secure API route handlers from unauthorized access'
+    ]
   },
   {
     id: 'w14-fri',
@@ -484,7 +653,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Fullstack Task Manager',
-    description: 'Build a task manager where users can create projects and tasks linked by foreign keys in Postgres.',
+    description: 'Build a relational application. Design a Postgres schema and connect it to your Next.js frontend.',
+    requirements: [
+        'Design a 1-to-Many relationship (User -> Projects)',
+        'Design a Many-to-Many relationship (Projects -> Tasks)',
+        'Implement CRUD operations using the Supabase SDK',
+        'Handle database constraints and "On Delete Cascade"'
+    ]
   },
   {
     id: 'w15-wed',
@@ -492,7 +667,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Relational Queries',
-    description: 'Write Supabase queries to fetch projects with their associated tasks in a single request.',
+    description: 'Fetch data like a senior engineer. Learn how to join tables and perform complex filtering in Postgres.',
+    requirements: [
+        'Perform a nested fetch (Get Project with all its Tasks)',
+        'Implement server-side filtering and sorting',
+        'Use Postgres Views or RPC for complex logic',
+        'Optimize queries for performance'
+    ]
   },
   {
     id: 'w15-fri',
@@ -517,7 +698,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Instagram Clone (Image Upload)',
-    description: 'Implement image uploading to Supabase Storage and store the URL in the database.',
+    description: 'Handle binary data. Build a system that allows users to upload, store, and view images.',
+    requirements: [
+        'Implement image uploading to Supabase Buckets',
+        'Generate public URLs for stored images',
+        'Implement client-side image resizing/preview before upload',
+        'Store image metadata (size, type, URL) in the database'
+    ]
   },
   {
     id: 'w16-wed',
@@ -525,7 +712,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Server Actions for Form Submission',
-    description: 'Handle form submissions using Next.js Server Actions instead of API routes.',
+    description: 'Eliminate API routes. Use the modern Next.js way to handle form data and mutations.',
+    requirements: [
+        'Create a Server Action to handle data submission',
+        'Implement useFormStatus for loading states',
+        'Implement useFormState for server-side validation messages',
+        'Revalidate paths immediately after a successful mutation'
+    ]
   },
   {
     id: 'w16-monthly',
@@ -550,7 +743,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Real-time Chat with TanStack Query',
-    description: 'Build a real-time chat application using TanStack Query for data fetching and caching.',
+    description: 'Master the best data fetching library in the industry. Build a real-time, resilient chat app.',
+    requirements: [
+        'Use useQuery for fetching message history',
+        'Implement useMutation for sending new messages',
+        'Set up Supabase Realtime for instant message updates',
+        'Implement "Infinite Scroll" for old messages'
+    ]
   },
   {
     id: 'w17-wed',
@@ -558,7 +757,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Optimistic Updates',
-    description: 'Implement optimistic updates so the UI reflects changes immediately before the server responds.',
+    description: 'Create "Instant" UIs. Learn how to update the UI before the server even responds.',
+    requirements: [
+        'Implement an optimistic update for "Liking" a message',
+        'Handle mutation errors by rolling back the UI state',
+        'Invalidate specific queries to trigger background refetches',
+        'Manage global cache configuration'
+    ]
   },
   {
     id: 'w17-fri',
@@ -583,7 +788,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Unit Testing with Vitest',
-    description: 'Write unit tests for your utility functions and components using Vitest and React Testing Library.',
+    description: 'Write "Bulletproof" code. Learn how to test your logic in isolation to prevent regressions.',
+    requirements: [
+        'Write unit tests for complex utility functions',
+        'Test a React component using React Testing Library',
+        'Mock external dependencies and API calls',
+        'Achieve at least 80% test coverage for core logic'
+    ]
   },
   {
     id: 'w18-wed',
@@ -591,7 +802,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'E2E Testing with Playwright',
-    description: 'Set up Playwright and write a test that simulates a user logging in and submitting a form.',
+    description: 'Test the "Happy Path". Automate the browser to ensure your entire app works together.',
+    requirements: [
+        'Write a test for the "Login -> Dashboard -> Logout" flow',
+        'Test responsive layouts on different viewport sizes',
+        'Use Playwright "Codegen" to generate test scripts',
+        'Implement visual regression testing'
+    ]
   },
   {
     id: 'w18-fri',
@@ -616,7 +833,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Optimizing LCP and CLS',
-    description: 'Analyze an existing site with Lighthouse and optimize images, fonts, and scripts to achieve a 90+ score.',
+    description: 'Build for speed. Learn how to achieve a "Perfect 100" Lighthouse score for production apps.',
+    requirements: [
+        'Optimize all images using next/image and proper sizing',
+        'Implement "Font Optimization" to prevent layout shift',
+        'Analyze bundle size using @next/bundle-analyzer',
+        'Optimize third-party scripts and "Critical CSS"'
+    ]
   },
   {
     id: 'w19-wed',
@@ -624,7 +847,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Dynamic Imports & Code Splitting',
-    description: 'Use next/dynamic to lazy-load heavy components and reduce the initial bundle size.',
+    description: 'Ship less JavaScript. Learn how to defer loading heavy components until they are needed.',
+    requirements: [
+        'Implement dynamic() imports for heavy libraries (e.g., charts)',
+        'Create "Skeleton" loaders for lazy-loaded components',
+        'Optimize the initial JS payload for mobile users',
+        'Use the "Streaming" pattern with Suspense'
+    ]
   },
   {
     id: 'w19-fri',
@@ -649,7 +878,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Building a RESTful API with Next.js',
-    description: 'Create a full CRUD API using Route Handlers and implement rate limiting.',
+    description: 'Build a public-facing API. Master Route Handlers, Rate Limiting, and API Security.',
+    requirements: [
+        'Create CRUD Route Handlers for an external entity',
+        'Implement API authentication via Header tokens',
+        'Implement Rate Limiting using Upstash or similar',
+        'Document your API using Swagger or a README'
+    ]
   },
   {
     id: 'w20-wed',
@@ -657,7 +892,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'GraphQL Basics',
-    description: 'Explore a GraphQL API and write queries to fetch specific data nested deep in the graph.',
+    description: 'Learn the alternative to REST. Explore the power of the "Graph" and fetching exactly what you need.',
+    requirements: [
+        'Write complex GraphQL queries and mutations',
+        'Understand the difference between Queries and Fragments',
+        'Explore a GraphQL schema using Apollo or GraphiQL',
+        'Understand how GraphQL solves over-fetching'
+    ]
   },
   {
     id: 'w20-monthly',
@@ -682,7 +923,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Converting JS Project to TS',
-    description: 'Take a medium-sized JS project and fully type it, including complex interfaces and generics.',
+    description: 'Add "Type Safety" to your workflow. Learn why TypeScript is mandatory for professional engineering.',
+    requirements: [
+        'Migrate a JavaScript project to TypeScript without using "any"',
+        'Define complex Interfaces and Types for API data',
+        'Implement "Strict Mode" and resolve all TS errors',
+        'Create type definitions for external libraries'
+    ]
   },
   {
     id: 'w21-wed',
@@ -690,7 +937,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Generics & Utility Types',
-    description: 'Write a generic fetch wrapper that automatically types the response data.',
+    description: 'Write "Flexible" but "Safe" code. Learn how to build generic components and functions.',
+    requirements: [
+        'Create a generic "Table" component in React',
+        'Use Utility types like Partial, Omit, and Pick',
+        'Implement "Conditional Types" for complex logic',
+        'Build a type-safe API wrapper using Generics'
+    ]
   },
   {
     id: 'w21-fri',
@@ -715,7 +968,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'CI/CD Pipeline with GitHub Actions',
-    description: 'Set up a pipeline that automatically runs tests and linting on every push to GitHub.',
+    description: 'Automate your releases. Build a pipeline that tests and lints your code on every push.',
+    requirements: [
+        'Write a .github/workflows/main.yml file',
+        'Automate Vitest runs on every Pull Request',
+        'Implement "Production Branch Protection" rules',
+        'Set up Slack/Discord notifications for build failures'
+    ]
   },
   {
     id: 'w22-wed',
@@ -723,7 +982,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Custom Domain & SSL',
-    description: 'Configure a custom domain for your Vercel project and ensure SSL is working properly.',
+    description: 'Go "Live" professionally. Learn how to manage domains, SSL, and production environments.',
+    requirements: [
+        'Configure a custom domain on Vercel/Netlify',
+        'Set up "Environment Variables" for production keys',
+        'Configure DNS records (CNAME, A, TXT)',
+        'Monitor production logs and errors'
+    ]
   },
   {
     id: 'w22-fri',
@@ -748,7 +1013,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'assignment',
     title: 'Final Project Proposal',
-    description: 'Submit a detailed plan for your final project, including Figma designs and database schema.',
+    description: 'The "Masterpiece" begins. Submit a detailed plan for your capstone professional SaaS application.',
+    requirements: [
+        'Create a full Figma design with prototype',
+        'Design a complete Database Schema (ERD)',
+        'Write a detailed Technical Specification document',
+        'Outline the "MVP" features and future roadmap'
+    ]
   },
   {
     id: 'w23-wed',
@@ -756,7 +1027,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Architecture Review',
-    description: 'Review your proposed architecture with a focus on scalability and security.',
+    description: 'Ensure your foundation is solid. Review your tech stack and architectural decisions.',
+    requirements: [
+        'Choose appropriate State Management (Context, TanStack, or Zustand)',
+        'Plan the "Auth" and "RLS" strategy for the database',
+        'Identify potential performance bottlenecks',
+        'Select a UI library or custom design system'
+    ]
   },
   {
     id: 'w23-fri',
@@ -781,7 +1058,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Monday',
     type: 'final_project',
     title: 'Final Capstone Project',
-    description: 'Build a full-featured, professional SaaS application using Next.js, Supabase, Tailwind, and TypeScript. Must include Auth, DB, and Storage.',
+    description: 'The "Ultimate" test. Build a full-featured, professional SaaS application using the entire stack.',
+    requirements: [
+        'Full Authentication and User Profiles',
+        'Relational Database with complex queries',
+        'File storage for user content',
+        'Optimized for Performance and SEO'
+    ]
   },
   {
     id: 'w24-wed',
@@ -789,7 +1072,13 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Wednesday',
     type: 'task',
     title: 'Final Bug Bash',
-    description: 'Thoroughly test your application, fix all bugs, and optimize for production.',
+    description: 'Polish and refine. Ensure your application is "Production Ready" for the real world.',
+    requirements: [
+        'Zero console errors and warnings',
+        'Fully responsive on all screen sizes',
+        'Complete test coverage for critical paths',
+        'Professional documentation and README'
+    ]
   },
   {
     id: 'w24-final',
@@ -797,6 +1086,12 @@ export const CURRICULUM: CurriculumItem[] = [
     day: 'Final',
     type: 'final_project',
     title: 'Course Graduation',
-    description: 'Present your final project and receive your certificate.',
+    description: 'Present your masterpiece. Showcase your skills to the world and receive your certification.',
+    requirements: [
+        'Live demonstration of the application',
+        'Technical walkthrough of the architecture',
+        'Q&A session with industry professionals',
+        'Graduation ceremony and certificate award'
+    ]
   },
 ];

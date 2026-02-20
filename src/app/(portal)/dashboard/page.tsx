@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 import { AICodeReview } from '@/components/code-review';
 import { QuizModule } from '@/components/quiz';
+import { PENALTY_TASKS } from '@/lib/penalties';
 
 interface Profile {
   id: string;
@@ -58,10 +59,17 @@ interface Submission {
   status: string;
 }
 
+interface ExtraTask {
+  id: string;
+  description: string;
+  is_completed: boolean;
+}
+
 export default function DashboardPage() {
   const { setTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [extraTasks, setExtraTasks] = useState<ExtraTask[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -74,8 +82,8 @@ export default function DashboardPage() {
   const [showReviewFor, setShowReviewFor] = useState<string | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<CurriculumItem | null>(null);
 
-  const [sorryMessage, setSorryMessage] = useState('');
-  const [sendingSorry, setSendingSorry] = useState<string | null>(null);
+  const [isUnlocking, setIsUnlocking] = useState<string | null>(null);
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -108,6 +116,13 @@ export default function DashboardPage() {
       .eq('student_id', user.id);
 
     setSubmissions((subs as unknown as Submission[]) || []);
+
+    const { data: tasks } = await supabase
+      .from('extra_tasks')
+      .select('*')
+      .eq('student_id', user.id);
+
+    setExtraTasks((tasks as unknown as ExtraTask[]) || []);
 
     const { data: curriculumData } = await supabase
       .from('curriculum')
@@ -190,20 +205,39 @@ export default function DashboardPage() {
   const currentWeek = getCurrentWeek();
   const weekContent = curriculum.filter(item => item.week === currentWeek);
 
-  const handleSendSorry = async (curriculumId: string) => {
-    setSendingSorry(curriculumId);
+  const handleAutomatedUnlock = async (curriculumId: string) => {
+    setIsUnlocking(curriculumId);
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('messages').insert({
-        student_id: user.id,
-        curriculum_id: curriculumId,
-        body: sorryMessage,
-        status: 'pending'
-      });
-      setSorryMessage('');
-      setSendingSorry(null);
+    if (!user) return;
+
+    const randomPenalty = PENALTY_TASKS[Math.floor(Math.random() * PENALTY_TASKS.length)];
+
+    const { error } = await supabase.from('extra_tasks').insert({
+      student_id: user.id,
+      description: `[UNLOCKED: ${curriculumId}] ${randomPenalty.title}: ${randomPenalty.description}`,
+      is_completed: false
+    });
+
+    if (!error) {
       fetchData();
     }
+    setIsUnlocking(null);
+  };
+
+  const handleCompleteExtraTask = async (taskId: string) => {
+    setCompletingTaskId(taskId);
+    const { error } = await supabase
+      .from('extra_tasks')
+      .update({
+        is_completed: true,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', taskId);
+
+    if (!error) {
+      fetchData();
+    }
+    setCompletingTaskId(null);
   };
 
   if (loading) return (
@@ -328,7 +362,8 @@ export default function DashboardPage() {
                       (item.day === 'Friday' && new Date().getDay() === 5)
                     );
 
-                    const isMissed = !isToday && !isSubmitted;
+                    const isUnlockedByPenalty = extraTasks.some(t => t.description.includes(`[UNLOCKED: ${item.id}]`));
+                    const isMissed = !isToday && !isSubmitted && !isUnlockedByPenalty;
 
                     return (
                       <Card key={item.id} className={cn(
@@ -354,33 +389,40 @@ export default function DashboardPage() {
                           <CardFooter className="flex flex-col gap-4 border-t bg-muted/20 p-6">
                             {isMissed && (
                               <div className="w-full space-y-4">
-                                <Alert variant="destructive">
+                                <Alert variant="destructive" className="bg-destructive/10">
                                   <AlertCircle className="h-4 w-4" />
-                                  <AlertTitle>Assignment Missed</AlertTitle>
+                                  <AlertTitle>Assignment Locked</AlertTitle>
                                   <AlertDescription>
-                                    This assignment is locked. Please message the admin to unlock it.
+                                    You missed the deadline. Use the Automated Unlock to proceed (Penalty required).
                                   </AlertDescription>
                                 </Alert>
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-full">Message Admin</Button>
+                                    <Button variant="destructive" className="w-full">
+                                      <Zap className="mr-2 h-4 w-4" />
+                                      Automated Unlock
+                                    </Button>
                                   </DialogTrigger>
                                   <DialogContent>
                                     <DialogHeader>
-                                      <DialogTitle>Explain why you missed it</DialogTitle>
+                                      <DialogTitle>Automated Accountability</DialogTitle>
                                     </DialogHeader>
-                                    <div className="py-4">
-                                      <Label htmlFor="sorry">Your Message</Label>
-                                      <Textarea
-                                        id="sorry"
-                                        placeholder="I&apos;m sorry, I was sick..."
-                                        value={sorryMessage}
-                                        onChange={(e) => setSorryMessage(e.target.value)}
-                                      />
+                                    <div className="py-4 space-y-4">
+                                      <p className="text-sm text-muted-foreground">
+                                        To unlock this assignment, an automated penalty task will be assigned to your profile.
+                                      </p>
+                                      <div className="p-4 bg-muted rounded-lg border border-dashed border-primary/50">
+                                        <p className="text-xs font-mono uppercase tracking-widest text-primary mb-2">Penalty Clause</p>
+                                        <p className="text-sm italic">"I acknowledge that missing deadlines is not professional. I will complete the assigned penalty task alongside this assignment."</p>
+                                      </div>
                                     </div>
                                     <DialogFooter>
-                                      <Button onClick={() => handleSendSorry(item.id)} disabled={!sorryMessage || sendingSorry === item.id}>
-                                        {sendingSorry === item.id ? 'Sending...' : 'Send Message'}
+                                      <Button
+                                        onClick={() => handleAutomatedUnlock(item.id)}
+                                        className="w-full"
+                                        disabled={isUnlocking === item.id}
+                                      >
+                                        {isUnlocking === item.id ? 'Unlocking...' : 'Accept Penalty & Unlock'}
                                       </Button>
                                     </DialogFooter>
                                   </DialogContent>
@@ -388,7 +430,7 @@ export default function DashboardPage() {
                               </div>
                             )}
 
-                            {isToday && (
+                            {(isToday || isUnlockedByPenalty) && (
                               <div className="w-full space-y-4">
                                 {item.type === 'quiz' ? (
                                   <Button className="w-full" onClick={() => setActiveQuiz(item)}>
@@ -480,20 +522,58 @@ export default function DashboardPage() {
                    </Card>
                  )}
 
-                 {/* Missed Assignments Warning */}
-                 <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-900">
+                 {/* Missed Assignments & Extra Tasks */}
+                 {extraTasks.length > 0 && (
+                   <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-900">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-semibold text-orange-800 dark:text-orange-400 flex items-center gap-2">
                         <AlertCircle className="h-4 w-4" />
+                        Active Penalties ({extraTasks.filter(t => !t.is_completed).length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {extraTasks.map(task => (
+                        <div key={task.id} className={cn(
+                          "p-3 rounded-md text-xs border",
+                          task.is_completed ? "bg-green-100/50 border-green-200 text-green-700" : "bg-white/50 border-orange-200 text-orange-800"
+                        )}>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="font-bold">{task.is_completed ? 'RESOLVED' : 'PENDING'}</span>
+                            {!task.is_completed && <Badge variant="outline" className="text-[10px]">Penalty</Badge>}
+                          </div>
+                          <p className="mb-3">{task.description}</p>
+                          {!task.is_completed && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[10px] w-full border-orange-300 hover:bg-orange-100"
+                              onClick={() => handleCompleteExtraTask(task.id)}
+                              disabled={completingTaskId === task.id}
+                            >
+                              {completingTaskId === task.id ? 'Processing...' : 'Mark as Completed'}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                   </Card>
+                 )}
+
+                 {extraTasks.length === 0 && (
+                   <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-semibold text-green-800 dark:text-green-400 flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4" />
                         Account Status
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xs text-orange-700 dark:text-orange-500">
-                        You have 0 missed assignments. Stay on track to avoid penalties.
+                      <p className="text-xs text-green-700 dark:text-green-500">
+                        Perfect standing. You have 0 missed assignments.
                       </p>
                     </CardContent>
-                 </Card>
+                   </Card>
+                 )}
               </div>
             </div>
         </div>
