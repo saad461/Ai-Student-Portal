@@ -126,17 +126,64 @@
 
 /* Pro Mode (Hacker Theme) */
 .pro-mode {
-  --primary: 142.1 70.6% 45.3%; /* Green hacker color */
-  --primary-foreground: 144.9 80.4% 10%;
+  --background: oklch(0.1 0 0);
+  --foreground: oklch(0.8 0.1 142);
+  --card: oklch(0.15 0 0);
+  --card-foreground: oklch(0.8 0.1 142);
+  --primary: oklch(0.7 0.2 142);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.2 0 0);
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.5 0.1 142);
+  --accent: oklch(0.7 0.2 142 / 0.1);
+  --border: oklch(0.7 0.2 142 / 0.2);
+  --radius: 0px; /* Sharp corners for hacker look */
+
   font-family: var(--font-geist-mono);
+  background-image:
+    linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .pro-mode .hacker-border {
-  border: 1px solid oklch(0.627 0.265 142.1);
-  box-shadow: 0 0 10px oklch(0.627 0.265 142.1 / 0.2);
+  border: 1px solid oklch(0.7 0.2 142);
+  box-shadow: 0 0 15px oklch(0.7 0.2 142 / 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.pro-mode .hacker-border::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.7 0.2 142 / 0.1),
+    transparent
+  );
+  animation: scan 3s infinite;
+}
+
+@keyframes scan {
+  from { left: -100%; }
+  to { left: 200%; }
 }
 
 .pro-mode .hacker-text {
-  color: oklch(0.627 0.265 142.1);
-  text-shadow: 0 0 5px oklch(0.627 0.265 142.1 / 0.5);
+  color: oklch(0.7 0.2 142);
+  text-shadow: 0 0 8px oklch(0.7 0.2 142 / 0.6);
+  letter-spacing: 0.05em;
+}
+
+.pro-mode .card {
+  @apply border-primary/20 bg-black/40 backdrop-blur-md;
+}
+
+.pro-mode .badge {
+  @apply rounded-none uppercase tracking-tighter border-primary/50;
 }
