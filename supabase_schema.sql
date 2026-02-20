@@ -17,7 +17,7 @@ create table profiles (
 
 -- Curriculum table: Stores assignments, tasks, and quizzes
 create table curriculum (
-  id uuid default uuid_generate_v4() primary key,
+  id text primary key,
   week integer not null,
   day text not null check (day in ('Monday', 'Wednesday', 'Friday', 'Monthly', 'Final')),
   type text not null check (type in ('assignment', 'task', 'quiz', 'grand_test', 'final_project')),

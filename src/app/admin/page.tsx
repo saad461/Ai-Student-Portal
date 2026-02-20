@@ -18,7 +18,11 @@ import {
   Plus,
   Search,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  Database,
+  BookOpen,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,6 +35,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { seedCurriculum } from '@/lib/seed-curriculum';
+import { CurriculumItem } from '@/lib/curriculum';
 
 interface StudentProfile {
   id: string;
@@ -53,7 +59,9 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [messages, setMessages] = useState<SorryMessage[]>([]);
+  const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'students' | 'curriculum'>('students');
 
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
@@ -74,6 +82,14 @@ export default function AdminDashboard() {
       .order('created_at', { ascending: false });
 
     setMessages((msgs as unknown as SorryMessage[]) || []);
+
+    const { data: curriculumData } = await supabase
+      .from('curriculum')
+      .select('*')
+      .order('week', { ascending: true })
+      .order('day', { ascending: true });
+
+    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
 
     setLoading(false);
   }, []);
@@ -119,21 +135,73 @@ export default function AdminDashboard() {
     fetchAdminData();
   };
 
+  const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
+
+  const handleSaveCurriculum = async (item: Partial<CurriculumItem>) => {
+    if (!item.id) return;
+
+    const { error } = await supabase
+      .from('curriculum')
+      .upsert(item);
+
+    if (!error) {
+      setEditingItem(null);
+      fetchAdminData();
+    }
+  };
+
+  const handleDeleteCurriculum = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    const { error } = await supabase
+      .from('curriculum')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      fetchAdminData();
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Loading Admin Controls...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <header className="flex justify-between items-center">
+        <header className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Admin Dashboard</h1>
             <p className="text-slate-500">Manage students and curriculum progression.</p>
           </div>
-          <Button variant="outline" onClick={() => { localStorage.removeItem('admin_auth'); router.push('/admin/login'); }}>
-            Logout Admin
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={async () => {
+              const res = await seedCurriculum();
+              if (res.success) alert('Curriculum seeded successfully!');
+              else alert('Error seeding curriculum: ' + JSON.stringify(res.error));
+            }}>
+              <Database className="h-4 w-4 mr-2" /> Seed Curriculum
+            </Button>
+            <Button variant="outline" onClick={() => { localStorage.removeItem('admin_auth'); router.push('/admin/login'); }}>
+              Logout Admin
+            </Button>
+          </div>
         </header>
 
+        <div className="flex gap-4 border-b pb-4">
+          <Button
+            variant={activeTab === 'students' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('students')}
+          >
+            <Users className="h-4 w-4 mr-2" /> Students
+          </Button>
+          <Button
+            variant={activeTab === 'curriculum' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('curriculum')}
+          >
+            <BookOpen className="h-4 w-4 mr-2" /> Curriculum
+          </Button>
+        </div>
+
+        {activeTab === 'students' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
           {/* Students List */}
@@ -274,6 +342,137 @@ export default function AdminDashboard() {
             </Card>
           </div>
         </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Manage Course Modules</h2>
+              <Button onClick={() => setEditingItem({
+                id: `new-${Date.now()}`,
+                week: 1,
+                day: 'Monday',
+                type: 'assignment',
+                title: '',
+                description: ''
+              })}>
+                <Plus className="h-4 w-4 mr-2" /> Add Module
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {curriculum.map((item) => (
+                <Card key={item.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <Badge variant="outline">{item.day}</Badge>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteCurriculum(item.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <CardTitle className="text-lg">W{item.week}: {item.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                    <Badge variant="secondary" className="mt-2">{item.type}</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Edit Module Dialog */}
+        <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+          <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>{editingItem?.id?.startsWith('new-') ? 'Add' : 'Edit'} Module</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Week</Label>
+                  <Input
+                    type="number"
+                    value={editingItem?.week || 1}
+                    onChange={(e) => setEditingItem(prev => ({ ...prev!, week: parseInt(e.target.value) }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Day</Label>
+                  <select
+                    className="w-full p-2 border rounded-md bg-background"
+                    value={editingItem?.day || 'Monday'}
+                    onChange={(e) => setEditingItem(prev => ({ ...prev!, day: e.target.value as CurriculumItem['day'] }))}
+                  >
+                    <option>Monday</option>
+                    <option>Wednesday</option>
+                    <option>Friday</option>
+                    <option>Monthly</option>
+                    <option>Final</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <select
+                  className="w-full p-2 border rounded-md bg-background"
+                  value={editingItem?.type || 'assignment'}
+                  onChange={(e) => setEditingItem(prev => ({ ...prev!, type: e.target.value as CurriculumItem['type'] }))}
+                >
+                  <option value="assignment">Assignment</option>
+                  <option value="task">Task</option>
+                  <option value="quiz">Quiz</option>
+                  <option value="grand_test">Grand Test</option>
+                  <option value="final_project">Final Project</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={editingItem?.title || ''}
+                  onChange={(e) => setEditingItem(prev => ({ ...prev!, title: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={editingItem?.description || ''}
+                  onChange={(e) => setEditingItem(prev => ({ ...prev!, description: e.target.value }))}
+                />
+              </div>
+
+              {editingItem?.type === 'quiz' && (
+                <div className="space-y-2 border-t pt-4">
+                  <Label>Quiz Content (JSON format)</Label>
+                  <Textarea
+                    className="font-mono text-xs h-40"
+                    placeholder='[{"question": "...", "options": ["...", "..."], "correctAnswer": 0}]'
+                    value={JSON.stringify(editingItem?.content, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const content = JSON.parse(e.target.value);
+                        setEditingItem(prev => ({ ...prev!, content }));
+                      } catch (_err) {
+                        // Keep typing...
+                      }
+                    }}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Ensure the JSON is valid to save quiz questions.</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => handleSaveCurriculum(editingItem!)}>Save Module</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

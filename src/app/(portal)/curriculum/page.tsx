@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/sidebar';
-import { CURRICULUM } from '@/lib/curriculum';
+import { CurriculumItem } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Lock, CheckCircle2, AlertCircle, BookOpen } from 'lucide-react';
+import { CheckCircle2, AlertCircle, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   Dialog,
@@ -27,6 +27,7 @@ interface Submission {
 
 export default function CurriculumPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +60,14 @@ export default function CurriculumPage() {
       .eq('student_id', user.id);
 
     setSubmissions((subs as unknown as Submission[]) || []);
+
+    const { data: curriculumData } = await supabase
+      .from('curriculum')
+      .select('*')
+      .order('week', { ascending: true });
+
+    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+
     setLoading(false);
   }, []);
 
@@ -137,7 +146,7 @@ export default function CurriculumPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {CURRICULUM.filter(item => item.week === w).map((item) => {
+                  {curriculum.filter(item => item.week === w).map((item) => {
                     const isSubmitted = submissions.find(s => s.curriculum_id === item.id);
                     const isMissed = !isSubmitted && isDayPassed(w, item.day);
 

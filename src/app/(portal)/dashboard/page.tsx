@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
-import { CURRICULUM, CurriculumItem, QuizQuestion } from '@/lib/curriculum';
+import { CurriculumItem, QuizQuestion } from '@/lib/curriculum';
 import { useTheme } from '@/components/theme-provider';
 import {
   Card,
@@ -62,6 +62,7 @@ export default function DashboardPage() {
   const { setTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [punchInLoading, setPunchInLoading] = useState(false);
@@ -107,6 +108,12 @@ export default function DashboardPage() {
       .eq('student_id', user.id);
 
     setSubmissions((subs as unknown as Submission[]) || []);
+
+    const { data: curriculumData } = await supabase
+      .from('curriculum')
+      .select('*');
+
+    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
 
     const { data: focusData } = await supabase
       .from('focus_sessions')
@@ -181,7 +188,7 @@ export default function DashboardPage() {
   };
 
   const currentWeek = getCurrentWeek();
-  const weekContent = CURRICULUM.filter(item => item.week === currentWeek);
+  const weekContent = curriculum.filter(item => item.week === currentWeek);
 
   const handleSendSorry = async (curriculumId: string) => {
     setSendingSorry(curriculumId);
@@ -425,8 +432,8 @@ export default function DashboardPage() {
                 {showReviewFor && (
                   <AICodeReview
                     githubUrl={lastSubmittedUrl}
-                    assignmentTitle={CURRICULUM.find(i => i.id === showReviewFor)?.title}
-                    assignmentDescription={CURRICULUM.find(i => i.id === showReviewFor)?.description}
+                    assignmentTitle={curriculum.find(i => i.id === showReviewFor)?.title}
+                    assignmentDescription={curriculum.find(i => i.id === showReviewFor)?.description}
                   />
                 )}
               </div>
