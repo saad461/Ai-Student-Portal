@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Captcha } from '@/components/captcha';
 
 export default function EnrollPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -34,13 +36,6 @@ export default function EnrollPage() {
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Enrollment failed');
-
-      if (!authData.session) {
-        // This usually means email confirmation is enabled
-        setError('Enrollment successful! Please check your email to confirm your account before logging in.');
-        setLoading(false);
-        return;
-      }
 
       // 2. Upload CV (if any)
       let cvUrl = '';
@@ -132,9 +127,14 @@ export default function EnrollPage() {
                 onChange={(e) => setFormData({ ...formData, cv: e.target.files?.[0] || null })}
               />
             </div>
+
+            <div className="space-y-2 pt-2 border-t">
+              <Label>Security Check</Label>
+              <Captcha onVerify={setIsCaptchaVerified} />
+            </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !isCaptchaVerified}>
               {loading ? 'Enrolling...' : 'Join the Course'}
             </Button>
           </CardFooter>
