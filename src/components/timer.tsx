@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { supabase } from '@/lib/supabase';
 
 export function DeepWorkTimer() {
   const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 minutes
   const [isActive, setIsActive] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const sessionStartTimeRef = useRef<number | null>(null);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -19,10 +21,17 @@ export function DeepWorkTimer() {
 
   const handleVisibilityChange = useCallback(() => {
     if (document.hidden && isActive) {
+      if (sessionStartTimeRef.current !== null) {
+        const elapsed = sessionStartTimeRef.current - timeLeft;
+        if (elapsed > 0) {
+          saveSession(elapsed);
+        }
+      }
+      sessionStartTimeRef.current = null;
       setIsActive(false);
       setShowWarning(true);
     }
-  }, [isActive]);
+  }, [isActive, timeLeft, saveSession]);
 
   useEffect(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -36,6 +45,10 @@ export function DeepWorkTimer() {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             setIsActive(false);
+            if (sessionStartTimeRef.current !== null) {
+              saveSession(sessionStartTimeRef.current);
+            }
+            sessionStartTimeRef.current = null;
             return 0;
           }
           return prev - 1;
@@ -45,7 +58,34 @@ export function DeepWorkTimer() {
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
-  const toggleTimer = () => setIsActive(!isActive);
+  const saveSession = useCallback(async (seconds: number) => {
+    if (seconds < 10) return; // Don't save sessions shorter than 10 seconds
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from('focus_sessions').insert({
+      student_id: user.id,
+      duration_seconds: seconds,
+    });
+  }, []);
+
+  const toggleTimer = () => {
+    if (isActive) {
+      // Pausing
+      if (sessionStartTimeRef.current !== null) {
+        const elapsed = sessionStartTimeRef.current - timeLeft;
+        if (elapsed > 0) {
+          saveSession(elapsed);
+        }
+      }
+      sessionStartTimeRef.current = null;
+    } else {
+      // Starting
+      sessionStartTimeRef.current = timeLeft;
+    }
+    setIsActive(!isActive);
+  };
   const resetTimer = () => {
     setIsActive(false);
     setTimeLeft(60 * 60);

@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   BookOpen,
-  Trophy,
   Clock,
   LogOut,
   Github,
@@ -31,7 +30,6 @@ export function Sidebar() {
     { name: 'Curriculum', href: '/curriculum', icon: BookOpen },
     { name: 'GitHub Mastery', href: '/github-mastery', icon: Github },
     { name: 'Deep Work', href: '/timer', icon: Clock },
-    { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
   ];
 
   return (

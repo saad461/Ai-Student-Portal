@@ -2,6 +2,7 @@
 
 import { Sidebar } from '@/components/sidebar';
 import { DeepWorkTimer } from '@/components/timer';
+import { FocusHistory } from '@/components/focus-history';
 import { useTheme } from '@/components/theme-provider';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ShieldCheck } from 'lucide-react';
@@ -49,6 +50,8 @@ export default function TimerPage() {
                    </p>
                  </div>
                )}
+
+               <FocusHistory />
             </div>
           </div>
         </div>
