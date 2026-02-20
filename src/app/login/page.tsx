@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { Captcha } from '@/components/captcha';
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -75,9 +77,14 @@ export default function LoginPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
+
+            <div className="space-y-2 pt-2 border-t">
+              <Label>Security Check</Label>
+              <Captcha onVerify={setIsCaptchaVerified} />
+            </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !isCaptchaVerified}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
             <div className="text-sm text-center">
