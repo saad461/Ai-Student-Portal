@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const text = response.text();
 
     // Attempt to parse JSON from response
-    const jsonMatch = text.match(/\[.*\]/s);
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
     const feedback = jsonMatch ? JSON.parse(jsonMatch[0]) : [
       "Good progress on the assignment.",
       "Consider optimizing your component structure.",
