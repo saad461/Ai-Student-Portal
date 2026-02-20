@@ -68,6 +68,11 @@ interface ExtraTask {
   is_completed: boolean;
 }
 
+const getTodayString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export default function DashboardPage() {
   const { setTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -104,12 +109,14 @@ export default function DashboardPage() {
 
     setProfile(profileData as unknown as Profile);
 
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+    const today = getTodayString();
     const { data: attendance, error: attError } = await supabase
       .from('attendance')
       .select('*')
       .eq('student_id', user.id)
       .eq('date', today);
+
+    console.log('Attendance check for', today, ':', attendance);
 
     if (attendance && attendance.length > 0) {
       setHasPunchedInToday(true);
@@ -182,13 +189,13 @@ export default function DashboardPage() {
         return;
       }
 
-      const today = new Date().toLocaleDateString('en-CA');
+      const today = getTodayString();
 
       // 1. Record in attendance table
-      const { error: attendanceError } = await supabase.from('attendance').insert({
+      const { error: attendanceError } = await supabase.from('attendance').upsert({
         student_id: user.id,
         date: today
-      });
+      }, { onConflict: 'student_id,date' });
 
       if (attendanceError) {
         console.error('Attendance Error:', attendanceError);

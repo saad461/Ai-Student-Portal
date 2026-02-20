@@ -103,6 +103,7 @@ create policy "Users can update their own submissions" on submissions for update
 -- Attendance policies
 create policy "Users can view their own attendance" on attendance for select using (auth.uid() = student_id);
 create policy "Users can insert their own attendance" on attendance for insert with check (auth.uid() = student_id);
+create policy "Users can update their own attendance" on attendance for update using (auth.uid() = student_id);
 
 -- Messages policies
 create policy "Users can view their own messages" on messages for select using (auth.uid() = student_id);
