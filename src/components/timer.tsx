@@ -56,7 +56,7 @@ export function DeepWorkTimer() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
+  }, [isActive, timeLeft, saveSession]);
 
   const saveSession = useCallback(async (seconds: number) => {
     if (seconds < 10) return; // Don't save sessions shorter than 10 seconds
