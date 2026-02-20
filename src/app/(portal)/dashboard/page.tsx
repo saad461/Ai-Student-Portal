@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { AICodeReview } from '@/components/code-review';
 import { QuizModule } from '@/components/quiz';
 import { PENALTY_TASKS } from '@/lib/penalties';
+import confetti from 'canvas-confetti';
 
 interface Profile {
   id: string;
@@ -50,6 +51,8 @@ interface Profile {
   enrollment_date: string;
   is_pro: boolean;
   current_streak: number;
+  total_points: number;
+  last_punch_in: string | null;
 }
 
 interface Submission {
@@ -160,15 +163,54 @@ export default function DashboardPage() {
   const handlePunchIn = async () => {
     setPunchInLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user || !profile) return;
 
-    const { error } = await supabase.from('attendance').insert({
+    const today = new Date().toISOString().split('T')[0];
+
+    // 1. Record in attendance table
+    const { error: attendanceError } = await supabase.from('attendance').insert({
       student_id: user.id,
-      date: new Date().toISOString().split('T')[0]
+      date: today
     });
 
-    if (!error) {
-      setHasPunchedInToday(true);
+    if (!attendanceError) {
+      // 2. Calculate new streak
+      let newStreak = 1;
+      if (profile.last_punch_in) {
+        const lastPunch = new Date(profile.last_punch_in);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const isConsecutive = lastPunch.toDateString() === yesterday.toDateString();
+
+        if (isConsecutive) {
+          newStreak = profile.current_streak + 1;
+        }
+      }
+
+      // 3. Update profile with points and streak
+      const { error: profileUpdateError } = await supabase.from('profiles').update({
+        current_streak: newStreak,
+        total_points: (profile.total_points || 0) + 10,
+        last_punch_in: new Date().toISOString()
+      }).eq('id', user.id);
+
+      if (!profileUpdateError) {
+        setHasPunchedInToday(true);
+
+        // Effects
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#f97316', '#10b981', '#3b82f6']
+        });
+
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2012/2012-preview.mp3');
+        audio.play().catch(() => {});
+
+        fetchData();
+      }
     }
     setPunchInLoading(false);
   };
@@ -286,7 +328,7 @@ export default function DashboardPage() {
           </header>
 
           {/* Progress Overview */}
-          <div className={`grid grid-cols-1 ${profile?.is_pro ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Overall Progress</CardTitle>
@@ -320,6 +362,19 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xs text-muted-foreground">Keep it up! Consistency is key.</div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-primary uppercase tracking-wider flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Total Points
+                </CardTitle>
+                <div className="text-2xl font-bold">{profile?.total_points || 0} XP</div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xs text-muted-foreground">Earn points by punching in and completing tasks.</div>
               </CardContent>
             </Card>
 
