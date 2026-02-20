@@ -27,7 +27,6 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import {
   CheckCircle2,
   Clock,
@@ -428,7 +427,7 @@ export default function DashboardPage() {
                                       </p>
                                       <div className="p-4 bg-muted rounded-lg border border-dashed border-primary/50">
                                         <p className="text-xs font-mono uppercase tracking-widest text-primary mb-2">Penalty Clause</p>
-                                        <p className="text-sm italic">"I acknowledge that missing deadlines is not professional. I will complete the assigned penalty task alongside this assignment."</p>
+                                        <p className="text-sm italic">&quot;I acknowledge that missing deadlines is not professional. I will complete the assigned penalty task alongside this assignment.&quot;</p>
                                       </div>
                                     </div>
                                     <DialogFooter>

@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                       try {
                         const content = JSON.parse(e.target.value);
                         setEditingItem(prev => ({ ...prev!, content }));
-                      } catch (_err) {
+                      } catch {
                         // Keep typing...
                       }
                     }}

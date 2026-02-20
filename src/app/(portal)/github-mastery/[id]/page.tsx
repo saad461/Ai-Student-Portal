@@ -4,7 +4,7 @@ import { use } from 'react';
 import { Sidebar } from '@/components/sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Github, Terminal, GitBranch, GitPullRequest, GitMerge, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Terminal, GitBranch, GitPullRequest, GitMerge, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
