@@ -6,8 +6,9 @@ import { CurriculumItem, isDayUnlocked, isDayPassed } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { CheckCircle2, AlertCircle, BookOpen } from 'lucide-react';
+import { CheckCircle2, AlertCircle, BookOpen, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogTrigger,
