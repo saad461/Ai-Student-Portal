@@ -54,10 +54,12 @@ create table applications (
 create table curriculum (
   id text primary key,
   week integer not null,
-  day text not null check (day in ('Monday', 'Wednesday', 'Friday', 'Monthly', 'Final')),
+  day text not null check (day in ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monthly', 'Final')),
   type text not null check (type in ('assignment', 'task', 'quiz', 'grand_test', 'final_project')),
   title text not null,
   description text not null,
+  requirements text[],
+  required_focus_hours numeric default 0,
   content jsonb, -- For quiz questions or detailed task instructions
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

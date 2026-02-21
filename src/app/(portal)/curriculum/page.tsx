@@ -30,6 +30,7 @@ export default function CurriculumPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [currentWeek, setCurrentWeek] = useState(1);
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const [sorryMessage, setSorryMessage] = useState('');
@@ -68,6 +69,16 @@ export default function CurriculumPage() {
       .order('week', { ascending: true });
 
     setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+
+    const { data: focusData } = await supabase
+      .from('focus_sessions')
+      .select('duration_seconds')
+      .eq('student_id', user.id);
+
+    if (focusData) {
+      const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+      setTotalFocusMinutes(Math.round(totalSeconds / 60));
+    }
 
     setLoading(false);
   }, []);
@@ -138,13 +149,16 @@ export default function CurriculumPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {curriculum.filter(item => item.week === w).map((item) => {
                     const isSubmitted = submissions.find(s => s.curriculum_id === item.id);
-                    const isUnlocked = isDayUnlocked(w, item.day, currentWeek);
+                    const isDateUnlocked = isDayUnlocked(w, item.day, currentWeek);
+                    const isFocusUnlocked = (totalFocusMinutes / 60) >= (item.required_focus_hours || 0);
+                    const isUnlocked = isDateUnlocked && isFocusUnlocked;
+
                     const isMissed = !isSubmitted && isDayPassed(w, item.day, currentWeek);
 
                     return (
                       <Card key={item.id} className={cn(
                         "flex flex-col transition-all",
-                        !isUnlocked && "opacity-50 grayscale pointer-events-none"
+                        !isUnlocked && "opacity-50 grayscale"
                       )}>
                         <CardHeader className="flex-none">
                           <div className="flex justify-between items-start">

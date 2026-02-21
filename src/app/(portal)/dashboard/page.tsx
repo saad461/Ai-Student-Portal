@@ -378,8 +378,11 @@ export default function DashboardPage() {
                 ) : (
                   weekContent.map((item) => {
                     const isSubmitted = submissions.find(s => s.curriculum_id === item.id);
-                    const isUnlocked = isDayUnlocked(currentWeek, item.day, currentWeek);
-                    const isToday = isUnlocked && !isDayPassed(currentWeek, item.day, currentWeek);
+                    const isDateUnlocked = isDayUnlocked(currentWeek, item.day, currentWeek);
+                    const isFocusUnlocked = (totalFocusMinutes / 60) >= (item.required_focus_hours || 0);
+                    const isUnlocked = isDateUnlocked && isFocusUnlocked;
+
+                    const isToday = isDateUnlocked && !isDayPassed(currentWeek, item.day, currentWeek);
 
                     const isUnlockedByPenalty = extraTasks.some(t => t.description.includes(`[UNLOCKED: ${item.id}]`));
                     const isMissed = !isSubmitted && isDayPassed(currentWeek, item.day, currentWeek) && !isUnlockedByPenalty;
@@ -388,8 +391,8 @@ export default function DashboardPage() {
                       <Card key={item.id} className={cn(
                         "overflow-hidden transition-all",
                         isSubmitted && "opacity-75",
-                        isToday && "ring-2 ring-primary ring-offset-2",
-                        !isUnlocked && "opacity-50 grayscale pointer-events-none"
+                        isToday && isUnlocked && "ring-2 ring-primary ring-offset-2",
+                        !isUnlocked && "opacity-50 grayscale"
                       )}>
                         <div className={cn(
                           "h-2",
@@ -403,9 +406,16 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <CardTitle>{item.title}</CardTitle>
-                            {!isUnlocked && <Lock className="h-4 w-4 text-muted-foreground" />}
+                            {!isUnlocked && <Lock className="h-4 w-4 text-destructive" />}
                           </div>
                           <CardDescription>{item.description}</CardDescription>
+
+                          {!isFocusUnlocked && (
+                            <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-700 dark:text-orange-400 text-xs flex items-center gap-2 font-medium">
+                               <Clock className="h-4 w-4" />
+                               Locked: Requires {item.required_focus_hours}h Focus Time. You have {Math.round(totalFocusMinutes / 60 * 10) / 10}h.
+                            </div>
+                          )}
 
                           {item.requirements && item.requirements.length > 0 && isUnlocked && (
                             <div className="mt-4 space-y-2">
