@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Captcha } from '@/components/captcha';
+import { ShieldAlert, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    pin: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,15 +29,48 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // 1. Authenticate with Email/Password
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
+
+      // 2. Verify Login Pin from Profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('login_pin')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        // If it's an admin, they might not have a pin in the profile record if it was created differently
+        // But for students, we must check the pin.
+        // Let's check the role.
+        const { data: roleCheck } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single();
+
+        if (roleCheck?.role === 'admin') {
+           router.push('/dashboard');
+           return;
+        }
+
+        await supabase.auth.signOut();
+        throw new Error('Security verification failed. Profile not found.');
+      }
+
+      if (profile.login_pin && profile.login_pin !== formData.pin) {
+        await supabase.auth.signOut();
+        throw new Error('Invalid Security PIN. Please check your credentials.');
+      }
 
       router.push('/dashboard');
     } catch (err: unknown) {
+      console.error('Login error:', err);
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -48,20 +83,25 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your training dashboard.</CardDescription>
+      <Card className="w-full max-w-md shadow-2xl border-t-4 border-t-primary">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold uppercase tracking-tight">Student Portal</CardTitle>
+          <CardDescription>Enter your credentials and security PIN to continue.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md">{error}</div>}
+            {error && (
+              <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md flex items-center gap-2 border border-destructive/20">
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="john@example.com"
+                placeholder="student@example.com"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -77,19 +117,45 @@ export default function LoginPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="pin">Security PIN</Label>
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">6-Digit Pin</span>
+              </div>
+              <Input
+                id="pin"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="******"
+                required={formData.email !== ''} // Make it required for login
+                value={formData.pin}
+                onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                className="text-center text-2xl tracking-[0.5em] font-mono"
+              />
+            </div>
 
-            <div className="space-y-2 pt-2 border-t">
-              <Label>Security Check</Label>
-              <Captcha onVerify={setIsCaptchaVerified} />
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="text-xs text-center block text-muted-foreground">Security Check</Label>
+              <div className="flex justify-center">
+                <Captcha onVerify={setIsCaptchaVerified} />
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading || !isCaptchaVerified}>
-              {loading ? 'Signing in...' : 'Sign In'}
+            <Button type="submit" className="w-full h-12 text-lg font-bold uppercase" disabled={loading || !isCaptchaVerified}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Verifying...
+                </>
+              ) : (
+                'Secure Login'
+              )}
             </Button>
-            <div className="text-sm text-center">
-              Don&apos;t have an account?{' '}
-              <Link href="/enroll" className="text-primary hover:underline font-medium">
+            <div className="text-sm text-center text-muted-foreground">
+              New student?{' '}
+              <Link href="/enroll" className="text-primary hover:underline font-bold">
                 Enroll Now
               </Link>
             </div>

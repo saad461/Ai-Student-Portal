@@ -5,6 +5,20 @@ create extension if not exists "uuid-ossp";
 create table profiles (
   id uuid references auth.users on delete cascade primary key,
   full_name text not null,
+  first_name text,
+  last_name text,
+  gender text,
+  cnic text,
+  age integer,
+  phone_number text,
+  passport_url text,
+  skills_level text,
+  objective text,
+  education text,
+  city text,
+  github_link text,
+  login_pin text,
+  course_pin text,
   cv_url text,
   enrollment_date timestamp with time zone default timezone('utc'::text, now()) not null,
   is_pro boolean default false,
@@ -12,6 +26,27 @@ create table profiles (
   total_points integer default 0,
   role text default 'student' check (role in ('student', 'admin')),
   last_punch_in timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Applications table: Stores enrollment requests
+create table applications (
+  id uuid default uuid_generate_v4() primary key,
+  first_name text not null,
+  last_name text not null,
+  gender text not null,
+  cnic text not null,
+  email text not null,
+  age integer not null,
+  phone_number text not null,
+  passport_url text,
+  skills_level text not null,
+  objective text not null,
+  education text not null,
+  city text not null,
+  github_link text,
+  course_pin text not null,
+  status text default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -90,6 +125,12 @@ alter table focus_sessions enable row level security;
 -- Policies
 create policy "Public curriculum is viewable by everyone" on curriculum for select using (true);
 
+-- Applications policies
+alter table applications enable row level security;
+create policy "Anyone can insert applications" on applications for insert with check (true);
+create policy "Admins can view all applications" on applications for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can update applications" on applications for update using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
 -- Profiles policies
 create policy "Users can view their own profile" on profiles for select using (auth.uid() = id);
 create policy "Users can update their own profile" on profiles for update using (auth.uid() = id);
@@ -125,3 +166,12 @@ create policy "Admins can view all attendance" on attendance for all using (exis
 create policy "Admins can manage all messages" on messages for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can manage all extra tasks" on extra_tasks for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can view all focus sessions" on focus_sessions for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+-- Storage Buckets
+-- Note: These usually need to be created via the Supabase Dashboard or API
+-- insert into storage.buckets (id, name, public) values ('passports', 'passports', true);
+-- insert into storage.buckets (id, name, public) values ('cvs', 'cvs', true);
+
+-- Storage Policies for Passports
+-- create policy "Passport images are publicly accessible" on storage.objects for select using (bucket_id = 'passports');
+-- create policy "Anyone can upload a passport image" on storage.objects for insert with check (bucket_id = 'passports');

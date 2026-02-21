@@ -1,0 +1,100 @@
+
+> student-portal@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 1155ms
+○ Compiling / ...
+ GET / 200 in 5.7s (compile: 5.2s, render: 486ms)
+⨯ ./src/app/enroll/page.tsx:11:1
+Module not found: Can't resolve '@/components/ui/select'
+[0m [90m  9 |[39m [36mimport[39m { [33mLabel[39m } [36mfrom[39m [32m'@/components/ui/label'[39m[33m;[39m
+ [90m 10 |[39m [36mimport[39m { [33mTextarea[39m } [36mfrom[39m [32m'@/components/ui/textarea'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 11 |[39m [36mimport[39m {
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 12 |[39m   [33mSelect[39m[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 13 |[39m   [33mSelectContent[39m[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 14 |[39m   [33mSelectItem[39m[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 15 |[39m   [33mSelectTrigger[39m[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 16 |[39m   [33mSelectValue[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 17 |[39m } [36mfrom[39m [32m'@/components/ui/select'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 18 |[39m [36mimport[39m { [33mCaptcha[39m } [36mfrom[39m [32m'@/components/captcha'[39m[33m;[39m
+ [90m 19 |[39m [36mimport[39m { jsPDF } [36mfrom[39m [32m'jspdf'[39m[33m;[39m
+ [90m 20 |[39m [36mimport[39m autoTable [36mfrom[39m [32m'jspdf-autotable'[39m[33m;[39m[0m
+
+Import map: aliased to relative './src/components/ui/select' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/app/enroll/page.tsx [Client Component Browser]
+    ./src/app/enroll/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/enroll/page.tsx [Client Component SSR]
+    ./src/app/enroll/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ GET /enroll 500 in 4.8s (compile: 4.5s, render: 263ms)
+ GET /login 200 in 993ms (compile: 743ms, render: 250ms)
+✓ Compiled in 520ms
+ GET / 200 in 96ms (compile: 12ms, render: 84ms)
+ GET /enroll 200 in 638ms (compile: 229ms, render: 409ms)
+ GET /login 200 in 91ms (compile: 13ms, render: 78ms)
+ GET / 200 in 103ms (compile: 6ms, render: 98ms)
+ GET /enroll 200 in 102ms (compile: 5ms, render: 97ms)
+ GET /login 200 in 59ms (compile: 4ms, render: 55ms)
+ GET /admin 200 in 1029ms (compile: 896ms, render: 133ms)
+ GET /admin/login 200 in 611ms (compile: 557ms, render: 55ms)
+ GET /admin/applications 200 in 1052ms (compile: 959ms, render: 93ms)
+⨯ Error: supabaseUrl is required.
+    at module evaluation (src/app/admin/application-actions.ts:8:35)
+    at module evaluation (.next-internal/server/app/admin/applications/page/actions.js (server actions loader):1:1)
+    at module evaluation (.next/dev/server/chunks/ssr/_9a0a1ae8._.js:135:401)
+   6 | const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+   7 |
+>  8 | const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole, {
+     |                                   ^
+   9 |   auth: {
+  10 |     autoRefreshToken: false,
+  11 |     persistSession: false {
+  digest: '2535244321'
+}
+ POST /admin/applications 500 in 707ms (compile: 3ms, render: 703ms)
+ GET / 200 in 438ms (compile: 129ms, render: 309ms)
+ GET /enroll 200 in 81ms (compile: 10ms, render: 72ms)
+ GET /login 200 in 79ms (compile: 9ms, render: 69ms)
+ GET /admin 200 in 78ms (compile: 9ms, render: 69ms)
+ GET /admin/login 200 in 116ms (compile: 12ms, render: 104ms)
+ GET /admin/applications 200 in 99ms (compile: 12ms, render: 88ms)
+⨯ Error: supabaseUrl is required.
+    at module evaluation (src/app/admin/application-actions.ts:8:35)
+    at module evaluation (.next-internal/server/app/admin/applications/page/actions.js (server actions loader):1:1)
+    at module evaluation (.next/dev/server/chunks/ssr/_9a0a1ae8._.js:135:401)
+   6 | const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+   7 |
+>  8 | const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole, {
+     |                                   ^
+   9 |   auth: {
+  10 |     autoRefreshToken: false,
+  11 |     persistSession: false {
+  digest: '2535244321'
+}
+ POST /admin/applications 500 in 523ms (compile: 3ms, render: 520ms)
