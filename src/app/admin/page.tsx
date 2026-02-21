@@ -376,45 +376,90 @@ export default function AdminDashboard() {
           </div>
         </div>
         ) : activeTab === 'curriculum' ? (
-          <div className="space-y-6">
+          <div className="space-y-12">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Manage Course Modules</h2>
+              <div>
+                <h2 className="text-2xl font-bold">Course Curriculum</h2>
+                <p className="text-sm text-muted-foreground">Manage weeks, days, and tasks.</p>
+              </div>
               <Button onClick={() => setEditingItem({
                 id: `new-${Date.now()}`,
                 week: 1,
                 day: 'Monday',
                 type: 'assignment',
                 title: '',
-                description: ''
+                description: '',
+                required_focus_hours: 0,
+                requirements: []
               })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Module
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {curriculum.map((item) => (
-                <Card key={item.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <Badge variant="outline">{item.day}</Badge>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteCurriculum(item.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <CardTitle className="text-lg">W{item.week}: {item.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
-                    <Badge variant="secondary" className="mt-2">{item.type}</Badge>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* Grouped Curriculum */}
+            {[...new Set(curriculum.map(i => i.week))].sort((a, b) => a - b).map(week => (
+              <div key={week} className="space-y-6">
+                <div className="flex items-center gap-4">
+                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
+                     W{week}
+                   </div>
+                   <h3 className="text-xl font-bold">Week {week}</h3>
+                   <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {curriculum
+                    .filter(i => i.week === week)
+                    .sort((a, b) => {
+                      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monthly', 'Final'];
+                      return days.indexOf(a.day) - days.indexOf(b.day);
+                    })
+                    .map((item) => (
+                    <Card key={item.id} className="group hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <div className="flex gap-2">
+                            <Badge variant="outline">{item.day}</Badge>
+                            {item.required_focus_hours ? (
+                              <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {item.required_focus_hours}h Focus
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <CardTitle className="text-lg leading-tight mt-2">{item.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-xs text-muted-foreground line-clamp-3 mb-4">{item.description}</p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <Badge variant="secondary" className="text-[10px] uppercase">{item.type.replace('_', ' ')}</Badge>
+                          {item.type === 'quiz' && (
+                            <span className="text-[10px] text-muted-foreground font-medium">
+                              {((item.content as any[])?.length || 0)} Questions
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {curriculum.length === 0 && (
+              <div className="text-center py-20 border-2 border-dashed rounded-xl">
+                <p className="text-muted-foreground italic">No curriculum modules found. Start by adding your first module!</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
@@ -481,7 +526,7 @@ export default function AdminDashboard() {
               <DialogTitle>{editingItem?.id?.startsWith('new-') ? 'Add' : 'Edit'} Module</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Week</Label>
                   <Input
@@ -502,9 +547,21 @@ export default function AdminDashboard() {
                     <option>Wednesday</option>
                     <option>Thursday</option>
                     <option>Friday</option>
+                    <option>Saturday</option>
+                    <option>Sunday</option>
                     <option>Monthly</option>
                     <option>Final</option>
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Focus Hours</Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 1.5"
+                    step="0.5"
+                    value={editingItem?.required_focus_hours || 0}
+                    onChange={(e) => setEditingItem(prev => ({ ...prev!, required_focus_hours: parseFloat(e.target.value) }))}
+                  />
                 </div>
               </div>
 
@@ -576,22 +633,89 @@ export default function AdminDashboard() {
               </div>
 
               {(editingItem?.type === 'quiz' || editingItem?.type === 'grand_test') && (
-                <div className="space-y-2 border-t pt-4">
-                  <Label>Quiz Content (JSON format)</Label>
-                  <Textarea
-                    className="font-mono text-xs h-40"
-                    placeholder='[{"question": "...", "options": ["...", "..."], "correctAnswer": 0}]'
-                    value={JSON.stringify(editingItem?.content, null, 2)}
-                    onChange={(e) => {
-                      try {
-                        const content = JSON.parse(e.target.value);
-                        setEditingItem(prev => ({ ...prev!, content }));
-                      } catch {
-                        // Keep typing...
-                      }
-                    }}
-                  />
-                  <p className="text-[10px] text-muted-foreground">Ensure the JSON is valid to save quiz questions.</p>
+                <div className="space-y-6 border-t pt-4">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-lg font-bold">Quiz Builder</Label>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      const questions = (editingItem?.content as any[]) || [];
+                      setEditingItem(prev => ({
+                        ...prev!,
+                        content: [...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]
+                      }));
+                    }}>
+                      <Plus className="h-4 w-4 mr-2" /> Add Question
+                    </Button>
+                  </div>
+
+                  <div className="space-y-8">
+                    {((editingItem?.content as any[]) || []).map((q, qIdx) => (
+                      <div key={qIdx} className="p-4 border rounded-lg bg-muted/30 relative group/q">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8 text-destructive opacity-0 group-hover/q:opacity-100 transition-opacity"
+                          onClick={() => {
+                            const questions = (editingItem?.content as any[]).filter((_, i) => i !== qIdx);
+                            setEditingItem(prev => ({ ...prev!, content: questions }));
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs uppercase text-muted-foreground">Question {qIdx + 1}</Label>
+                            <Input
+                              placeholder="Enter question text..."
+                              value={q.question}
+                              onChange={(e) => {
+                                const questions = [...(editingItem?.content as any[])];
+                                questions[qIdx] = { ...questions[qIdx], question: e.target.value };
+                                setEditingItem(prev => ({ ...prev!, content: questions }));
+                              }}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {(q.options || ['', '', '', '']).map((opt: string, oIdx: number) => (
+                              <div key={oIdx} className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    name={`q-${qIdx}`}
+                                    checked={q.correctAnswer === oIdx}
+                                    onChange={() => {
+                                      const questions = [...(editingItem?.content as any[])];
+                                      questions[qIdx] = { ...questions[qIdx], correctAnswer: oIdx };
+                                      setEditingItem(prev => ({ ...prev!, content: questions }));
+                                    }}
+                                  />
+                                  <Input
+                                    placeholder={`Option ${oIdx + 1}`}
+                                    className="h-8 text-xs"
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const questions = [...(editingItem?.content as any[])];
+                                      const options = [...questions[qIdx].options];
+                                      options[oIdx] = e.target.value;
+                                      questions[qIdx] = { ...questions[qIdx], options };
+                                      setEditingItem(prev => ({ ...prev!, content: questions }));
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {(!editingItem?.content || (editingItem.content as any[]).length === 0) && (
+                      <div className="text-center py-8 bg-muted/50 rounded-lg border border-dashed">
+                        <p className="text-sm text-muted-foreground italic">No questions added yet.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -7,11 +7,12 @@ export interface QuizQuestion {
 export interface CurriculumItem {
   id: string;
   week: number;
-  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Monthly' | 'Final';
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday' | 'Monthly' | 'Final';
   type: 'assignment' | 'task' | 'quiz' | 'grand_test' | 'final_project';
   title: string;
   description: string;
   requirements?: string[];
+  required_focus_hours?: number;
   content?: QuizQuestion[] | string[];
 }
 
@@ -21,6 +22,8 @@ export const DAY_MAP: Record<string, number> = {
   'Wednesday': 3,
   'Thursday': 4,
   'Friday': 5,
+  'Saturday': 6,
+  'Sunday': 7,
   'Monthly': 5,
   'Final': 5
 };
@@ -58,6 +61,7 @@ export const CURRICULUM: CurriculumItem[] = [
     type: 'assignment',
     title: 'Semantic HTML & Personal Portfolio Structure',
     description: 'Create a multi-page website structure using only semantic HTML5 tags.',
+    required_focus_hours: 1,
     requirements: [
         'Use at least 10 different semantic HTML5 tags',
         'Implement a contact form with at least 5 different input types',
