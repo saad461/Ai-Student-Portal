@@ -75,7 +75,6 @@ export default function DashboardPage() {
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [punchInLoading, setPunchInLoading] = useState(false);
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
   const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
 
@@ -171,82 +170,6 @@ export default function DashboardPage() {
 
     fetchData();
   }, [fetchData]);
-
-  const handlePunchIn = async () => {
-    setPunchInLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !profile) {
-        setPunchInLoading(false);
-        return;
-      }
-
-      const today = new Date().toLocaleDateString('en-CA');
-
-      // 1. Record in attendance table
-      const { error: attendanceError } = await supabase.from('attendance').insert({
-        student_id: user.id,
-        date: today
-      });
-
-      if (attendanceError) {
-        console.error('Attendance Error:', attendanceError);
-        alert('Failed to punch in: ' + attendanceError.message);
-        setPunchInLoading(false);
-        return;
-      }
-
-      // 2. Calculate new streak
-      let newStreak = 1;
-      if (profile.last_punch_in) {
-        const lastPunch = new Date(profile.last_punch_in);
-        const todayDate = new Date();
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        const isConsecutive = lastPunch.toDateString() === yesterday.toDateString();
-        const isToday = lastPunch.toDateString() === todayDate.toDateString();
-
-        if (isConsecutive) {
-          newStreak = (profile.current_streak || 0) + 1;
-        } else if (isToday) {
-          newStreak = profile.current_streak || 1;
-        }
-      }
-
-      // 3. Update profile with points and streak
-      const { error: profileUpdateError } = await supabase.from('profiles').update({
-        current_streak: newStreak,
-        total_points: (profile.total_points || 0) + 10,
-        last_punch_in: new Date().toISOString()
-      }).eq('id', user.id);
-
-      if (profileUpdateError) {
-        console.error('Profile Update Error:', profileUpdateError);
-        alert('Punch in recorded, but failed to update streak/points.');
-      } else {
-        setHasPunchedInToday(true);
-
-        // Effects
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#f97316', '#10b981', '#3b82f6']
-        });
-
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2012/2012-preview.mp3');
-        audio.play().catch(() => {});
-
-        fetchData();
-      }
-    } catch (err) {
-      console.error('Punch In Exception:', err);
-      alert('An unexpected error occurred during punch in.');
-    } finally {
-      setPunchInLoading(false);
-    }
-  };
 
   const handleSubmitAssignment = async (curriculumId: string) => {
     setSubmittingId(curriculumId);
@@ -354,16 +277,15 @@ export default function DashboardPage() {
               <p className="text-muted-foreground">Week {currentWeek} &bull; Day {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
             </div>
             <div className="flex gap-4">
-              {!hasPunchedInToday && (
-                <Button onClick={handlePunchIn} disabled={punchInLoading} className="bg-orange-500 hover:bg-orange-600">
-                  <Clock className="mr-2 h-4 w-4" />
-                  {punchInLoading ? 'Punching In...' : 'Punch In Today'}
-                </Button>
-              )}
-              {hasPunchedInToday && (
+              {hasPunchedInToday ? (
                 <Badge variant="outline" className="text-green-600 border-green-600 px-4 py-2">
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Punched In
+                  Attendance Marked
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-orange-600 border-orange-600 px-4 py-2">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Attendance Pending
                 </Badge>
               )}
               {profile?.is_pro && (

@@ -28,8 +28,9 @@ export function Sidebar() {
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Curriculum', href: '/curriculum', icon: BookOpen },
+    { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'GitHub Mastery', href: '/github-mastery', icon: Github },
-    { name: 'Deep Work', href: '/timer', icon: Clock },
+    { name: 'Deep Work', href: '/timer', icon: Zap },
   ];
 
   return (
