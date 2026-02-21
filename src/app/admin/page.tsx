@@ -39,6 +39,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { seedCurriculum } from '@/lib/seed-curriculum';
 import { CurriculumItem } from '@/lib/curriculum';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface StudentProfile {
   id: string;
@@ -62,8 +70,9 @@ export default function AdminDashboard() {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [messages, setMessages] = useState<SorryMessage[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'curriculum'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'curriculum' | 'attendance'>('students');
 
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
@@ -92,6 +101,13 @@ export default function AdminDashboard() {
       .order('day', { ascending: true });
 
     setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+
+    const { data: attendanceData } = await supabase
+      .from('attendance')
+      .select('*, profiles(full_name)')
+      .order('date', { ascending: false });
+
+    setAttendance(attendanceData || []);
 
     setLoading(false);
   }, []);
@@ -200,6 +216,12 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('curriculum')}
           >
             <BookOpen className="h-4 w-4 mr-2" /> Curriculum
+          </Button>
+          <Button
+            variant={activeTab === 'attendance' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('attendance')}
+          >
+            <Clock className="h-4 w-4 mr-2" /> Attendance
           </Button>
           <Button
             variant="ghost"
@@ -352,7 +374,7 @@ export default function AdminDashboard() {
             </Card>
           </div>
         </div>
-        ) : (
+        ) : activeTab === 'curriculum' ? (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Manage Course Modules</h2>
@@ -392,6 +414,62 @@ export default function AdminDashboard() {
                 </Card>
               ))}
             </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+             <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Attendance Log
+                </h2>
+                <div className="flex gap-4 items-center">
+                   <div className="text-sm text-muted-foreground">
+                      Total Records: <span className="font-bold text-slate-900 dark:text-white">{attendance.length}</span>
+                   </div>
+                </div>
+             </div>
+
+             <Card>
+               <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50 dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900">
+                        <TableHead className="px-6 py-4 text-slate-500 uppercase text-[10px] font-bold">Student Name</TableHead>
+                        <TableHead className="px-6 py-4 text-slate-500 uppercase text-[10px] font-bold">Date</TableHead>
+                        <TableHead className="px-6 py-4 text-slate-500 uppercase text-[10px] font-bold">Time Recorded</TableHead>
+                        <TableHead className="px-6 py-4 text-slate-500 uppercase text-[10px] font-bold">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendance.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="px-6 py-8 text-center text-slate-500 italic">No attendance records found.</TableCell>
+                        </TableRow>
+                      ) : (
+                        attendance.map((record) => (
+                          <TableRow key={record.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors border-slate-100 dark:border-slate-800">
+                            <TableCell className="px-6 py-4 font-medium text-slate-900 dark:text-white">{record.profiles?.full_name}</TableCell>
+                            <TableCell className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                              {new Date(record.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </TableCell>
+                            <TableCell className="px-6 py-4 text-slate-500">
+                              {new Date(record.punched_in_at).toLocaleTimeString()}
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              <Badge className="bg-green-600">PRESENT</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+               </CardContent>
+             </Card>
           </div>
         )}
 
