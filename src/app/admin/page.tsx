@@ -22,8 +22,10 @@ import {
   Database,
   BookOpen,
   Edit,
-  Trash2
+  Trash2,
+  FilePlus
 } from 'lucide-react';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -186,7 +188,7 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        <div className="flex gap-4 border-b pb-4">
+        <div className="flex gap-4 border-b pb-4 overflow-x-auto">
           <Button
             variant={activeTab === 'students' ? 'default' : 'ghost'}
             onClick={() => setActiveTab('students')}
@@ -198,6 +200,14 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab('curriculum')}
           >
             <BookOpen className="h-4 w-4 mr-2" /> Curriculum
+          </Button>
+          <Button
+            variant="ghost"
+            asChild
+          >
+            <Link href="/admin/applications">
+              <FilePlus className="h-4 w-4 mr-2" /> Student Applications
+            </Link>
           </Button>
         </div>
 
