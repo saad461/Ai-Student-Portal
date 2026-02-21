@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { seedCurriculum } from '@/lib/seed-curriculum';
+import { seedCurriculumAction } from './actions';
 import { CurriculumItem } from '@/lib/curriculum';
 import {
   Table,
@@ -193,7 +193,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={async () => {
-              const res = await seedCurriculum();
+              const res = await seedCurriculumAction();
               if (res.success) alert('Curriculum seeded successfully!');
               else alert('Error seeding curriculum: ' + JSON.stringify(res.error));
             }}>
