@@ -36,13 +36,15 @@ import {
   ArrowRight,
   Send,
   BookOpen,
-  Zap
+  Zap,
+  Video
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AICodeReview } from '@/components/code-review';
 import { QuizModule } from '@/components/quiz';
 import { PENALTY_TASKS } from '@/lib/penalties';
 import confetti from 'canvas-confetti';
+import Link from 'next/link';
 
 interface Profile {
   id: string;
@@ -397,11 +399,15 @@ export default function DashboardPage() {
                         <div className={cn(
                           "h-2",
                           item.type === 'assignment' ? "bg-blue-500" :
-                          item.type === 'task' ? "bg-orange-500" : "bg-green-500"
+                          item.type === 'task' ? "bg-orange-500" :
+                          item.type === 'lecture' ? "bg-purple-500" : "bg-green-500"
                         )} />
                         <CardHeader>
                           <div className="flex justify-between items-start">
-                            <Badge variant="outline" className="mb-2">{item.type.replace('_', ' ')}</Badge>
+                            <Badge variant="outline" className="mb-2 flex items-center gap-1">
+                              {item.type === 'lecture' && <Video className="h-3 w-3" />}
+                              {item.type.replace('_', ' ')}
+                            </Badge>
                             {isSubmitted && <Badge className="bg-green-600">Completed</Badge>}
                           </div>
                           <div className="flex items-center gap-2">
@@ -483,6 +489,13 @@ export default function DashboardPage() {
                                   <Button className="w-full" onClick={() => setActiveQuiz(item)}>
                                     Start Weekly Quiz
                                     <ArrowRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                                ) : item.type === 'lecture' ? (
+                                  <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                                    <Link href={`/lecture/${item.id}`}>
+                                      Open Lecture Room
+                                      <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Link>
                                   </Button>
                                 ) : (
                                   <div className="w-full space-y-4">
