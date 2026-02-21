@@ -575,6 +575,7 @@ export default function AdminDashboard() {
                   <option value="assignment">Assignment</option>
                   <option value="task">Task</option>
                   <option value="quiz">Quiz</option>
+                  <option value="lecture">Lecture</option>
                   <option value="grand_test">Grand Test</option>
                   <option value="final_project">Final Project</option>
                 </select>

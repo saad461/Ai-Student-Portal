@@ -55,7 +55,7 @@ create table curriculum (
   id text primary key,
   week integer not null,
   day text not null check (day in ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monthly', 'Final')),
-  type text not null check (type in ('assignment', 'task', 'quiz', 'grand_test', 'final_project')),
+  type text not null check (type in ('assignment', 'task', 'quiz', 'lecture', 'grand_test', 'final_project')),
   title text not null,
   description text not null,
   requirements text[],

@@ -36,7 +36,8 @@ import {
   ArrowRight,
   Send,
   BookOpen,
-  Zap
+  Zap,
+  Video
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AICodeReview } from '@/components/code-review';
@@ -86,6 +87,7 @@ export default function DashboardPage() {
 
   const [isUnlocking, setIsUnlocking] = useState<string | null>(null);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
+  const [markingLecture, setMarkingLecture] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -250,6 +252,26 @@ export default function DashboardPage() {
     setCompletingTaskId(null);
   };
 
+  const handleMarkLectureDone = async (curriculumId: string) => {
+    setMarkingLecture(curriculumId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase.from('submissions').upsert({
+        student_id: user.id,
+        curriculum_id: curriculumId,
+        status: 'submitted'
+      });
+
+      if (!error) {
+        fetchData();
+      }
+    } finally {
+      setMarkingLecture(null);
+    }
+  };
+
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -397,11 +419,15 @@ export default function DashboardPage() {
                         <div className={cn(
                           "h-2",
                           item.type === 'assignment' ? "bg-blue-500" :
-                          item.type === 'task' ? "bg-orange-500" : "bg-green-500"
+                          item.type === 'task' ? "bg-orange-500" :
+                          item.type === 'lecture' ? "bg-purple-500" : "bg-green-500"
                         )} />
                         <CardHeader>
                           <div className="flex justify-between items-start">
-                            <Badge variant="outline" className="mb-2">{item.type.replace('_', ' ')}</Badge>
+                            <Badge variant="outline" className="mb-2 flex items-center gap-1">
+                              {item.type === 'lecture' && <Video className="h-3 w-3" />}
+                              {item.type.replace('_', ' ')}
+                            </Badge>
                             {isSubmitted && <Badge className="bg-green-600">Completed</Badge>}
                           </div>
                           <div className="flex items-center gap-2">
@@ -483,6 +509,15 @@ export default function DashboardPage() {
                                   <Button className="w-full" onClick={() => setActiveQuiz(item)}>
                                     Start Weekly Quiz
                                     <ArrowRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                                ) : item.type === 'lecture' ? (
+                                  <Button
+                                    className="w-full"
+                                    onClick={() => handleMarkLectureDone(item.id)}
+                                    disabled={markingLecture === item.id}
+                                  >
+                                    {markingLecture === item.id ? 'Marking...' : 'Mark Lecture as Completed'}
+                                    <CheckCircle2 className="ml-2 h-4 w-4" />
                                   </Button>
                                 ) : (
                                   <div className="w-full space-y-4">

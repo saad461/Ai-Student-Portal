@@ -6,7 +6,7 @@ import { CurriculumItem, isDayUnlocked, isDayPassed } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { CheckCircle2, AlertCircle, BookOpen, Lock } from 'lucide-react';
+import { CheckCircle2, AlertCircle, BookOpen, Lock, Video } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import {
@@ -35,6 +35,7 @@ export default function CurriculumPage() {
 
   const [sorryMessage, setSorryMessage] = useState('');
   const [sendingSorry, setSendingSorry] = useState<string | null>(null);
+  const [markingLecture, setMarkingLecture] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -103,6 +104,26 @@ export default function CurriculumPage() {
     }
   };
 
+  const handleMarkLectureDone = async (curriculumId: string) => {
+    setMarkingLecture(curriculumId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase.from('submissions').upsert({
+        student_id: user.id,
+        curriculum_id: curriculumId,
+        status: 'submitted'
+      });
+
+      if (!error) {
+        fetchData();
+      }
+    } finally {
+      setMarkingLecture(null);
+    }
+  };
+
   const weeks = Array.from({ length: 24 }, (_, i) => i + 1);
 
   if (loading) return (
@@ -164,6 +185,10 @@ export default function CurriculumPage() {
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="mb-2">{item.day}</Badge>
+                                <Badge variant="outline" className="mb-2 uppercase text-[10px] flex items-center gap-1">
+                                  {item.type === 'lecture' && <Video className="h-2 w-2" />}
+                                  {item.type}
+                                </Badge>
                                 {!isUnlocked && <Lock className="h-3 w-3 text-muted-foreground mb-2" />}
                             </div>
                             {isSubmitted && <CheckCircle2 className="h-5 w-5 text-green-500" />}
@@ -188,6 +213,20 @@ export default function CurriculumPage() {
                             </div>
                           )}
                         </CardContent>
+                        {!isSubmitted && isUnlocked && item.type === 'lecture' && (
+                           <CardFooter className="pt-0 pb-6 px-6">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
+                                onClick={() => handleMarkLectureDone(item.id)}
+                                disabled={markingLecture === item.id}
+                              >
+                                {markingLecture === item.id ? 'Marking...' : 'Mark as Viewed'}
+                              </Button>
+                           </CardFooter>
+                        )}
+
                         {isMissed && (
                           <CardFooter className="pt-0 pb-6 px-6">
                             <Dialog>

@@ -8,7 +8,7 @@ export interface CurriculumItem {
   id: string;
   week: number;
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday' | 'Monthly' | 'Final';
-  type: 'assignment' | 'task' | 'quiz' | 'grand_test' | 'final_project';
+  type: 'assignment' | 'task' | 'quiz' | 'lecture' | 'grand_test' | 'final_project';
   title: string;
   description: string;
   requirements?: string[];
