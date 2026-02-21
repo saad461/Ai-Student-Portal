@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CheckCircle2, AlertCircle, BookOpen, Lock, Video } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -35,7 +36,6 @@ export default function CurriculumPage() {
 
   const [sorryMessage, setSorryMessage] = useState('');
   const [sendingSorry, setSendingSorry] = useState<string | null>(null);
-  const [markingLecture, setMarkingLecture] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -101,26 +101,6 @@ export default function CurriculumPage() {
       setSorryMessage('');
       setSendingSorry(null);
       fetchData();
-    }
-  };
-
-  const handleMarkLectureDone = async (curriculumId: string) => {
-    setMarkingLecture(curriculumId);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.from('submissions').upsert({
-        student_id: user.id,
-        curriculum_id: curriculumId,
-        status: 'submitted'
-      });
-
-      if (!error) {
-        fetchData();
-      }
-    } finally {
-      setMarkingLecture(null);
     }
   };
 
@@ -216,13 +196,14 @@ export default function CurriculumPage() {
                         {!isSubmitted && isUnlocked && item.type === 'lecture' && (
                            <CardFooter className="pt-0 pb-6 px-6">
                               <Button
+                                asChild
                                 variant="outline"
                                 size="sm"
                                 className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
-                                onClick={() => handleMarkLectureDone(item.id)}
-                                disabled={markingLecture === item.id}
                               >
-                                {markingLecture === item.id ? 'Marking...' : 'Mark as Viewed'}
+                                <Link href={`/lecture/${item.id}`}>
+                                  Open Lecture Room
+                                </Link>
                               </Button>
                            </CardFooter>
                         )}

@@ -44,6 +44,7 @@ import { AICodeReview } from '@/components/code-review';
 import { QuizModule } from '@/components/quiz';
 import { PENALTY_TASKS } from '@/lib/penalties';
 import confetti from 'canvas-confetti';
+import Link from 'next/link';
 
 interface Profile {
   id: string;
@@ -87,7 +88,6 @@ export default function DashboardPage() {
 
   const [isUnlocking, setIsUnlocking] = useState<string | null>(null);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
-  const [markingLecture, setMarkingLecture] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -250,26 +250,6 @@ export default function DashboardPage() {
       fetchData();
     }
     setCompletingTaskId(null);
-  };
-
-  const handleMarkLectureDone = async (curriculumId: string) => {
-    setMarkingLecture(curriculumId);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.from('submissions').upsert({
-        student_id: user.id,
-        curriculum_id: curriculumId,
-        status: 'submitted'
-      });
-
-      if (!error) {
-        fetchData();
-      }
-    } finally {
-      setMarkingLecture(null);
-    }
   };
 
   if (loading) return (
@@ -511,13 +491,11 @@ export default function DashboardPage() {
                                     <ArrowRight className="ml-2 h-4 w-4" />
                                   </Button>
                                 ) : item.type === 'lecture' ? (
-                                  <Button
-                                    className="w-full"
-                                    onClick={() => handleMarkLectureDone(item.id)}
-                                    disabled={markingLecture === item.id}
-                                  >
-                                    {markingLecture === item.id ? 'Marking...' : 'Mark Lecture as Completed'}
-                                    <CheckCircle2 className="ml-2 h-4 w-4" />
+                                  <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                                    <Link href={`/lecture/${item.id}`}>
+                                      Open Lecture Room
+                                      <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Link>
                                   </Button>
                                 ) : (
                                   <div className="w-full space-y-4">

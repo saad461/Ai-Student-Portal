@@ -61,6 +61,9 @@ create table curriculum (
   requirements text[],
   required_focus_hours numeric default 0,
   content jsonb, -- For quiz questions or detailed task instructions
+  theory_content text,
+  attached_assignment jsonb,
+  attached_quiz jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -72,6 +75,7 @@ create table submissions (
   github_url text,
   status text default 'submitted' check (status in ('submitted', 'reviewed', 'extra_task_assigned')),
   feedback text,
+  completion_data jsonb, -- For tracking lecture sub-tasks completion
   submitted_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique(student_id, curriculum_id)
 );

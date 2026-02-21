@@ -597,6 +597,163 @@ export default function AdminDashboard() {
                 />
               </div>
 
+              {editingItem?.type === 'lecture' && (
+                <div className="space-y-6 border-t pt-4">
+                   <div className="space-y-2">
+                      <Label className="text-lg font-bold text-primary">Lecture: Theory Content</Label>
+                      <Textarea
+                        placeholder="Explain the concepts here... (Markdown supported)"
+                        className="h-60"
+                        value={editingItem.theory_content || ''}
+                        onChange={(e) => setEditingItem(prev => ({ ...prev!, theory_content: e.target.value }))}
+                      />
+                   </div>
+
+                   <div className="space-y-4 p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-900/10">
+                      <Label className="text-lg font-bold text-blue-700 dark:text-blue-400">Lecture: Attached Assignment</Label>
+                      <div className="space-y-4">
+                         <div className="space-y-2">
+                            <Label>Assignment Title</Label>
+                            <Input
+                               value={editingItem.attached_assignment?.title || ''}
+                               onChange={(e) => setEditingItem(prev => ({
+                                  ...prev!,
+                                  attached_assignment: { ...prev!.attached_assignment!, title: e.target.value }
+                               }))}
+                            />
+                         </div>
+                         <div className="space-y-2">
+                            <Label>Assignment Description</Label>
+                            <Textarea
+                               value={editingItem.attached_assignment?.description || ''}
+                               onChange={(e) => setEditingItem(prev => ({
+                                  ...prev!,
+                                  attached_assignment: { ...prev!.attached_assignment!, description: e.target.value }
+                               }))}
+                            />
+                         </div>
+                         <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                               <Label>Assignment Requirements</Label>
+                               <Button size="sm" variant="ghost" onClick={() => {
+                                  const reqs = editingItem.attached_assignment?.requirements || [];
+                                  setEditingItem(prev => ({
+                                     ...prev!,
+                                     attached_assignment: { ...prev!.attached_assignment!, requirements: [...reqs, ''] }
+                                  }));
+                               }}>
+                                  <Plus className="h-3 w-3 mr-1" /> Add Requirement
+                               </Button>
+                            </div>
+                            <div className="space-y-2">
+                               {(editingItem.attached_assignment?.requirements || []).map((req, idx) => (
+                                  <div key={idx} className="flex gap-2">
+                                     <Input
+                                        value={req}
+                                        onChange={(e) => {
+                                           const newReqs = [...(editingItem.attached_assignment?.requirements || [])];
+                                           newReqs[idx] = e.target.value;
+                                           setEditingItem(prev => ({
+                                              ...prev!,
+                                              attached_assignment: { ...prev!.attached_assignment!, requirements: newReqs }
+                                           }));
+                                        }}
+                                     />
+                                     <Button variant="ghost" size="icon" onClick={() => {
+                                        const newReqs = (editingItem.attached_assignment?.requirements || []).filter((_, i) => i !== idx);
+                                        setEditingItem(prev => ({
+                                           ...prev!,
+                                           attached_assignment: { ...prev!.attached_assignment!, requirements: newReqs }
+                                        }));
+                                     }}>
+                                        <Trash2 className="h-4 w-4" />
+                                     </Button>
+                                  </div>
+                               ))}
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="space-y-6 border-t pt-4">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-lg font-bold text-green-700 dark:text-green-400">Lecture: Attached Quiz</Label>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          const questions = editingItem.attached_quiz || [];
+                          setEditingItem(prev => ({
+                            ...prev!,
+                            attached_quiz: [...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]
+                          }));
+                        }}>
+                          <Plus className="h-4 w-4 mr-2" /> Add Quiz Question
+                        </Button>
+                      </div>
+
+                      <div className="space-y-8">
+                        {(editingItem.attached_quiz || []).map((q, qIdx) => (
+                          <div key={qIdx} className="p-4 border rounded-lg bg-muted/30 relative group/q">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 h-8 w-8 text-destructive"
+                              onClick={() => {
+                                const questions = editingItem.attached_quiz!.filter((_, i) => i !== qIdx);
+                                setEditingItem(prev => ({ ...prev!, attached_quiz: questions }));
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs uppercase text-muted-foreground">Question {qIdx + 1}</Label>
+                                <Input
+                                  placeholder="Enter question text..."
+                                  value={q.question}
+                                  onChange={(e) => {
+                                    const questions = [...editingItem.attached_quiz!];
+                                    questions[qIdx] = { ...questions[qIdx], question: e.target.value };
+                                    setEditingItem(prev => ({ ...prev!, attached_quiz: questions }));
+                                  }}
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                {(q.options || ['', '', '', '']).map((opt, oIdx) => (
+                                  <div key={oIdx} className="flex items-center gap-2">
+                                    <input
+                                      type="radio"
+                                      name={`lecture-q-${qIdx}`}
+                                      checked={q.correctAnswer === oIdx}
+                                      onChange={() => {
+                                        const questions = [...editingItem.attached_quiz!];
+                                        questions[qIdx] = { ...questions[qIdx], correctAnswer: oIdx };
+                                        setEditingItem(prev => ({ ...prev!, attached_quiz: questions }));
+                                      }}
+                                    />
+                                    <Input
+                                      placeholder={`Option ${oIdx + 1}`}
+                                      className="h-8 text-xs"
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const questions = [...editingItem.attached_quiz!];
+                                        const options = [...questions[qIdx].options];
+                                        options[oIdx] = e.target.value;
+                                        questions[qIdx] = { ...questions[qIdx], options };
+                                        setEditingItem(prev => ({ ...prev!, attached_quiz: questions }));
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                   </div>
+                </div>
+              )}
+
               <div className="space-y-2 border-t pt-4">
                 <Label className="flex justify-between items-center">
                   Requirements

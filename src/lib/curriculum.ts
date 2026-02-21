@@ -14,6 +14,13 @@ export interface CurriculumItem {
   requirements?: string[];
   required_focus_hours?: number;
   content?: QuizQuestion[] | string[];
+  theory_content?: string;
+  attached_assignment?: {
+    title: string;
+    description: string;
+    requirements: string[];
+  };
+  attached_quiz?: QuizQuestion[];
 }
 
 export const DAY_MAP: Record<string, number> = {
