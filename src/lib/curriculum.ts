@@ -35,6 +35,67 @@ export const DAY_MAP: Record<string, number> = {
   'Final': 5
 };
 
+export interface Module {
+  id: number;
+  title: string;
+  description: string;
+  weeks: number[];
+}
+
+export const MODULES: Module[] = [
+  { id: 1, title: 'Web Foundations', description: 'Semantic HTML, CSS Layouts, and Responsive Design.', weeks: [1, 2, 3] },
+  { id: 2, title: 'JavaScript Mastery', description: 'Logic, DOM Manipulation, and ES6+ Features.', weeks: [4, 5, 6] },
+  { id: 3, title: 'Frontend Patterns & UI', description: 'Modern CSS, Accessibility, and Component Design.', weeks: [7, 8, 9] },
+  { id: 4, title: 'React Excellence', description: 'Hooks, State Management, and Routing.', weeks: [10, 11, 12] },
+  { id: 5, title: 'Backend & Database Architecture', description: 'Postgres, Supabase, and API Design.', weeks: [13, 14, 15] },
+  { id: 6, title: 'Fullstack Engineering', description: 'Auth, Realtime, and Server-side Rendering.', weeks: [16, 17, 18] },
+  { id: 7, title: 'Advanced Systems & Security', description: 'TypeScript, Testing, and DevOps.', weeks: [19, 20, 21] },
+  { id: 8, title: 'Professional Capstone', description: 'Final project development and deployment.', weeks: [22, 23, 24] },
+];
+
+export const getSortedCurriculum = () => {
+  return [...CURRICULUM].sort((a, b) => {
+    if (a.week !== b.week) return a.week - b.week;
+    const dayOrder = (DAY_MAP[a.day] || 0) - (DAY_MAP[b.day] || 0);
+    if (dayOrder !== 0) return dayOrder;
+    // Tie-breaker for same day (e.g. multiple items on same day)
+    return a.id.localeCompare(b.id);
+  });
+};
+
+export const isItemUnlocked = (
+  itemId: string,
+  submissions: any[],
+  totalFocusHours: number,
+  enrollmentWeek: number
+) => {
+  const sorted = getSortedCurriculum();
+  const index = sorted.findIndex(item => item.id === itemId);
+  if (index === -1) return false;
+
+  // Sync Point Logic: Max 1 module ahead of enrollmentWeek
+  const currentItem = sorted[index];
+  const itemModule = MODULES.find(m => m.weeks.includes(currentItem.week))?.id || 1;
+  const targetModule = Math.ceil(enrollmentWeek / 3);
+  const isWithinSyncRange = itemModule <= targetModule + 1;
+
+  if (!isWithinSyncRange) return false;
+
+  // First item is always unlocked if within sync range
+  if (index === 0) return true;
+
+  // Strict Sequential Check: ALL previous items must be submitted
+  // For efficiency, we just check if the immediate previous item is submitted
+  // because the previous item itself would only be submitted if ITS previous was, and so on.
+  const prevItem = sorted[index - 1];
+  const prevSubmitted = submissions.some(s =>
+    s.curriculum_id === prevItem.id &&
+    (s.status === 'submitted' || s.status === 'reviewed')
+  );
+
+  return prevSubmitted;
+};
+
 export const isDayUnlocked = (week: number, day: string, currentWeek: number) => {
   const today = new Date();
   let currentDayNum = today.getDay();
@@ -65,16 +126,21 @@ export const CURRICULUM: CurriculumItem[] = [
     id: 'w1-mon',
     week: 1,
     day: 'Monday',
-    type: 'assignment',
-    title: 'Semantic HTML & Personal Portfolio Structure',
-    description: 'Create a multi-page website structure using only semantic HTML5 tags.',
+    type: 'lecture',
+    title: 'Modern Web Architecture & Semantic HTML',
+    description: 'Understand how the modern web works and why semantic structure is the foundation of professional engineering.',
     required_focus_hours: 1,
-    requirements: [
-        'Use at least 10 different semantic HTML5 tags',
-        'Implement a contact form with at least 5 different input types',
-        'Create a navigation system between three separate HTML files',
-        'Ensure 100% Lighthouse accessibility score'
-    ]
+    theory_content: 'In this lecture, we explore the DOM, browser rendering, and the importance of semantic HTML. Professional developers use semantic tags to provide meaning to their content, improving SEO and accessibility.',
+    attached_assignment: {
+        title: 'Semantic Portfolio Structure',
+        description: 'Create a multi-page website structure using only semantic HTML5 tags.',
+        requirements: [
+            'Use at least 10 different semantic HTML5 tags',
+            'Implement a contact form with at least 5 different input types',
+            'Create a navigation system between three separate HTML files',
+            'Ensure 100% Lighthouse accessibility score'
+        ]
+    }
   },
   {
     id: 'w1-tue',
@@ -285,15 +351,21 @@ export const CURRICULUM: CurriculumItem[] = [
     id: 'w4-mon',
     week: 4,
     day: 'Monday',
-    type: 'assignment',
-    title: 'Dynamic Quiz Application',
-    description: 'Create an engine that renders quizzes dynamically.',
-    requirements: [
-        'Render questions dynamically from a JS object',
-        'Implement a progress bar and score tracker',
-        'Show a "Results" screen with breakdown',
-        'Ensure UI is responsive and accessible'
-    ]
+    type: 'lecture',
+    title: 'DOM Architecture & High-Performance UI',
+    description: 'Learn how to manipulate the DOM efficiently and build dynamic interfaces.',
+    required_focus_hours: 2,
+    theory_content: 'This lecture covers the Event Loop, DOM Tree, and efficient rendering patterns. Understanding how the browser paints and reflows is critical for performance.',
+    attached_assignment: {
+        title: 'Dynamic Quiz Application',
+        description: 'Create an engine that renders quizzes dynamically.',
+        requirements: [
+            'Render questions dynamically from a JS object',
+            'Implement a progress bar and score tracker',
+            'Show a "Results" screen with breakdown',
+            'Ensure UI is responsive and accessible'
+        ]
+    }
   },
   {
     id: 'w4-tue',
