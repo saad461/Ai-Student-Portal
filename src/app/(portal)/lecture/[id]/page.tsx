@@ -43,6 +43,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [lecture, setLecture] = useState<CurriculumItem | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [submittingId, setSubmittingId] = useState(false);
   const [githubUrl, setGithubUrl] = useState('');
 
@@ -72,6 +73,16 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       setGithubUrl(subData.github_url || '');
     }
 
+    const { data: focusData } = await supabase
+      .from('focus_sessions')
+      .select('duration_seconds')
+      .eq('student_id', user.id);
+
+    if (focusData) {
+      const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+      setTotalFocusMinutes(Math.round(totalSeconds / 60));
+    }
+
     setLoading(false);
   }, [resolvedParams.id]);
 
@@ -91,7 +102,8 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     const isQuizDone = lecture?.attached_quiz ? updatedData.quiz_completed : true;
     const isAssignmentDone = lecture?.attached_assignment ? (updatedData.assignment_submitted || !!githubUrl) : true;
 
-    const isFullyCompleted = isTheoryDone && isQuizDone && isAssignmentDone;
+    const isFocusMet = (totalFocusMinutes / 60) >= (lecture?.required_focus_hours || 0);
+    const isFullyCompleted = isTheoryDone && isQuizDone && isAssignmentDone && isFocusMet;
 
     const { error } = await supabase.from('submissions').upsert({
       student_id: user.id,
@@ -132,7 +144,8 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const isTheoryDone = submission?.completion_data?.theory_read;
   const isAssignmentDone = submission?.completion_data?.assignment_submitted || !!submission?.github_url;
   const isQuizDone = submission?.completion_data?.quiz_completed;
-  const isFullyDone = isTheoryDone && (lecture.attached_assignment ? isAssignmentDone : true) && (lecture.attached_quiz ? isQuizDone : true);
+  const isFocusMet = (totalFocusMinutes / 60) >= (lecture.required_focus_hours || 0);
+  const isFullyDone = isTheoryDone && (lecture.attached_assignment ? isAssignmentDone : true) && (lecture.attached_quiz ? isQuizDone : true) && isFocusMet;
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -301,6 +314,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               </div>
             )}
           </div>
+
+          {!isFocusMet && isTheoryDone && (
+            <Alert className="bg-amber-50 border-amber-200 text-amber-800">
+               <Clock className="h-4 w-4" />
+               <AlertTitle className="font-bold uppercase tracking-widest text-[10px]">Focus Prerequisite</AlertTitle>
+               <AlertDescription className="text-xs">
+                 This lecture requires <strong>{lecture.required_focus_hours} hours</strong> of deep work to master.
+                 You currently have <strong>{Math.round(totalFocusMinutes / 60 * 10) / 10} hours</strong>.
+               </AlertDescription>
+            </Alert>
+          )}
 
           {isFullyDone && (
             <div className="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 flex flex-col items-center text-center gap-4">
