@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Database,
   BookOpen,
+  Github,
   Edit,
   Trash2,
   FilePlus
@@ -39,7 +40,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { seedCurriculumAction } from './actions';
-import { CurriculumItem } from '@/lib/curriculum';
+import { CurriculumItem, MODULES } from '@/lib/curriculum';
 import {
   Table,
   TableBody,
@@ -392,68 +393,76 @@ export default function AdminDashboard() {
                 required_focus_hours: 0,
                 requirements: []
               })}>
-                <Plus className="h-4 w-4 mr-2" /> Add Module
+                <Plus className="h-4 w-4 mr-2" /> Add Item
               </Button>
             </div>
 
-            {/* Grouped Curriculum */}
-            {[...new Set(curriculum.map(i => i.week))].sort((a, b) => a - b).map(week => (
-              <div key={week} className="space-y-6">
-                <div className="flex items-center gap-4">
-                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
-                     W{week}
-                   </div>
-                   <h3 className="text-xl font-bold">Week {week}</h3>
-                   <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
-                </div>
+            <div className="flex flex-col gap-10">
+              {MODULES.map(module => (
+                <div key={module.id} className="space-y-6">
+                  <div className="flex items-center gap-4">
+                     <div className="h-10 w-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                       {module.id}
+                     </div>
+                     <div>
+                       <h3 className="text-xl font-bold uppercase tracking-tight">{module.title}</h3>
+                       <p className="text-xs text-muted-foreground">Weeks {module.weeks.join(', ')} &bull; {module.description}</p>
+                     </div>
+                     <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {curriculum
-                    .filter(i => i.week === week)
-                    .sort((a, b) => {
-                      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monthly', 'Final'];
-                      return days.indexOf(a.day) - days.indexOf(b.day);
-                    })
-                    .map((item) => (
-                    <Card key={item.id} className="group hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex gap-2">
-                            <Badge variant="outline">{item.day}</Badge>
-                            {item.required_focus_hours ? (
-                              <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {item.required_focus_hours}h Focus
-                              </Badge>
-                            ) : null}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {curriculum
+                      .filter(i => module.weeks.includes(i.week))
+                      .sort((a, b) => {
+                        if (a.week !== b.week) return a.week - b.week;
+                        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monthly', 'Final'];
+                        return days.indexOf(a.day) - days.indexOf(b.day);
+                      })
+                      .map((item) => (
+                      <Card key={item.id} className="group hover:shadow-md transition-shadow border-muted/50">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div className="flex flex-wrap gap-1">
+                              <Badge variant="outline" className="text-[9px] px-1 h-4">W{item.week}</Badge>
+                              <Badge variant="outline" className="text-[9px] px-1 h-4">{item.day}</Badge>
+                              {item.required_focus_hours ? (
+                                <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none text-[9px] px-1 h-4">
+                                  <Clock className="h-2 w-2 mr-1" />
+                                  {item.required_focus_hours}h
+                                </Badge>
+                              ) : null}
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingItem(item)}>
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <CardTitle className="text-sm font-bold leading-tight mt-2">{item.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 mb-4">{item.description}</p>
+                          <div className="flex items-center justify-between mt-auto">
+                            <Badge variant="secondary" className="text-[9px] uppercase px-1 h-4">{item.type.replace('_', ' ')}</Badge>
+                            {(item.theory_content || item.attached_quiz || item.attached_assignment) && (
+                              <div className="flex gap-1">
+                                {item.theory_content && <FileText className="h-3 w-3 text-purple-500" />}
+                                {item.attached_assignment && <Github className="h-3 w-3 text-blue-500" />}
+                                {item.attached_quiz && <Check className="h-3 w-3 text-green-500" />}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        <CardTitle className="text-lg leading-tight mt-2">{item.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-xs text-muted-foreground line-clamp-3 mb-4">{item.description}</p>
-                        <div className="flex items-center justify-between mt-auto">
-                          <Badge variant="secondary" className="text-[10px] uppercase">{item.type.replace('_', ' ')}</Badge>
-                          {item.type === 'quiz' && (
-                            <span className="text-[10px] text-muted-foreground font-medium">
-                              {((item.content as any[])?.length || 0)} Questions
-                            </span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
             {curriculum.length === 0 && (
               <div className="text-center py-20 border-2 border-dashed rounded-xl">

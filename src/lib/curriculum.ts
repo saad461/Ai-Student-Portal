@@ -53,8 +53,8 @@ export const MODULES: Module[] = [
   { id: 8, title: 'Professional Capstone', description: 'Final project development and deployment.', weeks: [22, 23, 24] },
 ];
 
-export const getSortedCurriculum = () => {
-  return [...CURRICULUM].sort((a, b) => {
+export const getSortedCurriculum = (items: CurriculumItem[] = CURRICULUM) => {
+  return [...items].sort((a, b) => {
     if (a.week !== b.week) return a.week - b.week;
     const dayOrder = (DAY_MAP[a.day] || 0) - (DAY_MAP[b.day] || 0);
     if (dayOrder !== 0) return dayOrder;
@@ -67,9 +67,10 @@ export const isItemUnlocked = (
   itemId: string,
   submissions: any[],
   totalFocusHours: number,
-  enrollmentWeek: number
+  enrollmentWeek: number,
+  allCurriculum: CurriculumItem[] = CURRICULUM
 ) => {
-  const sorted = getSortedCurriculum();
+  const sorted = getSortedCurriculum(allCurriculum);
   const index = sorted.findIndex(item => item.id === itemId);
   if (index === -1) return false;
 
@@ -81,7 +82,11 @@ export const isItemUnlocked = (
 
   if (!isWithinSyncRange) return false;
 
-  // First item is always unlocked if within sync range
+  // Focus Hours Check for the current item
+  const isFocusMet = totalFocusHours >= (currentItem.required_focus_hours || 0);
+  if (!isFocusMet) return false;
+
+  // First item is always unlocked if within sync range and focus is met
   if (index === 0) return true;
 
   // Strict Sequential Check: ALL previous items must be submitted

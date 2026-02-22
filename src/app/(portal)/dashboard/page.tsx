@@ -75,6 +75,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [extraTasks, setExtraTasks] = useState<ExtraTask[]>([]);
+  const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [totalFocusHours, setTotalFocusHours] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -129,6 +130,12 @@ export default function DashboardPage() {
       .eq('student_id', user.id);
 
     setSubmissions((subs as unknown as Submission[]) || []);
+
+    const { data: curriculumData } = await supabase
+      .from('curriculum')
+      .select('*');
+
+    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
 
     const { data: tasks } = await supabase
       .from('extra_tasks')
@@ -195,7 +202,7 @@ export default function DashboardPage() {
   };
 
   const currentWeek = getCurrentWeek();
-  const sortedCurriculum = getSortedCurriculum();
+  const sortedCurriculum = getSortedCurriculum(curriculum);
   const nextItem = sortedCurriculum.find(item =>
     !submissions.some(s => s.curriculum_id === item.id && (s.status === 'submitted' || s.status === 'reviewed'))
   );
@@ -340,7 +347,7 @@ export default function DashboardPage() {
               ) : (
                 <Card className={cn(
                   "transition-all border-2 shadow-xl overflow-hidden",
-                  isItemUnlocked(nextItem.id, submissions, totalFocusHours, currentWeek) ? "border-primary/20" : "opacity-60 grayscale bg-muted/20"
+                  isItemUnlocked(nextItem.id, submissions, totalFocusHours, currentWeek, curriculum) ? "border-primary/20" : "opacity-60 grayscale bg-muted/20"
                 )}>
                   <div className="h-2 w-full bg-primary/20">
                      <div className="h-full bg-primary" style={{ width: `${(1 / moduleItems.length) * 100}%` }} />
@@ -371,20 +378,34 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    {!isItemUnlocked(nextItem.id, submissions, totalFocusHours, currentWeek) && nextItem.required_focus_hours && (
-                      <div className="p-4 bg-amber-50 rounded-xl border-2 border-amber-200 text-sm text-amber-700 flex items-center gap-3">
-                         <div className="bg-amber-100 p-2 rounded-lg">
-                           <Clock className="h-5 w-5" />
-                         </div>
-                         <div>
-                           <p className="font-bold uppercase text-[10px]">Focus Lock Active</p>
-                           <p>Requires {nextItem.required_focus_hours}h focus. Current: {Math.round(totalFocusHours * 10) / 10}h.</p>
-                         </div>
+                    {!isItemUnlocked(nextItem.id, submissions, totalFocusHours, currentWeek, curriculum) && (
+                      <div className="space-y-3">
+                        {totalFocusHours < (nextItem.required_focus_hours || 0) ? (
+                          <div className="p-4 bg-amber-50 rounded-xl border-2 border-amber-200 text-sm text-amber-700 flex items-center gap-3">
+                            <div className="bg-amber-100 p-2 rounded-lg">
+                              <Clock className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="font-bold uppercase text-[10px]">Focus Lock Active</p>
+                              <p>Requires {nextItem.required_focus_hours}h focus. Current: {Math.round(totalFocusHours * 10) / 10}h.</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200 text-sm text-blue-700 flex items-center gap-3">
+                            <div className="bg-blue-100 p-2 rounded-lg">
+                              <Lock className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="font-bold uppercase text-[10px]">Sequential Lock</p>
+                              <p>Complete the previous task to unlock this one.</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
                   <CardFooter className="bg-muted/30 pt-6">
-                    {isItemUnlocked(nextItem.id, submissions, totalFocusHours, currentWeek) ? (
+                    {isItemUnlocked(nextItem.id, submissions, totalFocusHours, currentWeek, curriculum) ? (
                        <div className="w-full">
                          {nextItem.type === 'quiz' ? (
                             <Button className="w-full h-14 text-lg font-black uppercase tracking-[0.1em] shadow-lg shadow-primary/20" onClick={() => setActiveQuiz(nextItem)}>

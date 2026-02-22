@@ -154,7 +154,7 @@ export default function CurriculumPage() {
     </div>
   );
 
-  const sortedCurriculum = getSortedCurriculum();
+  const sortedCurriculum = getSortedCurriculum(curriculum);
   const totalFocusHours = totalFocusMinutes / 60;
 
   // Group curriculum items by module
@@ -166,7 +166,7 @@ export default function CurriculumPage() {
     const progress = items.length > 0 ? (completedItems.length / items.length) * 100 : 0;
 
     // A module is unlocked if its first item is unlocked
-    const isUnlocked = items.length > 0 ? isItemUnlocked(items[0].id, submissions, totalFocusHours, currentWeek) : false;
+    const isUnlocked = items.length > 0 ? isItemUnlocked(items[0].id, submissions, totalFocusHours, currentWeek, curriculum) : false;
 
     return {
       ...module,
@@ -305,7 +305,7 @@ export default function CurriculumPage() {
                           <div className="grid grid-cols-1 gap-2">
                             {module.items.map((item) => {
                               const isSubmitted = submissions.some(s => s.curriculum_id === item.id && (s.status === 'submitted' || s.status === 'reviewed'));
-                              const isUnlocked = isItemUnlocked(item.id, submissions, totalFocusHours, currentWeek);
+                              const isUnlocked = isItemUnlocked(item.id, submissions, totalFocusHours, currentWeek, curriculum);
                               const isLecture = item.type === 'lecture';
 
                               return (
