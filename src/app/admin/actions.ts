@@ -19,6 +19,9 @@ export async function seedCurriculumAction() {
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+  // Delete all existing curriculum items before seeding new ones
+  await supabaseAdmin.from('curriculum').delete().neq('id', 'placeholder-to-delete-all');
+
   const { data, error } = await supabaseAdmin
     .from('curriculum')
     .upsert(CURRICULUM);
