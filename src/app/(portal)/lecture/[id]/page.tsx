@@ -518,9 +518,9 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                          size="lg"
                          className="h-14 px-8 rounded-2xl font-bold"
                          onClick={handleAssignmentSubmit}
-                         disabled={!githubUrl.includes('github.com') || submittingId}
+                         disabled={!githubUrl.includes('github.com') || submittingId || isFullyDone}
                        >
-                         {submittingId ? 'Submitting...' : isAssignmentDone ? 'Update Submission' : 'Ship Assignment'}
+                         {submittingId ? 'Submitting...' : isAssignmentDone ? 'Submission Locked' : 'Ship Assignment'}
                          {!submittingId && <Send className="ml-2 h-4 w-4" />}
                        </Button>
                     </div>
