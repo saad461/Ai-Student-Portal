@@ -84,6 +84,7 @@ create table curriculum (
   description text not null,
   requirements text[],
   required_focus_hours numeric default 0,
+  required_read_minutes integer default 0,
   content jsonb, -- For quiz questions or detailed task instructions
   theory_content text,
   video_url text,

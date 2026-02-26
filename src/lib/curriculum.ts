@@ -27,6 +27,7 @@ export interface CurriculumItem {
   description: string;
   requirements?: string[];
   required_focus_hours?: number;
+  required_read_minutes?: number;
   content?: QuizQuestion[] | string[];
   theory_content?: string;
   video_url?: string;
@@ -53,6 +54,14 @@ export const DAY_MAP: Record<string, number> = {
   'Sunday': 7,
   'Monthly': 5,
   'Final': 5
+};
+
+export const getEstimatedReadTime = (content: string | undefined): number => {
+  if (!content) return 0;
+  // Average reading speed: 200 words per minute
+  const words = content.trim().split(/\s+/).length;
+  const minutes = Math.ceil(words / 200);
+  return minutes;
 };
 
 export const isItemUnlocked = (

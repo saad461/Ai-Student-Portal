@@ -6,7 +6,7 @@ import { CurriculumItem, isItemUnlocked, Module, SubModule } from '@/lib/curricu
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { CheckCircle2, Lock, Video } from 'lucide-react';
+import { CheckCircle2, Lock, Video, FileText, Layers } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -186,7 +186,13 @@ export default function CurriculumPage() {
                           <div className="flex items-center gap-2">
                               <Badge variant="secondary" className="mb-2">{item.day}</Badge>
                               <Badge variant="outline" className="mb-2 uppercase text-[10px] flex items-center gap-1">
-                                {item.type === 'lecture' && <Video className="h-2 w-2" />}
+                                {item.type === 'lecture' && (
+                                  <>
+                                    {item.video_url && item.theory_content ? <Layers className="h-2 w-2" /> :
+                                     item.video_url ? <Video className="h-2 w-2" /> :
+                                     <FileText className="h-2 w-2" />}
+                                  </>
+                                )}
                                 {item.type}
                               </Badge>
                           </div>
@@ -257,7 +263,13 @@ export default function CurriculumPage() {
                                       <div className="flex items-center gap-2">
                                           <Badge variant="secondary" className="mb-2">{item.day}</Badge>
                                           <Badge variant="outline" className="mb-2 uppercase text-[10px] flex items-center gap-1">
-                                            {item.type === 'lecture' && <Video className="h-2 w-2" />}
+                                            {item.type === 'lecture' && (
+                                              <>
+                                                {item.video_url && item.theory_content ? <Layers className="h-2 w-2" /> :
+                                                 item.video_url ? <Video className="h-2 w-2" /> :
+                                                 <FileText className="h-2 w-2" />}
+                                              </>
+                                            )}
                                             {item.type}
                                           </Badge>
                                           {!isUnlocked && <Lock className="h-3 w-3 text-muted-foreground mb-2" />}
@@ -375,7 +387,13 @@ export default function CurriculumPage() {
                             <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="mb-2">{item.day}</Badge>
                                 <Badge variant="outline" className="mb-2 uppercase text-[10px] flex items-center gap-1">
-                                  {item.type === 'lecture' && <Video className="h-2 w-2" />}
+                                  {item.type === 'lecture' && (
+                                    <>
+                                      {item.video_url && item.theory_content ? <Layers className="h-2 w-2" /> :
+                                       item.video_url ? <Video className="h-2 w-2" /> :
+                                       <FileText className="h-2 w-2" />}
+                                    </>
+                                  )}
                                   {item.type}
                                 </Badge>
                                 {!isUnlocked && <Lock className="h-3 w-3 text-muted-foreground mb-2" />}
