@@ -26,6 +26,7 @@ create table profiles (
   total_points integer default 0,
   role text default 'student' check (role in ('student', 'admin')),
   last_punch_in timestamp with time zone,
+  agreed_tc boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -53,6 +54,9 @@ create table applications (
 -- Curriculum table: Stores assignments, tasks, and quizzes
 create table curriculum (
   id text primary key,
+  module_index integer,
+  module_name text,
+  lecture_index integer,
   week integer not null,
   day text not null check (day in ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monthly', 'Final')),
   type text not null check (type in ('assignment', 'task', 'quiz', 'lecture', 'grand_test', 'final_project')),
@@ -73,7 +77,7 @@ create table submissions (
   student_id uuid references profiles(id) on delete cascade not null,
   curriculum_id text not null,
   github_url text,
-  status text default 'submitted' check (status in ('submitted', 'reviewed', 'extra_task_assigned')),
+  status text default 'submitted' check (status in ('submitted', 'reviewed', 'extra_task_assigned', 'skipped')),
   feedback text,
   completion_data jsonb, -- For tracking lecture sub-tasks completion
   submitted_at timestamp with time zone default timezone('utc'::text, now()) not null,
