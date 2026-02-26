@@ -86,6 +86,7 @@ create table curriculum (
   required_focus_hours numeric default 0,
   content jsonb, -- For quiz questions or detailed task instructions
   theory_content text,
+  video_url text,
   attached_assignment jsonb,
   attached_quiz jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null

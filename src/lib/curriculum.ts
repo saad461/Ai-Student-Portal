@@ -29,6 +29,7 @@ export interface CurriculumItem {
   required_focus_hours?: number;
   content?: QuizQuestion[] | string[];
   theory_content?: string;
+  video_url?: string;
   attached_assignment?: {
     title: string;
     description: string;

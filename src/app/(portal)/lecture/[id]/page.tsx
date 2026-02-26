@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, use } from 'react';
+import { useState, useEffect, useCallback, use, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
 import { CurriculumItem, QuizQuestion } from '@/lib/curriculum';
@@ -19,12 +19,18 @@ import {
   FileText,
   HelpCircle,
   Lock,
-  ArrowRight
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Submission {
   id: string;
@@ -41,16 +47,24 @@ interface Submission {
 export default function LecturePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const [lecture, setLecture] = useState<CurriculumItem | null>(null);
+  const [allCurriculum, setAllCurriculum] = useState<CurriculumItem[]>([]);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState(false);
   const [githubUrl, setGithubUrl] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'theory' | 'assignment' | 'quiz'>('theory');
+  const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz'>('theory');
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    const { data: allCurr } = await supabase.from('curriculum').select('*');
+    const sorted = (allCurr || []).sort((a, b) => {
+      if (a.week !== b.week) return a.week - b.week;
+      return (a.lecture_index || 0) - (b.lecture_index || 0);
+    });
+    setAllCurriculum(sorted as CurriculumItem[]);
 
     const { data: lectureData } = await supabase
       .from('curriculum')
@@ -58,7 +72,12 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       .eq('id', resolvedParams.id)
       .single();
 
-    setLecture(lectureData as unknown as CurriculumItem);
+    if (lectureData) {
+      setLecture(lectureData as unknown as CurriculumItem);
+      if (!lectureData.theory_content && lectureData.video_url) {
+        setActiveTab('video');
+      }
+    }
 
     const { data: subData } = await supabase
       .from('submissions')
@@ -126,66 +145,180 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     await updateCompletion({ quiz_completed: true, quiz_score: score });
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
-  if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;
-
   const isTheoryDone = submission?.completion_data?.theory_read;
   const isAssignmentDone = submission?.completion_data?.assignment_submitted || !!submission?.github_url;
   const isQuizDone = submission?.completion_data?.quiz_completed;
-  const isFullyDone = isTheoryDone && (lecture.attached_assignment ? isAssignmentDone : true) && (lecture.attached_quiz ? isQuizDone : true);
+  const isFullyDone = isTheoryDone && (lecture?.attached_assignment ? isAssignmentDone : true) && (lecture?.attached_quiz ? isQuizDone : true);
+
+  const prevItem = useMemo(() => {
+    if (!lecture) return null;
+    const idx = allCurriculum.findIndex(i => i.id === lecture.id);
+    return idx > 0 ? allCurriculum[idx - 1] : null;
+  }, [allCurriculum, lecture]);
+
+  const nextItem = useMemo(() => {
+    if (!lecture) return null;
+    const idx = allCurriculum.findIndex(i => i.id === lecture.id);
+    return idx < allCurriculum.length - 1 ? allCurriculum[idx + 1] : null;
+  }, [allCurriculum, lecture]);
+
+  const isNextUnlocked = useMemo(() => {
+    if (!nextItem) return false;
+    return isFullyDone; // Current must be done to unlock next
+  }, [nextItem, isFullyDone]);
+
+  const headings = useMemo(() => {
+    if (!lecture?.theory_content) return [];
+    const lines = lecture.theory_content.split('\n');
+    return lines
+      .filter(line => line.startsWith('#'))
+      .map(line => {
+        const level = line.match(/^#+/)?.[0].length || 0;
+        const text = line.replace(/^#+\s*/, '').trim();
+        const id = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+        return { level, text, id };
+      });
+  }, [lecture?.theory_content]);
+
+  if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
+  if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;
+
+  const MarkdownComponents = {
+    h1: ({ children }: any) => {
+      const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
+      return <h1 id={id} className="text-3xl font-bold mt-8 mb-4 border-b pb-2">{children}</h1>;
+    },
+    h2: ({ children }: any) => {
+      const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
+      return <h2 id={id} className="text-2xl font-bold mt-6 mb-3">{children}</h2>;
+    },
+    h3: ({ children }: any) => {
+      const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
+      return <h3 id={id} className="text-xl font-bold mt-4 mb-2">{children}</h3>;
+    },
+    p: ({ children }: any) => <p className="text-lg leading-relaxed mb-4 text-slate-700 dark:text-slate-300">{children}</p>,
+    ul: ({ children }: any) => <ul className="list-disc pl-6 mb-4 space-y-2">{children}</ul>,
+    ol: ({ children }: any) => <ol className="list-decimal pl-6 mb-4 space-y-2">{children}</ol>,
+    li: ({ children }: any) => <li className="text-lg">{children}</li>,
+    code: ({ inline, children }: any) => (
+      inline
+        ? <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>
+        : <pre className="bg-slate-900 text-slate-50 p-4 rounded-lg overflow-x-auto my-4 font-mono text-sm"><code>{children}</code></pre>
+    ),
+    blockquote: ({ children }: any) => <blockquote className="border-l-4 border-primary/30 pl-4 italic my-4">{children}</blockquote>,
+  };
+
+  const getEmbedUrl = (url: string) => {
+    if (url.includes('youtube.com/watch?v=')) {
+      return url.replace('watch?v=', 'embed/');
+    }
+    if (url.includes('youtu.be/')) {
+      return url.replace('youtu.be/', 'youtube.com/embed/');
+    }
+    if (url.includes('vimeo.com/')) {
+      return url.replace('vimeo.com/', 'player.vimeo.com/video/');
+    }
+    return url;
+  };
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       <Sidebar />
-      <main className="flex-1 p-8">
-        <div className="max-w-4xl mx-auto space-y-8">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-8 pb-20">
 
-          <Link href="/curriculum" className="text-sm flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
-             <ArrowRight className="h-4 w-4 rotate-180" /> Back to Curriculum
-          </Link>
+          <div className="flex justify-between items-center">
+            <Link href="/curriculum" className="text-sm flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+               <ArrowRight className="h-4 w-4 rotate-180" /> Back to Curriculum
+            </Link>
+
+            <div className="flex gap-2">
+               {prevItem && (
+                 <Button variant="outline" size="sm" asChild>
+                   <Link href={`/lecture/${prevItem.id}`}>
+                     <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                   </Link>
+                 </Button>
+               )}
+               {nextItem && (
+                 <Button
+                   variant={isNextUnlocked ? "default" : "secondary"}
+                   size="sm"
+                   asChild={isNextUnlocked}
+                   disabled={!isNextUnlocked}
+                   className={!isNextUnlocked ? "opacity-50 cursor-not-allowed" : ""}
+                 >
+                   {isNextUnlocked ? (
+                     <Link href={`/lecture/${nextItem.id}`}>
+                       Next <ChevronRight className="h-4 w-4 ml-1" />
+                     </Link>
+                   ) : (
+                     <span className="flex items-center">
+                       Next <Lock className="h-3 w-3 ml-1" />
+                     </span>
+                   )}
+                 </Button>
+               )}
+            </div>
+          </div>
 
           <header className="space-y-4">
             <div className="flex justify-between items-start">
-               <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Badge variant="outline" className="bg-purple-100 text-purple-700 border-none uppercase text-[10px]">Lecture</Badge>
-                    <Badge variant="secondary">Week {lecture.week} • {lecture.day}</Badge>
+               <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-primary/10 text-primary border-none uppercase text-[10px] font-bold">Lecture</Badge>
+                    <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-wider">Module {lecture.week} • {lecture.day}</Badge>
                   </div>
-                  <h1 className="text-4xl font-extrabold tracking-tight">{lecture.title}</h1>
+                  <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">{lecture.title}</h1>
                </div>
                {isFullyDone && (
-                 <Badge className="bg-green-600 px-4 py-2 text-sm gap-2">
+                 <Badge className="bg-green-600 px-4 py-2 text-sm gap-2 animate-in zoom-in-50 duration-500">
                    <CheckCircle2 className="h-4 w-4" /> COMPLETED
                  </Badge>
                )}
             </div>
-            <p className="text-xl text-muted-foreground">{lecture.description}</p>
+            <p className="text-xl text-muted-foreground max-w-3xl leading-relaxed">{lecture.description}</p>
           </header>
 
-          <div className="flex gap-4 border-b pb-1 overflow-x-auto no-scrollbar">
-            <Button
-              variant="ghost"
-              className={cn(
-                "rounded-none border-b-2 px-6",
-                activeTab === 'theory' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
-              )}
-              onClick={() => setActiveTab('theory')}
-            >
-              <FileText className="h-4 w-4 mr-2" /> 1. Theory
-              {isTheoryDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
-            </Button>
+          <div className="flex gap-2 border-b pb-px overflow-x-auto no-scrollbar sticky top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10 pt-2">
+            {lecture.theory_content && (
+              <Button
+                variant="ghost"
+                className={cn(
+                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  activeTab === 'theory' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
+                )}
+                onClick={() => setActiveTab('theory')}
+              >
+                <FileText className="h-4 w-4 mr-2" /> Theory
+                {isTheoryDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
+              </Button>
+            )}
+
+            {lecture.video_url && (
+              <Button
+                variant="ghost"
+                className={cn(
+                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  activeTab === 'video' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
+                )}
+                onClick={() => setActiveTab('video')}
+              >
+                <Video className="h-4 w-4 mr-2" /> Video Lecture
+              </Button>
+            )}
 
             {lecture.attached_assignment && (
               <Button
                 variant="ghost"
                 className={cn(
-                  "rounded-none border-b-2 px-6",
+                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
                   activeTab === 'assignment' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
                   !isTheoryDone && "opacity-50 cursor-not-allowed"
                 )}
                 onClick={() => isTheoryDone && setActiveTab('assignment')}
               >
-                <Github className="h-4 w-4 mr-2" /> 2. Assignment
+                <Github className="h-4 w-4 mr-2" /> Assignment
                 {isAssignmentDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
               </Button>
             )}
@@ -194,92 +327,157 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <Button
                 variant="ghost"
                 className={cn(
-                  "rounded-none border-b-2 px-6",
+                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
                   activeTab === 'quiz' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
                   (!isTheoryDone || (lecture.attached_assignment && !isAssignmentDone)) && "opacity-50 cursor-not-allowed"
                 )}
                 onClick={() => isTheoryDone && (!lecture.attached_assignment || isAssignmentDone) && setActiveTab('quiz')}
               >
-                <HelpCircle className="h-4 w-4 mr-2" /> 3. Quiz
+                <HelpCircle className="h-4 w-4 mr-2" /> Quiz
                 {isQuizDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
               </Button>
             )}
           </div>
 
-          <div className="min-h-[400px]">
+          <div className="min-h-[500px] animate-in fade-in duration-700">
             {activeTab === 'theory' && (
-              <Card className="border-none shadow-none bg-transparent">
-                <CardContent className="p-0 space-y-6">
-                  <div className="prose prose-slate dark:prose-invert max-w-none bg-white dark:bg-slate-900 p-8 rounded-2xl border shadow-sm">
-                    {lecture.theory_content ? (
-                      <div className="whitespace-pre-wrap text-lg leading-relaxed">
-                        {lecture.theory_content}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-3 space-y-8">
+                  {headings.length > 0 && (
+                    <Card className="bg-slate-100/50 dark:bg-slate-900/50 border-none shadow-none p-6">
+                      <div className="flex items-center gap-2 mb-4 text-slate-500 font-bold uppercase text-xs tracking-widest">
+                        <List className="h-4 w-4" /> Table of Contents
                       </div>
-                    ) : (
-                      <div className="py-20 text-center text-muted-foreground italic">
-                        No theory content provided for this lecture yet.
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                        {headings.map((h, i) => (
+                          <a
+                            key={i}
+                            href={`#${h.id}`}
+                            className={cn(
+                              "text-sm hover:text-primary transition-colors flex items-center gap-2",
+                              h.level === 1 ? "font-bold" : "pl-4 text-muted-foreground"
+                            )}
+                          >
+                            <span className="h-1 w-1 rounded-full bg-slate-300" />
+                            {h.text}
+                          </a>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                  {!isTheoryDone && (
-                    <Button onClick={handleMarkTheoryRead} size="lg" className="w-full h-16 text-lg font-bold">
-                      I have read and understood the theory
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
+                    </Card>
                   )}
-                </CardContent>
-              </Card>
+
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardContent className="p-0 space-y-6">
+                      <div className="max-w-none bg-white dark:bg-slate-900 p-8 md:p-12 rounded-3xl border shadow-sm transition-all hover:shadow-md">
+                        {lecture.theory_content ? (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={MarkdownComponents as any}
+                          >
+                            {lecture.theory_content}
+                          </ReactMarkdown>
+                        ) : (
+                          <div className="py-20 text-center text-muted-foreground italic">
+                            No theory content provided for this lecture yet.
+                          </div>
+                        )}
+                      </div>
+                      {!isTheoryDone && (
+                        <Button onClick={handleMarkTheoryRead} size="lg" className="w-full h-20 text-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all active:scale-95">
+                          I have mastered the theory
+                          <ArrowRight className="ml-3 h-6 w-6" />
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="hidden lg:block space-y-6">
+                   <div className="sticky top-24">
+                      <Card className="bg-primary/5 border-primary/10 overflow-hidden">
+                        <CardHeader className="p-4 bg-primary/10">
+                          <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                             <Clock className="h-3 w-3" /> Focus Hours
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                           <div className="text-2xl font-black">{lecture.required_focus_hours || 0}h</div>
+                           <p className="text-[10px] text-muted-foreground uppercase mt-1">Required focus for this lecture</p>
+                        </CardContent>
+                      </Card>
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'video' && (
+              <div className="space-y-6 animate-in zoom-in-95 duration-500">
+                <div className="aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white dark:border-slate-800">
+                  <iframe
+                    src={getEmbedUrl(lecture.video_url || '')}
+                    className="w-full h-full"
+                    allowFullScreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  />
+                </div>
+                <Card className="bg-white dark:bg-slate-900 border shadow-sm p-6 rounded-2xl">
+                   <h3 className="text-xl font-bold mb-2">Video Overview</h3>
+                   <p className="text-muted-foreground">{lecture.description}</p>
+                </Card>
+              </div>
             )}
 
             {activeTab === 'assignment' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                <Card className="border-blue-200 bg-blue-50/30 dark:bg-blue-950/10">
-                   <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Github className="h-5 w-5 text-blue-600" />
+              <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto">
+                <Card className="border-blue-200 bg-blue-50/30 dark:bg-blue-950/10 rounded-3xl overflow-hidden border-none shadow-lg">
+                   <CardHeader className="bg-blue-600 text-white p-8">
+                      <CardTitle className="flex items-center gap-3 text-2xl">
+                        <Github className="h-8 w-8" />
                         {lecture.attached_assignment?.title || 'Lecture Assignment'}
                       </CardTitle>
-                      <CardDescription>{lecture.attached_assignment?.description}</CardDescription>
+                      <CardDescription className="text-blue-100 text-lg">{lecture.attached_assignment?.description}</CardDescription>
                    </CardHeader>
-                   <CardContent>
+                   <CardContent className="p-8 space-y-6 bg-white dark:bg-slate-900">
                       {lecture.attached_assignment?.requirements && (
-                        <div className="space-y-3">
-                           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Key Requirements:</p>
-                           <ul className="space-y-2">
+                        <div className="space-y-4">
+                           <p className="text-sm font-black uppercase tracking-widest text-slate-400">Implementation Checklist:</p>
+                           <div className="grid grid-cols-1 gap-3">
                               {lecture.attached_assignment.requirements.map((req, i) => (
-                                <li key={i} className="text-sm flex items-start gap-2">
-                                   <div className="h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                                   {req}
-                                </li>
+                                <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                   <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i+1}</div>
+                                   <span className="text-slate-700 dark:text-slate-300 font-medium">{req}</span>
+                                </div>
                               ))}
-                           </ul>
+                           </div>
                         </div>
                       )}
                    </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Submit your work</CardTitle>
-                    <CardDescription>Provide the GitHub repository URL containing your implementation.</CardDescription>
+                <Card className="rounded-3xl border-none shadow-xl overflow-hidden">
+                  <CardHeader className="p-8 pb-4">
+                    <CardTitle className="text-xl">Submission Portal</CardTitle>
+                    <CardDescription>Deploy your code to GitHub and share the repository link below.</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-4">
+                  <CardContent className="p-8 pt-0">
+                    <div className="flex flex-col md:flex-row gap-4">
                        <div className="relative flex-1">
-                          <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Github className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                           <Input
-                            placeholder="https://github.com/your-username/repo-name"
-                            className="pl-10"
+                            placeholder="https://github.com/username/repository"
+                            className="pl-12 h-14 rounded-2xl border-slate-200 focus:ring-primary"
                             value={githubUrl}
                             onChange={(e) => setGithubUrl(e.target.value)}
-                            disabled={isAssignmentDone && !isFullyDone}
+                            disabled={isAssignmentDone && isFullyDone}
                           />
                        </div>
                        <Button
+                         size="lg"
+                         className="h-14 px-8 rounded-2xl font-bold"
                          onClick={handleAssignmentSubmit}
                          disabled={!githubUrl.includes('github.com') || submittingId}
                        >
-                         {submittingId ? '...' : isAssignmentDone ? 'Update URL' : 'Submit Assignment'}
+                         {submittingId ? 'Submitting...' : isAssignmentDone ? 'Update Submission' : 'Ship Assignment'}
                          {!submittingId && <Send className="ml-2 h-4 w-4" />}
                        </Button>
                     </div>
@@ -289,14 +487,16 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             )}
 
             {activeTab === 'quiz' && (
-              <div className="animate-in zoom-in-95 duration-500">
+              <div className="animate-in zoom-in-95 duration-500 max-w-2xl mx-auto">
                 {lecture.attached_quiz ? (
-                  <QuizModule
-                    questions={lecture.attached_quiz}
-                    onComplete={handleQuizComplete}
-                  />
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border">
+                    <QuizModule
+                      questions={lecture.attached_quiz}
+                      onComplete={handleQuizComplete}
+                    />
+                  </div>
                 ) : (
-                  <div className="text-center py-20 text-muted-foreground">No quiz attached to this lecture.</div>
+                  <div className="text-center py-20 text-muted-foreground bg-slate-100 rounded-3xl border-2 border-dashed">No quiz required for this lecture.</div>
                 )}
               </div>
             )}
