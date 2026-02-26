@@ -176,7 +176,7 @@ export default function DashboardPage() {
         curriculum_id: curriculumId,
         github_url: githubUrl,
         status: 'submitted'
-      });
+      }, { onConflict: 'student_id,curriculum_id' });
 
       if (error) {
         alert('Failed to submit: ' + error.message);
@@ -204,7 +204,7 @@ export default function DashboardPage() {
         curriculum_id: itemId,
         status: 'skipped',
         feedback: 'Skipped by student using PIN'
-      });
+      }, { onConflict: 'student_id,curriculum_id' });
       setSkippingId(null);
       setSkipPin('');
       fetchData();
@@ -489,7 +489,12 @@ export default function DashboardPage() {
                onComplete={async (score) => {
                  const { data: { user } } = await supabase.auth.getUser();
                  if (user) {
-                   await supabase.from('submissions').upsert({ student_id: user.id, curriculum_id: activeQuiz.id, status: 'submitted', feedback: `Quiz score: ${score}` });
+                   await supabase.from('submissions').upsert({
+                     student_id: user.id,
+                     curriculum_id: activeQuiz.id,
+                     status: 'submitted',
+                     feedback: `Quiz score: ${score}`
+                   }, { onConflict: 'student_id,curriculum_id' });
                    fetchData();
                  }
                  setTimeout(() => setActiveQuiz(null), 3000);

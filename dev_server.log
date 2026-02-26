@@ -39,3 +39,7 @@ https://nextjs.org/telemetry
  GET /admin/login 200 in 38ms (compile: 5ms, render: 33ms)
  POST /admin/login 200 in 35ms (compile: 3ms, render: 32ms)
  GET /admin 200 in 21ms (compile: 3ms, render: 18ms)
+ GET /login 200 in 511ms (compile: 81ms, render: 429ms)
+ GET /admin 200 in 101ms (compile: 11ms, render: 90ms)
+ GET /admin/login 200 in 40ms (compile: 10ms, render: 30ms)
+ GET /lecture/m1-l1 200 in 1540ms (compile: 829ms, render: 711ms)

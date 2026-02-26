@@ -117,8 +117,8 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       curriculum_id: resolvedParams.id,
       github_url: githubUrl,
       completion_data: updatedData,
-      status: isFullyCompleted ? 'submitted' : 'reviewed' // 'reviewed' as a placeholder for partial? No, let's keep status simple
-    });
+      status: isFullyCompleted ? 'submitted' : 'reviewed'
+    }, { onConflict: 'student_id,curriculum_id' });
 
     if (!error) {
       if (isFullyCompleted && !submission?.completion_data?.theory_read) { // Just finished

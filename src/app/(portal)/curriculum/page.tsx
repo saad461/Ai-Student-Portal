@@ -124,7 +124,7 @@ export default function CurriculumPage() {
         curriculum_id: itemId,
         status: 'skipped',
         feedback: 'Skipped by student using PIN'
-      });
+      }, { onConflict: 'student_id,curriculum_id' });
       setSkippingId(null);
       setSkipPin('');
       fetchData();
