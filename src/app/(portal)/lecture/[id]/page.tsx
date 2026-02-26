@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, use, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
-import { CurriculumItem, QuizQuestion } from '@/lib/curriculum';
+import { CurriculumItem, QuizQuestion, getEstimatedReadTime } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,28 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [githubUrl, setGithubUrl] = useState('');
 
   const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz'>('theory');
+  const [readTimeSeconds, setReadTimeSeconds] = useState(0);
+
+  const isTheoryDone = submission?.completion_data?.theory_read;
+
+  const effectiveReadMinutes = useMemo(() => {
+    if (!lecture) return 0;
+    // Use manual override if provided, otherwise calculate automatically
+    if (lecture.required_read_minutes && lecture.required_read_minutes > 0) {
+      return lecture.required_read_minutes;
+    }
+    return getEstimatedReadTime(lecture.theory_content);
+  }, [lecture]);
+
+  useEffect(() => {
+    if (activeTab !== 'theory' || isTheoryDone || effectiveReadMinutes <= 0) return;
+
+    const interval = setInterval(() => {
+      setReadTimeSeconds(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeTab, isTheoryDone, effectiveReadMinutes]);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -145,7 +167,10 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     await updateCompletion({ quiz_completed: true, quiz_score: score });
   };
 
-  const isTheoryDone = submission?.completion_data?.theory_read;
+  const isReadTimeMet = useMemo(() => {
+    if (effectiveReadMinutes <= 0) return true;
+    return readTimeSeconds >= (effectiveReadMinutes * 60);
+  }, [effectiveReadMinutes, readTimeSeconds]);
   const isAssignmentDone = submission?.completion_data?.assignment_submitted || !!submission?.github_url;
   const isQuizDone = submission?.completion_data?.quiz_completed;
   const isFullyDone = isTheoryDone && (lecture?.attached_assignment ? isAssignmentDone : true) && (lecture?.attached_quiz ? isQuizDone : true);
@@ -426,17 +451,52 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                         )}
                       </div>
                       {!isTheoryDone && (
-                        <Button onClick={handleMarkTheoryRead} size="lg" className="w-full h-20 text-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all active:scale-95">
-                          I have mastered the theory
-                          <ArrowRight className="ml-3 h-6 w-6" />
-                        </Button>
+                        <div className="space-y-4">
+                          {!isReadTimeMet && effectiveReadMinutes > 0 && (
+                            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center justify-between">
+                              <div className="flex items-center gap-3 text-primary">
+                                <Clock className="h-5 w-5 animate-pulse" />
+                                <span className="font-bold">Reading requirement in progress...</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-2xl font-black tabular-nums">
+                                  {Math.max(0, Math.ceil((effectiveReadMinutes * 60 - readTimeSeconds) / 60))}
+                                </span>
+                                <span className="text-xs uppercase font-bold ml-1 opacity-60">mins left</span>
+                              </div>
+                            </div>
+                          )}
+                          <Button
+                            onClick={handleMarkTheoryRead}
+                            disabled={!isReadTimeMet}
+                            size="lg"
+                            className={cn(
+                              "w-full h-20 text-xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95",
+                              isReadTimeMet
+                                ? "shadow-primary/20 hover:scale-[1.01]"
+                                : "opacity-50 cursor-not-allowed grayscale shadow-none"
+                            )}
+                          >
+                            {isReadTimeMet ? (
+                              <>
+                                I have mastered the theory
+                                <ArrowRight className="ml-3 h-6 w-6" />
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="mr-3 h-5 w-5" />
+                                Reading... ({Math.floor(readTimeSeconds / 60)}/{effectiveReadMinutes}m)
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
                 </div>
 
                 <div className="hidden lg:block space-y-6">
-                   <div className="sticky top-24">
+                   <div className="sticky top-24 space-y-6">
                       <Card className="bg-primary/5 border-primary/10 overflow-hidden">
                         <CardHeader className="p-4 bg-primary/10">
                           <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
@@ -448,6 +508,40 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                            <p className="text-[10px] text-muted-foreground uppercase mt-1">Required focus for this lecture</p>
                         </CardContent>
                       </Card>
+
+                      {effectiveReadMinutes > 0 && (
+                        <Card className={cn(
+                          "overflow-hidden transition-all",
+                          isReadTimeMet ? "bg-green-500/5 border-green-500/20" : "bg-blue-500/5 border-blue-500/20"
+                        )}>
+                          <CardHeader className={cn(
+                            "p-4",
+                            isReadTimeMet ? "bg-green-500/10" : "bg-blue-500/10"
+                          )}>
+                            <CardTitle className={cn(
+                              "text-xs font-black uppercase tracking-widest flex items-center gap-2",
+                              isReadTimeMet ? "text-green-600" : "text-blue-600"
+                            )}>
+                               <FileText className="h-3 w-3" /> Reading Goal
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4">
+                             <div className="flex items-baseline gap-1">
+                               <span className="text-2xl font-black tabular-nums">{Math.floor(readTimeSeconds / 60)}</span>
+                               <span className="text-muted-foreground font-bold">/ {effectiveReadMinutes}m</span>
+                             </div>
+                             <div className="mt-2 h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                  className={cn(
+                                    "h-full transition-all duration-1000",
+                                    isReadTimeMet ? "bg-green-500" : "bg-blue-500"
+                                  )}
+                                  style={{ width: `${Math.min(100, (readTimeSeconds / (effectiveReadMinutes * 60)) * 100)}%` }}
+                                />
+                             </div>
+                          </CardContent>
+                        </Card>
+                      )}
                    </div>
                 </div>
               </div>
