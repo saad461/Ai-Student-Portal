@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/sidebar';
-import { CurriculumItem, isDayUnlocked, isDayPassed } from '@/lib/curriculum';
+import { CurriculumItem, isItemUnlocked } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { CheckCircle2, AlertCircle, BookOpen, Lock, Video } from 'lucide-react';
+import { CheckCircle2, Lock, Video } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -20,22 +20,24 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { TermsModal } from '@/components/terms-modal';
 
 interface Submission {
   id: string;
   curriculum_id: string;
+  status: string;
 }
 
 export default function CurriculumPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
-  const [currentWeek, setCurrentWeek] = useState(1);
-  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  const [sorryMessage, setSorryMessage] = useState('');
-  const [sendingSorry, setSendingSorry] = useState<string | null>(null);
+  const [agreedTC, setAgreedTC] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
+  const [skippingId, setSkippingId] = useState<string | null>(null);
+  const [skipPin, setSkipPin] = useState('');
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -51,10 +53,7 @@ export default function CurriculumPage() {
       .single();
 
     if (profile) {
-      const start = new Date(profile.enrollment_date);
-      const now = new Date();
-      const diff = now.getTime() - start.getTime();
-      setCurrentWeek(Math.floor(diff / (1000 * 60 * 60 * 24 * 7)) + 1);
+      setAgreedTC(profile.agreed_tc);
     }
 
     const { data: subs } = await supabase
@@ -88,23 +87,37 @@ export default function CurriculumPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleSendSorry = async (curriculumId: string) => {
-    setSendingSorry(curriculumId);
+  const handleAgreeTC = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from('messages').insert({
-        student_id: user.id,
-        curriculum_id: curriculumId,
-        body: sorryMessage,
-        status: 'pending'
-      });
-      setSorryMessage('');
-      setSendingSorry(null);
+      await supabase.from('profiles').update({ agreed_tc: true }).eq('id', user.id);
+      setAgreedTC(true);
+      setShowTerms(false);
       fetchData();
     }
   };
 
-  const weeks = Array.from({ length: 24 }, (_, i) => i + 1);
+  const handleSkip = async (itemId: string) => {
+    if (skipPin !== '7323') {
+      alert('Invalid PIN');
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('submissions').upsert({
+        student_id: user.id,
+        curriculum_id: itemId,
+        status: 'skipped',
+        feedback: 'Skipped by student using PIN'
+      });
+      setSkippingId(null);
+      setSkipPin('');
+      fetchData();
+    }
+  };
+
+  const modules = Array.from({ length: 24 }, (_, i) => i + 1);
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
@@ -119,47 +132,42 @@ export default function CurriculumPage() {
         <div className="max-w-5xl mx-auto space-y-8">
           <header>
             <h1 className="text-3xl font-bold">Course Curriculum</h1>
-            <p className="text-muted-foreground mt-2">Your 24-week path to mastery.</p>
+            <p className="text-muted-foreground mt-2">Your sequential path to mastery.</p>
           </header>
 
-          <Tabs defaultValue={currentWeek.toString()} className="w-full">
+          <Tabs defaultValue="1" className="w-full">
             <div className="overflow-x-auto pb-4">
               <TabsList className="inline-flex w-max">
-                {weeks.map((w) => (
+                {modules.map((m) => (
                   <TabsTrigger
-                    key={w}
-                    value={w.toString()}
+                    key={m}
+                    value={m.toString()}
                   >
-                    Week {w}
+                    Module {m}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
 
-            {weeks.map((w) => (
-              <TabsContent key={w} value={w.toString()} className="space-y-6 mt-6">
+            {modules.map((m) => (
+              <TabsContent key={m} value={m.toString()} className="space-y-6 mt-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">Week {w}: {w <= 4 ? 'Foundations' : w <= 8 ? 'Advanced JS' : w <= 12 ? 'React Mastery' : 'Fullstack Dev'}</h2>
-                  {w > currentWeek && (
-                    <Badge variant="outline" className="flex items-center gap-2 border-blue-500 text-blue-500">
-                      <BookOpen className="h-3 w-3" /> Preview: Week {w}
-                    </Badge>
-                  )}
+                  <h2 className="text-2xl font-bold">Module {m}: {m <= 4 ? 'Foundations' : m <= 8 ? 'Advanced JS' : m <= 12 ? 'React Mastery' : 'Fullstack Dev'}</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {curriculum.filter(item => item.week === w).map((item) => {
-                    const isSubmitted = submissions.find(s => s.curriculum_id === item.id);
-                    const isDateUnlocked = isDayUnlocked(w, item.day, currentWeek);
-                    const isFocusUnlocked = (totalFocusMinutes / 60) >= (item.required_focus_hours || 0);
-                    const isUnlocked = isDateUnlocked && isFocusUnlocked;
+                  {curriculum.filter(item => item.week === m).map((item) => {
+                    const submission = submissions.find(s => s.curriculum_id === item.id);
+                    const isSubmitted = submission && submission.status !== 'skipped';
+                    const isSkipped = submission && submission.status === 'skipped';
 
-                    const isMissed = !isSubmitted && isDayPassed(w, item.day, currentWeek);
+                    const isUnlocked = isItemUnlocked(item, curriculum, submissions, agreedTC);
+                    const isFocusUnlocked = (totalFocusMinutes / 60) >= (item.required_focus_hours || 0);
 
                     return (
                       <Card key={item.id} className={cn(
                         "flex flex-col transition-all",
-                        !isUnlocked && "opacity-50 grayscale"
+                        (!isUnlocked || !isFocusUnlocked) && "opacity-50 grayscale"
                       )}>
                         <CardHeader className="flex-none">
                           <div className="flex justify-between items-start">
@@ -172,7 +180,7 @@ export default function CurriculumPage() {
                                 {!isUnlocked && <Lock className="h-3 w-3 text-muted-foreground mb-2" />}
                             </div>
                             {isSubmitted && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-                            {isMissed && <AlertCircle className="h-5 w-5 text-destructive" />}
+                            {isSkipped && <Badge variant="outline" className="text-orange-500 border-orange-500">Skipped</Badge>}
                           </div>
                           <CardTitle className="text-lg">{item.title}</CardTitle>
                         </CardHeader>
@@ -193,7 +201,8 @@ export default function CurriculumPage() {
                             </div>
                           )}
                         </CardContent>
-                        {!isSubmitted && isUnlocked && item.type === 'lecture' && (
+
+                        {!isSubmitted && !isSkipped && isUnlocked && isFocusUnlocked && item.type === 'lecture' && (
                            <CardFooter className="pt-0 pb-6 px-6">
                               <Button
                                 asChild
@@ -208,28 +217,44 @@ export default function CurriculumPage() {
                            </CardFooter>
                         )}
 
-                        {isMissed && (
+                        {!isSubmitted && !isSkipped && !isUnlocked && !agreedTC && item.week === 1 && curriculum.sort((a,b) => a.week-b.week)[0]?.id === item.id && (
+                           <CardFooter className="pt-0 pb-6 px-6">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => setShowTerms(true)}
+                              >
+                                View Terms to Unlock
+                              </Button>
+                           </CardFooter>
+                        )}
+
+                        {!isSubmitted && !isSkipped && (
                           <CardFooter className="pt-0 pb-6 px-6">
-                            <Dialog>
+                            <Dialog open={skippingId === item.id} onOpenChange={(open) => !open && setSkippingId(null)}>
                               <DialogTrigger asChild>
-                                <Button variant="destructive" size="sm" className="w-full">Missed - Appeal</Button>
+                                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setSkippingId(item.id)}>
+                                  Skip this Lecture
+                                </Button>
                               </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Appeal Missed Assignment</DialogTitle>
+                                  <DialogTitle>Skip Lecture</DialogTitle>
                                 </DialogHeader>
                                 <div className="py-4">
-                                  <Label htmlFor="sorry-cur">Your Explanation</Label>
-                                  <Textarea
-                                    id="sorry-cur"
-                                    placeholder="I'm sorry, I missed this because..."
-                                    value={sorryMessage}
-                                    onChange={(e) => setSorryMessage(e.target.value)}
+                                  <Label htmlFor="skip-pin">Enter Skip PIN</Label>
+                                  <Input
+                                    id="skip-pin"
+                                    type="password"
+                                    placeholder="Enter PIN to skip"
+                                    value={skipPin}
+                                    onChange={(e) => setSkipPin(e.target.value)}
                                   />
                                 </div>
                                 <DialogFooter>
-                                  <Button onClick={() => handleSendSorry(item.id)} disabled={!sorryMessage || sendingSorry === item.id}>
-                                    {sendingSorry === item.id ? 'Sending...' : 'Send Appeal'}
+                                  <Button onClick={() => handleSkip(item.id)} disabled={!skipPin}>
+                                    Confirm Skip
                                   </Button>
                                 </DialogFooter>
                               </DialogContent>
@@ -245,6 +270,7 @@ export default function CurriculumPage() {
           </Tabs>
         </div>
       </main>
+      <TermsModal isOpen={showTerms} onAgree={handleAgreeTC} />
     </div>
   );
 }
