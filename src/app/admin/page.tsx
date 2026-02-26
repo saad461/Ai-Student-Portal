@@ -540,6 +540,7 @@ export default function AdminDashboard() {
                 <div className="space-y-2"><Label>Title</Label><Input value={editingItem?.title || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, title: e.target.value }))} /></div>
                 <div className="space-y-2"><Label>Description</Label><Textarea value={editingItem?.description || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, description: e.target.value }))} /></div>
                 <div className="space-y-2"><Label>Required Focus Hours</Label><Input type="number" step="0.5" value={editingItem?.required_focus_hours || 0} onChange={(e) => setEditingItem(prev => ({ ...prev!, required_focus_hours: parseFloat(e.target.value) }))} /></div>
+                <div className="space-y-2"><Label>Video URL (YouTube/Vimeo)</Label><Input placeholder="https://..." value={editingItem?.video_url || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, video_url: e.target.value }))} /></div>
               </div>
 
               <div className="space-y-4 border-l pl-8 overflow-y-auto">

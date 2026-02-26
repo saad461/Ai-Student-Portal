@@ -1,27 +1,41 @@
+
+> student-portal@0.1.0 dev
+> next dev
+
 ▲ Next.js 16.1.6 (Turbopack)
-- Local:         http://localhost:3001
-- Network:       http://192.168.0.2:3001
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
 
 ✓ Starting...
-✓ Ready in 1039ms
-○ Compiling /admin ...
- GET /admin 200 in 6.3s (compile: 5.8s, render: 545ms)
- GET /admin 200 in 104ms (compile: 7ms, render: 97ms)
-⨯ ./src/app/(portal)/curriculum/page.tsx:409:16
-Parsing ecmascript source code failed
-[0m [90m 407 |[39m                   })}
- [90m 408 |[39m                 [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
-[31m[1m>[22m[39m[90m 409 |[39m               [33m<[39m[33m/[39m[33mTabsContent[39m[33m>[39m
- [90m     |[39m                [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
- [90m 410 |[39m             ))}
- [90m 411 |[39m           [33m<[39m[33m/[39m[33mTabs[39m[33m>[39m
- [90m 412 |[39m         [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m[0m
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
 
-Unterminated regexp literal
-
-
- GET /curriculum 500 in 2.6s (compile: 2.3s, render: 248ms)
-✓ Compiled in 288ms
- GET /admin 200 in 65ms (compile: 6ms, render: 59ms)
- GET /admin 200 in 62ms (compile: 4ms, render: 58ms)
- GET /curriculum 200 in 459ms (compile: 252ms, render: 208ms)
+✓ Ready in 1166ms
+○ Compiling /login ...
+ GET /login 200 in 5.7s (compile: 5.2s, render: 502ms)
+ GET /admin 200 in 2.3s (compile: 2.0s, render: 291ms)
+ GET /admin/login 200 in 659ms (compile: 621ms, render: 39ms)
+ GET /lecture/m1-l1 200 in 3.1s (compile: 2.9s, render: 216ms)
+ GET /login 200 in 84ms (compile: 5ms, render: 79ms)
+ GET /admin 200 in 50ms (compile: 3ms, render: 46ms)
+ GET /admin/login 200 in 25ms (compile: 4ms, render: 21ms)
+ GET /lecture/m1-l1 200 in 681ms (compile: 147ms, render: 534ms)
+ GET /login 200 in 74ms (compile: 6ms, render: 68ms)
+ GET /admin 200 in 57ms (compile: 4ms, render: 53ms)
+ GET /admin/login 200 in 27ms (compile: 4ms, render: 24ms)
+ GET /lecture/m1-l1 200 in 294ms (compile: 98ms, render: 197ms)
+ GET /login 200 in 61ms (compile: 4ms, render: 57ms)
+ GET /admin 200 in 50ms (compile: 3ms, render: 47ms)
+ GET /admin/login 200 in 40ms (compile: 5ms, render: 35ms)
+ GET /lecture/m1-l1 200 in 302ms (compile: 96ms, render: 205ms)
+ GET /login 200 in 66ms (compile: 4ms, render: 61ms)
+ GET /admin 200 in 50ms (compile: 3ms, render: 47ms)
+ GET /admin/login 200 in 25ms (compile: 3ms, render: 22ms)
+ GET /lecture/m1-l1 200 in 322ms (compile: 93ms, render: 229ms)
+ GET /lecture/m1-l1 200 in 121ms (compile: 35ms, render: 86ms)
+ GET /admin 200 in 120ms (compile: 6ms, render: 114ms)
+ GET /admin/login 200 in 38ms (compile: 5ms, render: 33ms)
+ POST /admin/login 200 in 35ms (compile: 3ms, render: 32ms)
+ GET /admin 200 in 21ms (compile: 3ms, render: 18ms)
