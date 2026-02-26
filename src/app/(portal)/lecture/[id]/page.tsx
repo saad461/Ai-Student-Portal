@@ -186,26 +186,61 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const MarkdownComponents = {
     h1: ({ children }: any) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h1 id={id} className="text-3xl font-bold mt-8 mb-4 border-b pb-2">{children}</h1>;
+      return <h1 id={id} className="text-4xl font-black mt-12 mb-6 border-b-4 border-primary/10 pb-4 text-slate-900 dark:text-white">{children}</h1>;
     },
     h2: ({ children }: any) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h2 id={id} className="text-2xl font-bold mt-6 mb-3">{children}</h2>;
+      return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-800 dark:text-slate-100 flex items-center gap-3">
+        <span className="h-8 w-1.5 bg-primary rounded-full" />
+        {children}
+      </h2>;
     },
     h3: ({ children }: any) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h3 id={id} className="text-xl font-bold mt-4 mb-2">{children}</h3>;
+      return <h3 id={id} className="text-2xl font-bold mt-8 mb-4 text-slate-800 dark:text-slate-200">{children}</h3>;
     },
-    p: ({ children }: any) => <p className="text-lg leading-relaxed mb-4 text-slate-700 dark:text-slate-300">{children}</p>,
-    ul: ({ children }: any) => <ul className="list-disc pl-6 mb-4 space-y-2">{children}</ul>,
-    ol: ({ children }: any) => <ol className="list-decimal pl-6 mb-4 space-y-2">{children}</ol>,
-    li: ({ children }: any) => <li className="text-lg">{children}</li>,
+    p: ({ children }: any) => <p className="text-lg leading-relaxed mb-6 text-slate-700 dark:text-slate-300 font-medium">{children}</p>,
+    ul: ({ children }: any) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
+    ol: ({ children }: any) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-700 dark:text-slate-300">{children}</ol>,
+    li: ({ children, ordered }: any) => (
+      <li className="text-lg flex items-start gap-3">
+        {!ordered && <div className="h-2 w-2 rounded-full bg-primary mt-2.5 shrink-0" />}
+        <span className="text-slate-700 dark:text-slate-300 font-medium">{children}</span>
+      </li>
+    ),
+    strong: ({ children }: any) => <strong className="font-black text-slate-900 dark:text-white underline decoration-primary/30 decoration-4 underline-offset-2">{children}</strong>,
+    em: ({ children }: any) => <em className="italic text-primary/80 font-medium">{children}</em>,
+    a: ({ href, children }: any) => (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary font-bold underline decoration-primary/30 hover:decoration-primary transition-all underline-offset-4"
+      >
+        {children}
+      </a>
+    ),
     code: ({ inline, children }: any) => (
       inline
-        ? <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>
-        : <pre className="bg-slate-900 text-slate-50 p-4 rounded-lg overflow-x-auto my-4 font-mono text-sm"><code>{children}</code></pre>
+        ? <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">{children}</code>
+        : <div className="relative my-8 group">
+            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <pre className="relative bg-slate-900 text-slate-50 p-6 rounded-xl overflow-x-auto font-mono text-sm border border-slate-800 shadow-2xl">
+              <code>{children}</code>
+            </pre>
+          </div>
     ),
-    blockquote: ({ children }: any) => <blockquote className="border-l-4 border-primary/30 pl-4 italic my-4">{children}</blockquote>,
+    blockquote: ({ children }: any) => (
+      <blockquote className="border-l-8 border-primary bg-primary/5 p-6 rounded-r-2xl italic my-8 text-xl text-slate-700 dark:text-slate-300 font-medium shadow-inner">
+        {children}
+      </blockquote>
+    ),
+    img: ({ src, alt }: any) => (
+      <div className="my-10 text-center">
+        <img src={src} alt={alt} className="rounded-3xl shadow-2xl mx-auto border-4 border-white dark:border-slate-800 max-w-full h-auto" />
+        {alt && <p className="mt-4 text-sm text-muted-foreground font-bold italic">Above: {alt}</p>}
+      </div>
+    ),
   };
 
   const getEmbedUrl = (url: string) => {
@@ -344,22 +379,30 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <div className="lg:col-span-3 space-y-8">
                   {headings.length > 0 && (
-                    <Card className="bg-slate-100/50 dark:bg-slate-900/50 border-none shadow-none p-6">
-                      <div className="flex items-center gap-2 mb-4 text-slate-500 font-bold uppercase text-xs tracking-widest">
-                        <List className="h-4 w-4" /> Table of Contents
+                    <Card className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 border-none shadow-inner p-8 rounded-3xl overflow-hidden relative group">
+                      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                         <List className="h-24 w-24" />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
+                           <List className="h-4 w-4" />
+                        </div>
+                        <div className="text-slate-900 dark:text-white font-black uppercase text-sm tracking-[0.2em]">Table of Contents</div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
                         {headings.map((h, i) => (
                           <a
                             key={i}
                             href={`#${h.id}`}
                             className={cn(
-                              "text-sm hover:text-primary transition-colors flex items-center gap-2",
-                              h.level === 1 ? "font-bold" : "pl-4 text-muted-foreground"
+                              "text-sm transition-all flex items-center gap-3 group/item",
+                              h.level === 1
+                                ? "font-black text-slate-900 dark:text-white"
+                                : "pl-6 text-slate-500 dark:text-slate-400 font-bold"
                             )}
                           >
-                            <span className="h-1 w-1 rounded-full bg-slate-300" />
-                            {h.text}
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover/item:bg-primary group-hover/item:scale-150 transition-all" />
+                            <span className="group-hover/item:translate-x-1 transition-transform">{h.text}</span>
                           </a>
                         ))}
                       </div>
