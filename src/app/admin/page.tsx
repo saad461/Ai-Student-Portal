@@ -24,7 +24,11 @@ import {
   BookOpen,
   Edit,
   Trash2,
-  FilePlus
+  FilePlus,
+  Layers,
+  ChevronRight,
+  ChevronDown,
+  Layout
 } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -38,8 +42,16 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { seedCurriculumAction, saveCurriculumItemAction, deleteCurriculumItemAction } from './actions';
-import { CurriculumItem, QuizQuestion } from '@/lib/curriculum';
+import {
+  seedCurriculumAction,
+  saveCurriculumItemAction,
+  deleteCurriculumItemAction,
+  saveModuleAction,
+  deleteModuleAction,
+  saveSubModuleAction,
+  deleteSubModuleAction
+} from './actions';
+import { CurriculumItem, QuizQuestion, Module, SubModule } from '@/lib/curriculum';
 import {
   Table,
   TableBody,
@@ -71,16 +83,21 @@ export default function AdminDashboard() {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [messages, setMessages] = useState<SorryMessage[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [subModules, setSubModules] = useState<SubModule[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'curriculum' | 'attendance'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'curriculum' | 'attendance' | 'structure'>('students');
 
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
+  const [editingModule, setEditingModule] = useState<Partial<Module> | null>(null);
+  const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
 
   const fetchAdminData = useCallback(async () => {
+    setLoading(true);
     const { data: profiles } = await supabase
       .from('profiles')
       .select(`*, submissions (*)`);
@@ -100,6 +117,18 @@ export default function AdminDashboard() {
       .order('week', { ascending: true });
 
     setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+
+    const { data: modulesData } = await supabase
+      .from('modules')
+      .select('*')
+      .order('index', { ascending: true });
+    setModules((modulesData as Module[]) || []);
+
+    const { data: subModulesData } = await supabase
+      .from('sub_modules')
+      .select('*')
+      .order('index', { ascending: true });
+    setSubModules((subModulesData as SubModule[]) || []);
 
     const { data: attendanceData } = await supabase
       .from('attendance')
@@ -125,6 +154,38 @@ export default function AdminDashboard() {
     } else {
       alert('Error saving curriculum: ' + JSON.stringify(res.error));
     }
+  };
+
+  const handleSaveModule = async (mod: Partial<Module>) => {
+    const res = await saveModuleAction(mod);
+    if (res.success) {
+      setEditingModule(null);
+      fetchAdminData();
+    } else {
+      alert('Error saving module: ' + JSON.stringify(res.error));
+    }
+  };
+
+  const handleDeleteModule = async (id: string) => {
+    if (!confirm('Are you sure? This will delete all sub-modules and lectures in this module.')) return;
+    const res = await deleteModuleAction(id);
+    if (res.success) fetchAdminData();
+  };
+
+  const handleSaveSubModule = async (sub: Partial<SubModule>) => {
+    const res = await saveSubModuleAction(sub);
+    if (res.success) {
+      setEditingSubModule(null);
+      fetchAdminData();
+    } else {
+      alert('Error saving sub-module: ' + JSON.stringify(res.error));
+    }
+  };
+
+  const handleDeleteSubModule = async (id: string) => {
+    if (!confirm('Are you sure? This will affect all lectures in this sub-module.')) return;
+    const res = await deleteSubModuleAction(id);
+    if (res.success) fetchAdminData();
   };
 
   const handleDeleteCurriculum = async (id: string) => {
@@ -176,7 +237,8 @@ export default function AdminDashboard() {
 
         <div className="flex gap-4 border-b pb-4 overflow-x-auto">
           <Button variant={activeTab === 'students' ? 'default' : 'ghost'} onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-2" /> Students</Button>
-          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Modules & Lectures</Button>
+          <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-2" /> Course Structure</Button>
+          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Lectures & Content</Button>
           <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-2" /> Attendance</Button>
         </div>
 
@@ -207,59 +269,183 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
+        ) : activeTab === 'structure' ? (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">Course Modules & Sub-Modules</h2>
+                <p className="text-sm text-muted-foreground">Define the high-level hierarchy of your course.</p>
+              </div>
+              <Button onClick={() => setEditingModule({ index: modules.length + 1, name: '' })}>
+                <Plus className="h-4 w-4 mr-2" /> Add Module
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              {modules.map(mod => (
+                <Card key={mod.id} className="overflow-hidden">
+                  <div className="bg-slate-100 dark:bg-slate-900 p-4 flex justify-between items-center border-b">
+                    <div className="flex items-center gap-3">
+                      <Badge className="h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg">M{mod.index}</Badge>
+                      <h3 className="font-bold text-lg">{mod.name}</h3>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setEditingSubModule({ module_id: mod.id, index: subModules.filter(s => s.module_id === mod.id).length + 1, name: '' })}>
+                        <Plus className="h-4 w-4 mr-2" /> Add Sub-Module
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setEditingModule(mod)}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteModule(mod.id!)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                  <CardContent className="p-0">
+                    <div className="divide-y">
+                      {subModules.filter(s => s.module_id === mod.id).map(sub => (
+                        <div key={sub.id} className="p-4 pl-12 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <Layers className="h-4 w-4 text-slate-400" />
+                            <span className="font-medium">{sub.name}</span>
+                            <Badge variant="outline" className="text-[10px]">Index {sub.index}</Badge>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingSubModule(sub)}><Edit className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteSubModule(sub.id!)}><Trash2 className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                      ))}
+                      {subModules.filter(s => s.module_id === mod.id).length === 0 && (
+                        <div className="p-8 text-center text-sm text-slate-400 italic">No sub-modules yet. Add one to group your lectures.</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {modules.length === 0 && (
+                <div className="p-12 text-center border-2 border-dashed rounded-xl">
+                  <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                  <p className="text-slate-500">No modules created yet. Start by adding your first module.</p>
+                  <Button variant="outline" className="mt-4" onClick={() => setEditingModule({ index: 1, name: '' })}>Add First Module</Button>
+                </div>
+              )}
+            </div>
+          </div>
         ) : activeTab === 'curriculum' ? (
           <div className="space-y-12">
             <div className="flex justify-between items-center">
-              <div><h2 className="text-2xl font-bold">Course Modules</h2><p className="text-sm text-muted-foreground">Manage modules and lectures.</p></div>
-              <Button onClick={() => setEditingItem({ id: `new-${Date.now()}`, week: curriculum.length ? Math.max(...curriculum.map(i => i.week)) + 1 : 1, day: 'Lecture 1', type: 'lecture', title: '', description: '', lecture_index: 1, module_index: curriculum.length ? Math.max(...curriculum.map(i => i.module_index || 0)) + 1 : 1 })}>
-                <Plus className="h-4 w-4 mr-2" /> Add New Module
+              <div><h2 className="text-2xl font-bold">Course Content</h2><p className="text-sm text-muted-foreground">Manage lectures, assignments, and quizzes.</p></div>
+              <Button onClick={() => {
+                const lastMod = modules[modules.length - 1];
+                const lastSub = subModules.filter(s => s.module_id === lastMod?.id).pop();
+                setEditingItem({
+                  id: `new-${Date.now()}`,
+                  week: lastMod?.index || 1,
+                  module_name: lastMod?.name || '',
+                  day: 'Lecture 1',
+                  type: 'lecture',
+                  title: '',
+                  description: '',
+                  lecture_index: 1,
+                  sub_module_id: lastSub?.id,
+                  sub_module_name: lastSub?.name
+                });
+              }}>
+                <Plus className="h-4 w-4 mr-2" /> Add New Lecture
               </Button>
             </div>
-            {[...new Set(curriculum.map(i => i.week))].sort((a, b) => a - b).map(week => {
-              const moduleItems = curriculum.filter(i => i.week === week).sort((a, b) => (a.lecture_index || 0) - (b.lecture_index || 0));
-              const moduleName = moduleItems[0]?.module_name || `Module ${week}`;
+            {modules.length > 0 ? modules.map(mod => {
+              const moduleSubModules = subModules.filter(s => s.module_id === mod.id);
+              const moduleLectures = curriculum.filter(i => i.week === mod.index);
+
               return (
-                <div key={week} className="space-y-6">
+                <div key={mod.id} className="space-y-6">
                   <div className="flex items-center gap-4">
-                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">M{week}</div>
-                     <h3 className="text-xl font-bold">{moduleName}</h3>
+                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">M{mod.index}</div>
+                     <h3 className="text-xl font-bold">{mod.name}</h3>
                      <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
-                     <Button variant="outline" size="sm" onClick={() => {
-                        const lastLecture = moduleItems[moduleItems.length - 1];
-                        setEditingItem({
-                          id: `new-${Date.now()}`,
-                          week: week,
-                          module_name: moduleName,
-                          module_index: moduleItems[0]?.module_index || week,
-                          day: `Lecture ${moduleItems.length + 1}`,
-                          type: 'lecture',
-                          title: '',
-                          description: '',
-                          lecture_index: (lastLecture?.lecture_index || 0) + 1
-                        });
-                     }}><Plus className="h-4 w-4 mr-2" /> Add Lecture</Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {moduleItems.map((item) => (
-                      <Card key={item.id} className="group hover:shadow-md transition-shadow relative">
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'up')}><Clock className="h-4 w-4 rotate-180" /></Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'down')}><Clock className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
+
+                  <div className="space-y-8 pl-4 border-l-2 border-slate-100 dark:border-slate-800 ml-5">
+                    {moduleSubModules.map(sub => {
+                      const subLectures = moduleLectures.filter(l => l.sub_module_id === sub.id).sort((a, b) => (a.lecture_index || 0) - (b.lecture_index || 0));
+                      return (
+                        <div key={sub.id} className="space-y-4">
+                          <h4 className="font-bold text-slate-500 flex items-center gap-2">
+                            <ChevronRight className="h-4 w-4" /> {sub.name}
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {subLectures.map((item) => (
+                              <Card key={item.id} className="group hover:shadow-md transition-shadow relative">
+                                <CardHeader className="pb-2">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'up')}><Clock className="h-4 w-4 rotate-180" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'down')}><Clock className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                  </div>
+                                  <CardTitle className="text-lg leading-tight mt-2">{item.title}</CardTitle>
+                                </CardHeader>
+                              </Card>
+                            ))}
+                            <Button
+                              variant="ghost"
+                              className="h-full min-h-[100px] border-2 border-dashed hover:border-primary hover:bg-primary/5 group"
+                              onClick={() => setEditingItem({
+                                id: `new-${Date.now()}`,
+                                week: mod.index,
+                                module_name: mod.name,
+                                sub_module_id: sub.id,
+                                sub_module_name: sub.name,
+                                day: `Lecture ${subLectures.length + 1}`,
+                                type: 'lecture',
+                                title: '',
+                                description: '',
+                                lecture_index: (subLectures[subLectures.length - 1]?.lecture_index || 0) + 1
+                              })}
+                            >
+                              <Plus className="h-6 w-6 text-slate-300 group-hover:text-primary mb-2" />
+                              <span className="text-slate-400 group-hover:text-primary font-medium">Add to {sub.name}</span>
+                            </Button>
                           </div>
-                          <CardTitle className="text-lg leading-tight mt-2">{item.title}</CardTitle>
-                        </CardHeader>
-                      </Card>
-                    ))}
+                        </div>
+                      );
+                    })}
+
+                    {/* Lectures with no sub-module */}
+                    {moduleLectures.filter(l => !l.sub_module_id).length > 0 && (
+                      <div className="space-y-4">
+                        <h4 className="font-bold text-slate-400 italic flex items-center gap-2">
+                          <ChevronRight className="h-4 w-4" /> Uncategorized Lectures
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                           {moduleLectures.filter(l => !l.sub_module_id).map((item) => (
+                              <Card key={item.id} className="group hover:shadow-md transition-shadow relative">
+                                <CardHeader className="pb-2">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                  </div>
+                                  <CardTitle className="text-lg leading-tight mt-2">{item.title}</CardTitle>
+                                </CardHeader>
+                              </Card>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
-            })}
+            }) : (
+              <div className="p-12 text-center border-2 border-dashed rounded-xl">
+                 <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                 <p className="text-slate-500">Create some Modules first in the "Course Structure" tab.</p>
+                 <Button variant="outline" className="mt-4" onClick={() => setActiveTab('structure')}>Go to Course Structure</Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
@@ -304,11 +490,42 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Module Number (Week)</Label><Input type="number" value={editingItem?.week || 1} onChange={(e) => setEditingItem(prev => ({ ...prev!, week: parseInt(e.target.value) }))} /></div>
+                  <div className="space-y-2">
+                    <Label>Parent Module</Label>
+                    <select
+                      className="w-full p-2 rounded border bg-background"
+                      value={editingItem?.week || ''}
+                      onChange={(e) => {
+                        const mod = modules.find(m => m.index === parseInt(e.target.value));
+                        setEditingItem(prev => ({ ...prev!, week: parseInt(e.target.value), module_name: mod?.name || '' }))
+                      }}
+                    >
+                      <option value="">Select Module</option>
+                      {modules.map(m => <option key={m.id} value={m.index}>M{m.index}: {m.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sub-Module</Label>
+                    <select
+                      className="w-full p-2 rounded border bg-background"
+                      value={editingItem?.sub_module_id || ''}
+                      onChange={(e) => {
+                        const sub = subModules.find(s => s.id === e.target.value);
+                        setEditingItem(prev => ({ ...prev!, sub_module_id: e.target.value, sub_module_name: sub?.name || '' }))
+                      }}
+                    >
+                      <option value="">No Sub-Module</option>
+                      {subModules.filter(s => s.module_id === modules.find(m => m.index === editingItem?.week)?.id).map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Lecture Label (e.g. Lecture 1)</Label><Input placeholder="e.g. Lecture 1" value={editingItem?.day || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, day: e.target.value }))} /></div>
                   <div className="space-y-2"><Label>Lecture Index (Order)</Label><Input type="number" value={editingItem?.lecture_index || 1} onChange={(e) => setEditingItem(prev => ({ ...prev!, lecture_index: parseInt(e.target.value) }))} /></div>
                 </div>
-                <div className="space-y-2"><Label>Module Name</Label><Input placeholder="e.g. HTML Foundation" value={editingItem?.module_name || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, module_name: e.target.value }))} /></div>
-                <div className="space-y-2"><Label>Lecture Label (Day)</Label><Input placeholder="e.g. Lecture 1" value={editingItem?.day || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, day: e.target.value }))} /></div>
 
                 <div className="space-y-2">
                   <Label>Item Type</Label>
@@ -374,6 +591,29 @@ export default function AdminDashboard() {
               </div>
             </div>
             <DialogFooter><Button onClick={() => handleSaveCurriculum(editingItem!)}>Save Curriculum Item</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingModule} onOpenChange={(open) => !open && setEditingModule(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{editingModule?.id ? 'Edit' : 'Add'} Module</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2"><Label>Module Index</Label><Input type="number" value={editingModule?.index || 1} onChange={(e) => setEditingModule(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
+              <div className="space-y-2"><Label>Module Name</Label><Input value={editingModule?.name || ''} onChange={(e) => setEditingModule(prev => ({ ...prev!, name: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Description (Optional)</Label><Textarea value={editingModule?.description || ''} onChange={(e) => setEditingModule(prev => ({ ...prev!, description: e.target.value }))} /></div>
+            </div>
+            <DialogFooter><Button onClick={() => handleSaveModule(editingModule!)}>Save Module</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingSubModule} onOpenChange={(open) => !open && setEditingSubModule(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{editingSubModule?.id ? 'Edit' : 'Add'} Sub-Module</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2"><Label>Sub-Module Index</Label><Input type="number" value={editingSubModule?.index || 1} onChange={(e) => setEditingSubModule(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
+              <div className="space-y-2"><Label>Sub-Module Name</Label><Input value={editingSubModule?.name || ''} onChange={(e) => setEditingSubModule(prev => ({ ...prev!, name: e.target.value }))} /></div>
+            </div>
+            <DialogFooter><Button onClick={() => handleSaveSubModule(editingSubModule!)}>Save Sub-Module</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

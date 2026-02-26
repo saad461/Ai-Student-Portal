@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '@/components/sidebar';
-import { CurriculumItem, isItemUnlocked } from '@/lib/curriculum';
+import { CurriculumItem, isItemUnlocked, Module, SubModule } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -32,6 +32,8 @@ interface Submission {
 export default function CurriculumPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [subModules, setSubModules] = useState<SubModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [agreedTC, setAgreedTC] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -69,6 +71,18 @@ export default function CurriculumPage() {
       .order('week', { ascending: true });
 
     setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+
+    const { data: modulesData } = await supabase
+      .from('modules')
+      .select('*')
+      .order('index', { ascending: true });
+    setModules(modulesData || []);
+
+    const { data: subModulesData } = await supabase
+      .from('sub_modules')
+      .select('*')
+      .order('index', { ascending: true });
+    setSubModules(subModulesData || []);
 
     const { data: focusData } = await supabase
       .from('focus_sessions')
@@ -117,7 +131,7 @@ export default function CurriculumPage() {
     }
   };
 
-  const modules = Array.from({ length: 24 }, (_, i) => i + 1);
+  const displayModules = modules.length > 0 ? modules : Array.from({ length: 24 }, (_, i) => ({ id: (i + 1).toString(), index: i + 1, name: `Module ${i + 1}` }));
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
@@ -135,28 +149,155 @@ export default function CurriculumPage() {
             <p className="text-muted-foreground mt-2">Your sequential path to mastery.</p>
           </header>
 
-          <Tabs defaultValue="1" className="w-full">
+          <Tabs defaultValue={displayModules[0]?.index.toString()} className="w-full">
             <div className="overflow-x-auto pb-4">
               <TabsList className="inline-flex w-max">
-                {modules.map((m) => (
+                {displayModules.map((m) => (
                   <TabsTrigger
-                    key={m}
-                    value={m.toString()}
+                    key={m.index}
+                    value={m.index.toString()}
                   >
-                    Module {m}
+                    {m.name}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
 
-            {modules.map((m) => (
-              <TabsContent key={m} value={m.toString()} className="space-y-6 mt-6">
+            {displayModules.map((m) => (
+              <TabsContent key={m.index} value={m.index.toString()} className="space-y-8 mt-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">Module {m}: {m <= 4 ? 'Foundations' : m <= 8 ? 'Advanced JS' : m <= 12 ? 'React Mastery' : 'Fullstack Dev'}</h2>
+                  <h2 className="text-2xl font-bold">{m.name}</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {curriculum.filter(item => item.week === m).map((item) => {
+                {/* New Sub-Module Grouping */}
+                {subModules.filter(s => s.module_id === m.id).length > 0 ? (
+                  subModules.filter(s => s.module_id === m.id).map(sub => {
+                    const subLectures = curriculum.filter(item => item.week === m.index && item.sub_module_id === sub.id);
+                    if (subLectures.length === 0) return null;
+
+                    return (
+                      <div key={sub.id} className="space-y-4">
+                        <div className="flex items-center gap-4">
+                           <h3 className="text-lg font-bold text-muted-foreground">{sub.name}</h3>
+                           <div className="flex-1 h-[1px] bg-muted" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                           {subLectures.map((item) => {
+                              const submission = submissions.find(s => s.curriculum_id === item.id);
+                              const isSubmitted = submission && submission.status !== 'skipped';
+                              const isSkipped = submission && submission.status === 'skipped';
+
+                              const isUnlocked = isItemUnlocked(item, curriculum, submissions, agreedTC);
+                              const isFocusUnlocked = (totalFocusMinutes / 60) >= (item.required_focus_hours || 0);
+
+                              return (
+                                <Card key={item.id} className={cn(
+                                  "flex flex-col transition-all",
+                                  (!isUnlocked || !isFocusUnlocked) && "opacity-50 grayscale"
+                                )}>
+                                  <CardHeader className="flex-none">
+                                    <div className="flex justify-between items-start">
+                                      <div className="flex items-center gap-2">
+                                          <Badge variant="secondary" className="mb-2">{item.day}</Badge>
+                                          <Badge variant="outline" className="mb-2 uppercase text-[10px] flex items-center gap-1">
+                                            {item.type === 'lecture' && <Video className="h-2 w-2" />}
+                                            {item.type}
+                                          </Badge>
+                                          {!isUnlocked && <Lock className="h-3 w-3 text-muted-foreground mb-2" />}
+                                      </div>
+                                      {isSubmitted && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                                      {isSkipped && <Badge variant="outline" className="text-orange-500 border-orange-500">Skipped</Badge>}
+                                    </div>
+                                    <CardTitle className="text-lg">{item.title}</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="flex-grow space-y-4">
+                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+
+                                    {item.requirements && item.requirements.length > 0 && (
+                                      <div className="space-y-2">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Requirements:</p>
+                                        <ul className="text-xs space-y-1">
+                                          {item.requirements.map((req, i) => (
+                                            <li key={i} className="flex items-start gap-2">
+                                              <div className="h-1 w-1 rounded-full bg-primary mt-1.5" />
+                                              {req}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </CardContent>
+
+                                  {!isSubmitted && !isSkipped && isUnlocked && isFocusUnlocked && item.type === 'lecture' && (
+                                     <CardFooter className="pt-0 pb-6 px-6">
+                                        <Button
+                                          asChild
+                                          variant="outline"
+                                          size="sm"
+                                          className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
+                                        >
+                                          <Link href={`/lecture/${item.id}`}>
+                                            Open Lecture Room
+                                          </Link>
+                                        </Button>
+                                     </CardFooter>
+                                  )}
+
+                                  {!isSubmitted && !isSkipped && !isUnlocked && !agreedTC && item.week === 1 && curriculum.sort((a,b) => a.week-b.week)[0]?.id === item.id && (
+                                     <CardFooter className="pt-0 pb-6 px-6">
+                                        <Button
+                                          variant="default"
+                                          size="sm"
+                                          className="w-full"
+                                          onClick={() => setShowTerms(true)}
+                                        >
+                                          View Terms to Unlock
+                                        </Button>
+                                     </CardFooter>
+                                  )}
+
+                                  {!isSubmitted && !isSkipped && (
+                                    <CardFooter className="pt-0 pb-6 px-6">
+                                      <Dialog open={skippingId === item.id} onOpenChange={(open) => !open && setSkippingId(null)}>
+                                        <DialogTrigger asChild>
+                                          <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setSkippingId(item.id)}>
+                                            Skip this Lecture
+                                          </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                          <DialogHeader>
+                                            <DialogTitle>Skip Lecture</DialogTitle>
+                                          </DialogHeader>
+                                          <div className="py-4">
+                                            <Label htmlFor="skip-pin">Enter Skip PIN</Label>
+                                            <Input
+                                              id="skip-pin"
+                                              type="password"
+                                              placeholder="Enter PIN to skip"
+                                              value={skipPin}
+                                              onChange={(e) => setSkipPin(e.target.value)}
+                                            />
+                                          </div>
+                                          <DialogFooter>
+                                            <Button onClick={() => handleSkip(item.id)} disabled={!skipPin}>
+                                              Confirm Skip
+                                            </Button>
+                                          </DialogFooter>
+                                        </DialogContent>
+                                      </Dialog>
+                                    </CardFooter>
+                                  )}
+                                </Card>
+                              );
+                           })}
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  // Legacy/Fallback view
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {curriculum.filter(item => item.week === m.index).map((item) => {
                     const submission = submissions.find(s => s.curriculum_id === item.id);
                     const isSubmitted = submission && submission.status !== 'skipped';
                     const isSkipped = submission && submission.status === 'skipped';
@@ -265,6 +406,7 @@ export default function CurriculumPage() {
                     );
                   })}
                 </div>
+                )}
               </TabsContent>
             ))}
           </Tabs>
