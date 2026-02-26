@@ -207,7 +207,6 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
-          </div>
         ) : activeTab === 'curriculum' ? (
           <div className="space-y-12">
             <div className="flex justify-between items-center">
