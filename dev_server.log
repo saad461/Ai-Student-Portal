@@ -1,0 +1,28 @@
+
+> student-portal@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+✓ Ready in 1119ms
+○ Compiling /admin/login ...
+ GET /admin/login 200 in 4.3s (compile: 4.0s, render: 322ms)
+ GET /admin/login 200 in 114ms (compile: 6ms, render: 107ms)
+ POST /admin/login 200 in 38ms (compile: 6ms, render: 32ms)
+ GET /admin 200 in 2.5s (compile: 2.5s, render: 67ms)
+ GET /admin/login 200 in 71ms (compile: 6ms, render: 66ms)
+ POST /admin/login 200 in 13ms (compile: 5ms, render: 8ms)
+ GET /admin 200 in 24ms (compile: 3ms, render: 21ms)
+ GET /admin/login 200 in 66ms (compile: 4ms, render: 63ms)
+ POST /admin/login 200 in 17ms (compile: 6ms, render: 11ms)
+ GET /admin 200 in 196ms (compile: 148ms, render: 48ms)
+ GET /admin/login 200 in 73ms (compile: 5ms, render: 68ms)
+ POST /admin/login 200 in 12ms (compile: 3ms, render: 9ms)
+ GET /admin 200 in 23ms (compile: 3ms, render: 21ms)
+ GET /admin/login 200 in 450ms (compile: 33ms, render: 418ms)
+ POST /admin/login 200 in 17ms (compile: 6ms, render: 10ms)
+ GET /admin 200 in 572ms (compile: 347ms, render: 224ms)
+✓ Compiled in 245ms
