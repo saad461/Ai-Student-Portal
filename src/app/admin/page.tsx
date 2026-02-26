@@ -270,9 +270,14 @@ export default function AdminDashboard() {
             <DialogHeader><DialogTitle>{editingItem?.id?.startsWith('new-') ? 'Add' : 'Edit'} Lecture</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Module Number</Label><Input type="number" value={editingItem?.week || 1} onChange={(e) => setEditingItem(prev => ({ ...prev!, week: parseInt(e.target.value) }))} /></div>
-                <div className="space-y-2"><Label>Lecture Label</Label><Input placeholder="e.g. Lecture 1" value={editingItem?.day || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, day: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Module Number (Week)</Label><Input type="number" value={editingItem?.week || 1} onChange={(e) => setEditingItem(prev => ({ ...prev!, week: parseInt(e.target.value) }))} /></div>
+                <div className="space-y-2"><Label>Lecture Label (Day)</Label><Input placeholder="e.g. Lecture 1" value={editingItem?.day || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, day: e.target.value }))} /></div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Module Index</Label><Input type="number" value={editingItem?.module_index || 0} onChange={(e) => setEditingItem(prev => ({ ...prev!, module_index: parseInt(e.target.value) }))} /></div>
+                <div className="space-y-2"><Label>Lecture Index</Label><Input type="number" value={editingItem?.lecture_index || 0} onChange={(e) => setEditingItem(prev => ({ ...prev!, lecture_index: parseInt(e.target.value) }))} /></div>
+              </div>
+              <div className="space-y-2"><Label>Module Name</Label><Input placeholder="e.g. HTML Foundation" value={editingItem?.module_name || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, module_name: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Title</Label><Input value={editingItem?.title || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, title: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingItem?.description || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, description: e.target.value }))} /></div>
               {editingItem?.type === 'lecture' && (

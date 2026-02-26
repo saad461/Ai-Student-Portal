@@ -46,13 +46,14 @@ export const isItemUnlocked = (
 ) => {
   const sorted = [...allCurriculum].sort((a, b) => {
     if (a.week !== b.week) return a.week - b.week;
-    const getOrder = (d: string) => {
-      if (DAY_MAP[d]) return DAY_MAP[d];
-      const match = d.match(/Lecture\s+(\d+)/i);
+    const getOrder = (i: CurriculumItem) => {
+      if (i.lecture_index !== undefined && i.lecture_index !== null) return i.lecture_index;
+      if (DAY_MAP[i.day]) return DAY_MAP[i.day];
+      const match = i.day.match(/Lecture\s+(\d+)/i);
       if (match) return parseInt(match[1]);
       return 0;
     };
-    return getOrder(a.day) - getOrder(b.day);
+    return getOrder(a) - getOrder(b);
   });
 
   if (sorted.length === 0) return true;
