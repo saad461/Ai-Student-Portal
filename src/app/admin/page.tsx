@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
@@ -28,7 +28,13 @@ import {
   Layers,
   ChevronRight,
   ChevronDown,
-  Layout
+  Layout,
+  Type,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Code
 } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -93,6 +99,7 @@ export default function AdminDashboard() {
   const [isAssigning, setIsAssigning] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
+  const theoryRef = useRef<HTMLTextAreaElement>(null);
   const [editingModule, setEditingModule] = useState<Partial<Module> | null>(null);
   const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
 
@@ -192,6 +199,29 @@ export default function AdminDashboard() {
     if (!confirm('Are you sure you want to delete this item?')) return;
     const res = await deleteCurriculumItemAction(id);
     if (res.success) fetchAdminData();
+  };
+
+  const insertMarkdown = (prefix: string, suffix: string) => {
+    if (!theoryRef.current || !editingItem) return;
+    const textarea = theoryRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = editingItem.theory_content || '';
+    const before = text.substring(0, start);
+    const selection = text.substring(start, end);
+    const after = text.substring(end);
+
+    const newText = before + prefix + (selection || '') + suffix + after;
+    setEditingItem(prev => ({ ...prev!, theory_content: newText }));
+
+    setTimeout(() => {
+      textarea.focus();
+      if (selection) {
+        textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+      } else {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+      }
+    }, 10);
   };
 
   const moveItem = async (item: CurriculumItem, direction: 'up' | 'down') => {
@@ -546,8 +576,25 @@ export default function AdminDashboard() {
               <div className="space-y-4 border-l pl-8 overflow-y-auto">
                 {editingItem?.type === 'lecture' && (
                   <div className="space-y-2">
-                    <Label>Theory Content (Markdown supported)</Label>
-                    <Textarea className="min-h-[300px] font-mono text-sm" value={editingItem.theory_content || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, theory_content: e.target.value }))} />
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>Theory Content (Markdown supported)</Label>
+                      <div className="flex gap-1 border rounded-md p-1 bg-slate-50 dark:bg-slate-900 shadow-sm">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Bold" onClick={() => insertMarkdown('**', '**')}><Bold className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Italic" onClick={() => insertMarkdown('_', '_')}><Italic className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="H1" onClick={() => insertMarkdown('# ', '')}><Type className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="H2" onClick={() => insertMarkdown('## ', '')}><Type className="h-3 w-3" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Bullets" onClick={() => insertMarkdown('\n- ', '')}><List className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Numbers" onClick={() => insertMarkdown('\n1. ', '')}><ListOrdered className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Code Block" onClick={() => insertMarkdown('```\n', '\n```')}><Code className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                    <Textarea
+                      ref={theoryRef}
+                      className="min-h-[400px] font-mono text-sm shadow-inner"
+                      placeholder="# Start writing..."
+                      value={editingItem.theory_content || ''}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev!, theory_content: e.target.value }))}
+                    />
                   </div>
                 )}
 
