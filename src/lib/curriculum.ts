@@ -4,9 +4,23 @@ export interface QuizQuestion {
   correctAnswer: number;
 }
 
+export interface Module {
+  id: string;
+  index: number;
+  name: string;
+  description?: string;
+}
+
+export interface SubModule {
+  id: string;
+  module_id: string;
+  index: number;
+  name: string;
+}
+
 export interface CurriculumItem {
   id: string;
-  week: number; // Module Number
+  week: number; // Legacy Module Number
   day: string;  // Lecture Label or Day Name
   type: 'assignment' | 'task' | 'quiz' | 'lecture' | 'grand_test' | 'final_project';
   title: string;
@@ -24,6 +38,8 @@ export interface CurriculumItem {
   module_index?: number;
   module_name?: string;
   lecture_index?: number;
+  sub_module_id?: string;
+  sub_module_name?: string;
 }
 
 export const DAY_MAP: Record<string, number> = {
@@ -45,12 +61,20 @@ export const isItemUnlocked = (
   agreedTC: boolean = true
 ) => {
   const sorted = [...allCurriculum].sort((a, b) => {
+    // Primary Sort: Week/Module
     if (a.week !== b.week) return a.week - b.week;
+
+    // Secondary Sort: Lecture Index (if exists)
     const getOrder = (i: CurriculumItem) => {
       if (i.lecture_index !== undefined && i.lecture_index !== null) return i.lecture_index;
+
+      // Fallback to Day Map for legacy support
       if (DAY_MAP[i.day]) return DAY_MAP[i.day];
+
+      // Fallback to "Lecture X" parsing
       const match = i.day.match(/Lecture\s+(\d+)/i);
       if (match) return parseInt(match[1]);
+
       return 0;
     };
     return getOrder(a) - getOrder(b);

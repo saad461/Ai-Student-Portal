@@ -51,6 +51,24 @@ create table applications (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Modules table: For top-level course organization
+create table modules (
+  id uuid default uuid_generate_v4() primary key,
+  index integer not null,
+  name text not null,
+  description text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Sub-modules table: For grouping lectures within modules
+create table sub_modules (
+  id uuid default uuid_generate_v4() primary key,
+  module_id uuid references modules(id) on delete cascade not null,
+  index integer not null,
+  name text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Curriculum table: Stores assignments, tasks, and quizzes
 create table curriculum (
   id text primary key,
@@ -58,8 +76,10 @@ create table curriculum (
   module_name text,
   lecture_index integer,
   week integer not null,
-  day text not null check (day in ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Monthly', 'Final')),
+  day text not null, -- Day label (e.g. "Lecture 1") - Constraint removed to allow custom labels
   type text not null check (type in ('assignment', 'task', 'quiz', 'lecture', 'grand_test', 'final_project')),
+  sub_module_id uuid references sub_modules(id) on delete set null,
+  sub_module_name text,
   title text not null,
   description text not null,
   requirements text[],
@@ -125,6 +145,8 @@ create table focus_sessions (
 
 -- Row Level Security (RLS)
 alter table profiles enable row level security;
+alter table modules enable row level security;
+alter table sub_modules enable row level security;
 alter table curriculum enable row level security;
 alter table submissions enable row level security;
 alter table attendance enable row level security;
@@ -133,6 +155,8 @@ alter table extra_tasks enable row level security;
 alter table focus_sessions enable row level security;
 
 -- Policies
+create policy "Public modules are viewable by everyone" on modules for select using (true);
+create policy "Public sub_modules are viewable by everyone" on sub_modules for select using (true);
 create policy "Public curriculum is viewable by everyone" on curriculum for select using (true);
 
 -- Applications policies
@@ -170,6 +194,8 @@ create policy "Users can insert their own focus sessions" on focus_sessions for 
 
 -- Admin policies
 create policy "Admins can do everything" on profiles for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can manage modules" on modules for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can manage sub_modules" on sub_modules for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can manage curriculum" on curriculum for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can view/edit all submissions" on submissions for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can view all attendance" on attendance for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
