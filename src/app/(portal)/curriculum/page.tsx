@@ -160,8 +160,65 @@ export default function CurriculumPage() {
                     {m.name}
                   </TabsTrigger>
                 ))}
+                <TabsTrigger value="completed" className="bg-green-50 text-green-700 data-[state=active]:bg-green-600 data-[state=active]:text-white ml-2">
+                  Completed
+                </TabsTrigger>
               </TabsList>
             </div>
+
+            <TabsContent value="completed" className="space-y-8 mt-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-green-700">Completed Curriculum</h2>
+              </div>
+
+              {curriculum.filter(item => {
+                const sub = submissions.find(s => s.curriculum_id === item.id);
+                return sub && (sub.status === 'submitted' || sub.status === 'reviewed');
+              }).length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {curriculum.filter(item => {
+                    const sub = submissions.find(s => s.curriculum_id === item.id);
+                    return sub && (sub.status === 'submitted' || sub.status === 'reviewed');
+                  }).map((item) => (
+                    <Card key={item.id} className="flex flex-col border-green-200 bg-green-50/20">
+                      <CardHeader className="flex-none">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="mb-2">{item.day}</Badge>
+                              <Badge variant="outline" className="mb-2 uppercase text-[10px] flex items-center gap-1">
+                                {item.type === 'lecture' && <Video className="h-2 w-2" />}
+                                {item.type}
+                              </Badge>
+                          </div>
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        </div>
+                        <CardTitle className="text-lg">{item.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                      </CardContent>
+                      <CardFooter className="pt-0 pb-6 px-6 mt-auto">
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-green-500 text-green-700 hover:bg-green-100"
+                        >
+                          <Link href={`/lecture/${item.id}`}>
+                            Review Lecture
+                          </Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-20 text-center border-2 border-dashed rounded-3xl bg-slate-50">
+                  <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                  <p className="text-slate-500">No completed lectures yet. Keep learning!</p>
+                </div>
+              )}
+            </TabsContent>
 
             {displayModules.map((m) => (
               <TabsContent key={m.index} value={m.index.toString()} className="space-y-8 mt-6">
@@ -228,16 +285,19 @@ export default function CurriculumPage() {
                                     )}
                                   </CardContent>
 
-                                  {!isSubmitted && !isSkipped && isUnlocked && isFocusUnlocked && item.type === 'lecture' && (
+                                  {isUnlocked && isFocusUnlocked && item.type === 'lecture' && (
                                      <CardFooter className="pt-0 pb-6 px-6">
                                         <Button
                                           asChild
                                           variant="outline"
                                           size="sm"
-                                          className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
+                                          className={cn(
+                                            "w-full",
+                                            isSubmitted ? "border-green-500 text-green-700 hover:bg-green-50" : "border-purple-500 text-purple-600 hover:bg-purple-50"
+                                          )}
                                         >
                                           <Link href={`/lecture/${item.id}`}>
-                                            Open Lecture Room
+                                            {isSubmitted ? "Review Lecture" : "Open Lecture Room"}
                                           </Link>
                                         </Button>
                                      </CardFooter>
@@ -343,16 +403,19 @@ export default function CurriculumPage() {
                           )}
                         </CardContent>
 
-                        {!isSubmitted && !isSkipped && isUnlocked && isFocusUnlocked && item.type === 'lecture' && (
+                        {isUnlocked && isFocusUnlocked && item.type === 'lecture' && (
                            <CardFooter className="pt-0 pb-6 px-6">
                               <Button
                                 asChild
                                 variant="outline"
                                 size="sm"
-                                className="w-full border-purple-500 text-purple-600 hover:bg-purple-50"
+                                className={cn(
+                                  "w-full",
+                                  isSubmitted ? "border-green-500 text-green-700 hover:bg-green-50" : "border-purple-500 text-purple-600 hover:bg-purple-50"
+                                )}
                               >
                                 <Link href={`/lecture/${item.id}`}>
-                                  Open Lecture Room
+                                  {isSubmitted ? "Review Lecture" : "Open Lecture Room"}
                                 </Link>
                               </Button>
                            </CardFooter>
