@@ -209,6 +209,7 @@ create policy "Admins can view all focus sessions" on focus_sessions for select 
 -- Note: These usually need to be created via the Supabase Dashboard or API
 -- insert into storage.buckets (id, name, public) values ('passports', 'passports', true);
 -- insert into storage.buckets (id, name, public) values ('cvs', 'cvs', true);
+-- insert into storage.buckets (id, name, public) values ('curriculum-images', 'curriculum-images', true);
 
 -- Storage Policies for Passports
 -- create policy "Passport images are publicly accessible" on storage.objects for select using (bucket_id = 'passports');
