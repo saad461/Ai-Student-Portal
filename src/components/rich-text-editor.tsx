@@ -1,6 +1,6 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Link } from '@tiptap/extension-link';
 import { Image } from '@tiptap/extension-image';
@@ -17,6 +17,9 @@ import { Highlight } from '@tiptap/extension-highlight';
 import { Subscript } from '@tiptap/extension-subscript';
 import { Superscript } from '@tiptap/extension-superscript';
 import { FontFamily } from '@tiptap/extension-font-family';
+import { Typography } from '@tiptap/extension-typography';
+import { TaskList } from '@tiptap/extension-task-list';
+import { TaskItem } from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
 import {
   Bold,
@@ -30,6 +33,7 @@ import {
   Type,
   List,
   ListOrdered,
+  CheckSquare,
   Quote,
   Undo,
   Redo,
@@ -58,7 +62,7 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -325,6 +329,15 @@ const MenuBar = ({ editor }: { editor: any }) => {
         <Button
           variant="ghost"
           size="icon"
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          className={cn(editor.isActive('taskList') && 'bg-slate-200 dark:bg-slate-800')}
+          title="Task List"
+        >
+          <CheckSquare className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           className={cn(editor.isActive('blockquote') && 'bg-slate-200 dark:bg-slate-800')}
           title="Blockquote"
@@ -444,6 +457,11 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
       Subscript,
       Superscript,
       FontFamily,
+      Typography,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
       Markdown,
     ],
     content: content,
