@@ -28,7 +28,7 @@ export interface CurriculumItem {
   requirements?: string[];
   required_focus_hours?: number;
   required_read_minutes?: number;
-  content?: QuizQuestion[] | string[];
+  content?: any;
   theory_content?: string;
   video_url?: string;
   attached_assignment?: {
@@ -42,6 +42,7 @@ export interface CurriculumItem {
   lecture_index?: number;
   sub_module_id?: string;
   sub_module_name?: string;
+  custom_toc?: { text: string; id: string; level: number }[];
 }
 
 export const DAY_MAP: Record<string, number> = {
@@ -62,6 +63,38 @@ export const getEstimatedReadTime = (content: string | undefined): number => {
   const words = content.trim().split(/\s+/).length;
   const minutes = Math.ceil(words / 200);
   return minutes;
+};
+
+export const extractHeadings = (content: string | undefined) => {
+  if (!content) return [];
+
+  const extracted: { level: number; text: string; id: string }[] = [];
+  const lines = content.split('\n');
+
+  lines.forEach(line => {
+    // Markdown: # Heading
+    const mdMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    if (mdMatch) {
+      const level = mdMatch[1].length;
+      const rawText = mdMatch[2];
+      const cleanText = rawText.replace(/[*_~`]/g, '').replace(/<[^>]*>/g, '').trim();
+      const id = cleanText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+      extracted.push({ level, text: cleanText, id });
+      return;
+    }
+
+    // HTML: <h1 style="...">Heading</h1>
+    const htmlMatch = line.match(/<(h[1-3])[^>]*>(.*?)<\/h[1-3]>/i);
+    if (htmlMatch) {
+      const level = parseInt(htmlMatch[1][1]);
+      const rawText = htmlMatch[2];
+      const cleanText = rawText.replace(/<[^>]*>/g, '').replace(/[*_~`]/g, '').trim();
+      const id = cleanText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+      extracted.push({ level, text: cleanText, id });
+    }
+  });
+
+  return extracted;
 };
 
 export const isItemUnlocked = (

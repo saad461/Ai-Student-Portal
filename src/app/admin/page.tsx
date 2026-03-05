@@ -53,7 +53,7 @@ import {
   deleteSubModuleAction,
   uploadVideoAction
 } from './actions';
-import { CurriculumItem, QuizQuestion, Module, SubModule } from '@/lib/curriculum';
+import { CurriculumItem, QuizQuestion, Module, SubModule, extractHeadings } from '@/lib/curriculum';
 import {
   Table,
   TableBody,
@@ -602,14 +602,86 @@ export default function AdminDashboard() {
 
               <div className="space-y-6">
                 {editingItem?.type === 'lecture' && (
-                  <div className="space-y-2">
-                    <Label className="text-lg font-bold">Theory Content</Label>
-                    <RichTextEditor
-                      key={editingItem.id}
-                      content={editingItem.theory_content || ''}
-                      onChange={(content) => setEditingItem(prev => ({ ...prev!, theory_content: content }))}
-                    />
-                  </div>
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-lg font-bold">Theory Content</Label>
+                      <RichTextEditor
+                        key={editingItem.id}
+                        content={editingItem.theory_content || ''}
+                        onChange={(content) => setEditingItem(prev => ({ ...prev!, theory_content: content }))}
+                      />
+                    </div>
+
+                    <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                      <div className="flex justify-between items-center">
+                         <div>
+                            <h4 className="font-bold text-lg">Table of Contents</h4>
+                            <p className="text-xs text-muted-foreground">Manage the navigation links for this lecture.</p>
+                         </div>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             const auto = extractHeadings(editingItem.theory_content);
+                             setEditingItem(prev => ({ ...prev!, custom_toc: auto }));
+                           }}
+                         >
+                           Reset to Automatic
+                         </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {(editingItem.custom_toc || extractHeadings(editingItem.theory_content)).map((entry, idx) => (
+                          <div key={idx} className="flex gap-2 items-center group">
+                            <Badge variant="outline" className="h-6 w-8 flex justify-center p-0">H{entry.level}</Badge>
+                            <Input
+                              className="h-8 text-sm"
+                              value={entry.text}
+                              onChange={(e) => {
+                                const newToc = [...(editingItem.custom_toc || extractHeadings(editingItem.theory_content))];
+                                newToc[idx] = { ...newToc[idx], text: e.target.value };
+                                setEditingItem(prev => ({ ...prev!, custom_toc: newToc }));
+                              }}
+                            />
+                            <Input
+                              className="h-8 text-xs font-mono w-40"
+                              value={entry.id}
+                              onChange={(e) => {
+                                const newToc = [...(editingItem.custom_toc || extractHeadings(editingItem.theory_content))];
+                                newToc[idx] = { ...newToc[idx], id: e.target.value };
+                                setEditingItem(prev => ({ ...prev!, custom_toc: newToc }));
+                              }}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100"
+                              onClick={() => {
+                                const newToc = (editingItem.custom_toc || extractHeadings(editingItem.theory_content)).filter((_, i) => i !== idx);
+                                setEditingItem(prev => ({ ...prev!, custom_toc: newToc }));
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full border-2 border-dashed h-10 mt-2"
+                          onClick={() => {
+                            const current = (editingItem.custom_toc || extractHeadings(editingItem.theory_content));
+                            setEditingItem(prev => ({
+                              ...prev!,
+                              custom_toc: [...current, { text: 'New Link', id: 'new-link', level: 2 }]
+                            }));
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-2" /> Add Manual Link
+                        </Button>
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {(editingItem?.type === 'assignment' || editingItem?.type === 'lecture') && (

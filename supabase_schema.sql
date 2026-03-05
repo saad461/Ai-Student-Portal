@@ -86,6 +86,7 @@ create table curriculum (
   required_focus_hours numeric default 0,
   required_read_minutes integer default 0,
   content jsonb, -- For quiz questions or detailed task instructions
+  custom_toc jsonb, -- Manually managed Table of Contents
   theory_content text,
   video_url text,
   attached_assignment jsonb,
