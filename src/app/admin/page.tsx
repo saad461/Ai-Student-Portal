@@ -28,7 +28,8 @@ import {
   Layers,
   ChevronRight,
   ChevronDown,
-  Layout
+  Layout,
+  Video as VideoIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -49,7 +50,8 @@ import {
   saveModuleAction,
   deleteModuleAction,
   saveSubModuleAction,
-  deleteSubModuleAction
+  deleteSubModuleAction,
+  uploadVideoAction
 } from './actions';
 import { CurriculumItem, QuizQuestion, Module, SubModule } from '@/lib/curriculum';
 import {
@@ -61,6 +63,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RichTextEditor } from '@/components/rich-text-editor';
+import { cn } from '@/lib/utils';
 
 interface StudentProfile {
   id: string;
@@ -96,6 +99,8 @@ export default function AdminDashboard() {
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
   const [editingModule, setEditingModule] = useState<Partial<Module> | null>(null);
   const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
 
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
@@ -550,7 +555,49 @@ export default function AdminDashboard() {
                     <Input type="number" placeholder="Leave 0 for auto" value={editingItem?.required_read_minutes || 0} onChange={(e) => setEditingItem(prev => ({ ...prev!, required_read_minutes: parseInt(e.target.value) }))} />
                   </div>
                 </div>
-                <div className="space-y-2"><Label>Video URL (YouTube/Vimeo)</Label><Input placeholder="https://..." value={editingItem?.video_url || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, video_url: e.target.value }))} /></div>
+                <div className="space-y-2">
+                  <Label>Video URL or Upload</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://..."
+                      className="flex-1"
+                      value={editingItem?.video_url || ''}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev!, video_url: e.target.value }))}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={isVideoUploading}
+                      onClick={() => videoInputRef.current?.click()}
+                      title="Upload Video"
+                    >
+                      <VideoIcon className={cn("h-4 w-4", isVideoUploading && "animate-pulse")} />
+                    </Button>
+                  </div>
+                  <input
+                    type="file"
+                    ref={videoInputRef}
+                    className="hidden"
+                    accept="video/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsVideoUploading(true);
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      try {
+                        const res = await uploadVideoAction(fd);
+                        if (res.success) setEditingItem(prev => ({ ...prev!, video_url: res.url }));
+                        else alert('Upload failed: ' + res.error);
+                      } catch (err) { alert('Upload error'); }
+                      finally {
+                        setIsVideoUploading(false);
+                        if (videoInputRef.current) videoInputRef.current.value = '';
+                      }
+                    }}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Supports YouTube/Vimeo links or direct MP4/WebM uploads.</p>
+                </div>
               </div>
 
               <div className="space-y-4 border-l pl-8 overflow-y-auto">

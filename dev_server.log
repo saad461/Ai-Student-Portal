@@ -26,3 +26,23 @@
  POST /admin/login 200 in 17ms (compile: 6ms, render: 10ms)
  GET /admin 200 in 572ms (compile: 347ms, render: 224ms)
 ✓ Compiled in 245ms
+✓ Compiled in 3.6s
+✓ Compiled in 1024ms
+ GET /admin/login 200 in 2.3s (compile: 1606ms, render: 727ms)
+ POST /admin/login 200 in 46ms (compile: 6ms, render: 40ms)
+ GET /admin 200 in 1866ms (compile: 1738ms, render: 128ms)
+ GET /admin/login 200 in 182ms (compile: 11ms, render: 170ms)
+ POST /admin/login 200 in 28ms (compile: 9ms, render: 19ms)
+ GET /admin 200 in 53ms (compile: 6ms, render: 47ms)
+ GET /admin/login 200 in 92ms (compile: 4ms, render: 88ms)
+ POST /admin/login 200 in 14ms (compile: 3ms, render: 11ms)
+ GET /admin 200 in 29ms (compile: 4ms, render: 26ms)
+ GET /admin/login 200 in 75ms (compile: 6ms, render: 69ms)
+ POST /admin/login 200 in 14ms (compile: 3ms, render: 12ms)
+ GET /admin 200 in 25ms (compile: 3ms, render: 22ms)
+ GET /admin/login 200 in 83ms (compile: 3ms, render: 79ms)
+ POST /admin/login 200 in 14ms (compile: 4ms, render: 10ms)
+ GET /admin 200 in 210ms (compile: 174ms, render: 36ms)
+ GET /admin/login 200 in 81ms (compile: 4ms, render: 77ms)
+ POST /admin/login 200 in 12ms (compile: 5ms, render: 7ms)
+ GET /admin 200 in 24ms (compile: 3ms, render: 21ms)

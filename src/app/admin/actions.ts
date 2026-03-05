@@ -122,6 +122,30 @@ export async function uploadImageAction(formData: FormData) {
   return { success: true, url: publicUrl };
 }
 
+export async function uploadVideoAction(formData: FormData) {
+  const file = formData.get('file') as File;
+  if (!file) return { success: false, error: 'No file provided' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+  const { data, error } = await supabaseAdmin.storage
+    .from('curriculum-videos')
+    .upload(fileName, file);
+
+  if (error) return { success: false, error: error.message };
+
+  const { data: { publicUrl } } = supabaseAdmin.storage
+    .from('curriculum-videos')
+    .getPublicUrl(fileName);
+
+  return { success: true, url: publicUrl };
+}
+
 export async function saveSubModuleAction(subModule: any) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
