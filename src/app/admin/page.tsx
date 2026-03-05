@@ -623,7 +623,7 @@ export default function AdminDashboard() {
                            size="sm"
                            onClick={() => {
                              const auto = extractHeadings(editingItem.theory_content);
-                             setEditingItem(prev => ({ ...prev!, custom_toc: auto }));
+                             setEditingItem(prev => ({ ...prev!, content: auto }));
                            }}
                          >
                            Reset to Automatic
@@ -631,25 +631,27 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-3">
-                        {(editingItem.custom_toc || extractHeadings(editingItem.theory_content)).map((entry, idx) => (
+                        {((Array.isArray(editingItem.content) ? editingItem.content : null) || extractHeadings(editingItem.theory_content)).map((entry: any, idx: number) => (
                           <div key={idx} className="flex gap-2 items-center group">
                             <Badge variant="outline" className="h-6 w-8 flex justify-center p-0">H{entry.level}</Badge>
                             <Input
                               className="h-8 text-sm"
                               value={entry.text}
                               onChange={(e) => {
-                                const newToc = [...(editingItem.custom_toc || extractHeadings(editingItem.theory_content))];
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], text: e.target.value };
-                                setEditingItem(prev => ({ ...prev!, custom_toc: newToc }));
+                                setEditingItem(prev => ({ ...prev!, content: newToc }));
                               }}
                             />
                             <Input
                               className="h-8 text-xs font-mono w-40"
                               value={entry.id}
                               onChange={(e) => {
-                                const newToc = [...(editingItem.custom_toc || extractHeadings(editingItem.theory_content))];
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], id: e.target.value };
-                                setEditingItem(prev => ({ ...prev!, custom_toc: newToc }));
+                                setEditingItem(prev => ({ ...prev!, content: newToc }));
                               }}
                             />
                             <Button
@@ -657,8 +659,9 @@ export default function AdminDashboard() {
                               size="icon"
                               className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100"
                               onClick={() => {
-                                const newToc = (editingItem.custom_toc || extractHeadings(editingItem.theory_content)).filter((_, i) => i !== idx);
-                                setEditingItem(prev => ({ ...prev!, custom_toc: newToc }));
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const newToc = currentToc.filter((_: any, i: number) => i !== idx);
+                                setEditingItem(prev => ({ ...prev!, content: newToc }));
                               }}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -670,10 +673,10 @@ export default function AdminDashboard() {
                           size="sm"
                           className="w-full border-2 border-dashed h-10 mt-2"
                           onClick={() => {
-                            const current = (editingItem.custom_toc || extractHeadings(editingItem.theory_content));
+                            const current = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
                             setEditingItem(prev => ({
                               ...prev!,
-                              custom_toc: [...current, { text: 'New Link', id: 'new-link', level: 2 }]
+                              content: [...current, { text: 'New Link', id: 'new-link', level: 2 }]
                             }));
                           }}
                         >
