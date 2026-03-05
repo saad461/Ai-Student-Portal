@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, use, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
-import { CurriculumItem, QuizQuestion, getEstimatedReadTime } from '@/lib/curriculum';
+import { CurriculumItem, QuizQuestion, getEstimatedReadTime, extractHeadings } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -194,36 +194,11 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   }, [nextItem, isFullyDone]);
 
   const headings = useMemo(() => {
-    if (!lecture?.theory_content) return [];
-
-    const extracted: { level: number; text: string; id: string }[] = [];
-    const lines = lecture.theory_content.split('\n');
-
-    lines.forEach(line => {
-      // Markdown: # Heading
-      const mdMatch = line.match(/^(#{1,3})\s+(.+)$/);
-      if (mdMatch) {
-        const level = mdMatch[1].length;
-        const rawText = mdMatch[2];
-        const cleanText = rawText.replace(/[*_~`]/g, '').replace(/<[^>]*>/g, '').trim();
-        const id = cleanText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-        extracted.push({ level, text: cleanText, id });
-        return;
-      }
-
-      // HTML: <h1 style="...">Heading</h1>
-      const htmlMatch = line.match(/<(h[1-3])[^>]*>(.*?)<\/h[1-3]>/i);
-      if (htmlMatch) {
-        const level = parseInt(htmlMatch[1][1]);
-        const rawText = htmlMatch[2];
-        const cleanText = rawText.replace(/<[^>]*>/g, '').replace(/[*_~`]/g, '').trim();
-        const id = cleanText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-        extracted.push({ level, text: cleanText, id });
-      }
-    });
-
-    return extracted;
-  }, [lecture?.theory_content]);
+    if (lecture?.custom_toc && lecture.custom_toc.length > 0) {
+      return lecture.custom_toc;
+    }
+    return extractHeadings(lecture?.theory_content);
+  }, [lecture?.theory_content, lecture?.custom_toc]);
 
   if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
   if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;
