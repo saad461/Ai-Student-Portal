@@ -188,3 +188,52 @@
 .pro-mode .badge {
   @apply rounded-none uppercase tracking-tighter border-primary/50;
 }
+
+/* Tiptap & Typography Enhancements */
+@layer base {
+  .prose :where(ul):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply list-disc list-outside pl-6;
+  }
+  .prose :where(ol):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply list-decimal list-outside pl-6;
+  }
+  .prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    @apply border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 my-6 p-4 rounded-lg overflow-x-auto font-mono text-sm;
+  }
+
+  /* Tiptap Task List Styles */
+  .prose ul[data-type="taskList"] {
+    list-style: none !important;
+    padding: 0 !important;
+  }
+
+  .prose ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose ul[data-type="taskList"] li > label {
+    flex: 0 0 auto;
+    user-select: none;
+    margin-right: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  .prose ul[data-type="taskList"] li > div {
+    flex: 1 1 auto;
+    margin: 0 !important;
+  }
+
+  .prose ul[data-type="taskList"] input[type="checkbox"] {
+    @apply h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary;
+    cursor: pointer;
+  }
+
+  /* Support for Font Families */
+  .prose [style*="font-family: Inter"] { font-family: 'Inter', sans-serif; }
+  .prose [style*="font-family: Comic Sans MS"] { font-family: 'Comic Sans MS', 'Comic Sans', cursive; }
+  .prose [style*="font-family: serif"] { font-family: serif; }
+  .prose [style*="font-family: monospace"] { font-family: monospace; }
+  .prose [style*="font-family: cursive"] { font-family: cursive; }
+}
