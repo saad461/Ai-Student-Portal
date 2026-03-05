@@ -31,6 +31,7 @@ import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 interface Submission {
   id: string;
@@ -444,6 +445,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                         {lecture.theory_content ? (
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeRaw]}
                             components={MarkdownComponents as any}
                           >
                             {lecture.theory_content}

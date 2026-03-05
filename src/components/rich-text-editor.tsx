@@ -11,7 +11,7 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { Underline } from '@tiptap/extension-underline';
-import { TextStyle } from '@tiptap/extension-text-style';
+import { TextStyle, FontSize } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
 import { Subscript } from '@tiptap/extension-subscript';
@@ -202,6 +202,29 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
           <option value="serif">Serif</option>
           <option value="monospace">Monospace</option>
           <option value="cursive">Cursive</option>
+        </select>
+
+        <select
+          className="h-8 text-xs bg-transparent border rounded px-1 w-20"
+          onChange={(e) => {
+            if (e.target.value === 'default') {
+              (editor.commands as any).unsetFontSize();
+            } else {
+              (editor.commands as any).setFontSize(e.target.value);
+            }
+          }}
+          title="Font Size"
+        >
+          <option value="default">Size</option>
+          <option value="12px">12px</option>
+          <option value="14px">14px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+          <option value="20px">20px</option>
+          <option value="24px">24px</option>
+          <option value="30px">30px</option>
+          <option value="36px">36px</option>
+          <option value="48px">48px</option>
         </select>
       </div>
 
@@ -452,6 +475,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
       }),
       Underline,
       TextStyle,
+      FontSize,
       Color,
       Highlight.configure({ multicolor: true }),
       Subscript,

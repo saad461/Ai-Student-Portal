@@ -124,49 +124,49 @@ export const CURRICULUM: CurriculumItem[] = [
     module_index: 1,
     module_name: 'HTML Foundation',
     lecture_index: 1,
-    theory_content: `Welcome to Learn HTML!
-
-This HTML course for web developers provides a solid overview for developers, from novice to expert level HTML.
-
-HyperText Markup Language, or HTML, is the backbone of the web, providing the content, as well as the structure of that content, that you see displayed in your web browser.
-
-Unless you're reading a PDF or a printed version of this page, this content is made up of various HTML elements and text. HTML is the content layer of the web. HTML elements are the nodes that make up the Document Object Model.
-
-Cascading Style Sheets provide the look and feel, or presentation layer of the page. JavaScript is the behavior layer, often used to manipulate the objects within a document. Sites that are built with JavaScript frameworks are really just manipulating HTML. In turn, it's important to mark up your HTML in a way that scripts can easily parse and that assistive technologies can understand.
-
-This means writing HTML code with modern standards.
-
-### What you'll learn
-This HTML course for web developers provides a solid overview for developers, from novice to expert level HTML. If you're completely new to HTML, you'll learn how to build structurally sound content. If you've been building websites for years, this course may fill in gaps in knowledge that you didn't even know you had.
-
-Along this journey, we'll build the structure for MachineLearningWorkshop.com. No machines were harmed in the creation of this series.
-
-This is not a complete reference. Each section introduces the section topic with brief explanations and examples, providing you an opportunity to explore further. There are links to topic references, such as MDN and WHATWG specifications, and other web.dev articles. While this is not an accessibility course, each section includes accessibility best practices and specific issues, with links to deeper dives on the topic. Each section has a short assessment to help people confirm their understanding.
-
-### Here's what you'll learn:
-- **Overview of HTML**: A brief introduction to the key concepts in HTML.
-- **Document structure**: Learn how to structure your HTML documents with a solid foundation.
-- **Metadata**: How to use meta tags to provide information about your documents.
-- **Semantic HTML**: Using the correct HTML elements to describe your document content.
-- **Headings and sections**: How to correctly use sectioning elements to give meaning to your content.
-- **Attributes**: Learn about the different global attributes along with attributes specific to particular HTML elements.
-- **Text basics**: How to format text using HTML.
-- **Links**: Everything you need to know about links.
-- **Lists**: Lists and other ways of grouping your content.
-- **Navigation**: Navigation is a key element of any site of application, and it starts with HTML.
-- **Tables**: Understanding how to use tables to mark up tabular data.
-- **Forms**: An overview of forms in HTML.
-- **Images**: An overview of images in HTML.
-- **Audio and Video**: Discover how to work with HTML media such as audio and video.
-- **Template, slot, and shadow**: An explanation of template, slot, and shadow.
-- **HTML APIs**: Learn how HTML information can be exposed and manipulated using JavaScript.
-- **Focus**: How to manage focus order in your HTML documents.
-- **Other inline text elements**: An introduction to the range of elements used to markup text.
-- **Details and summary**: Discover how the very useful details and summary elements work, and where to use them.
-- **Dialog**: The <dialog> element is a useful element for representing any kind of dialog in HTML, find out how it works.
-- **Conclusion and next steps**: Wrapping up with some further resources.
-
-So, are you ready to learn HTML? Let's get started.`,
+    theory_content: `<h1>Welcome to Learn HTML!</h1>
+<p>This HTML course for web developers provides a <strong>solid overview</strong> for developers, from <em>novice to expert</em> level HTML.</p>
+<p>HyperText Markup Language, or HTML, is the <u>backbone of the web</u>, providing the content, as well as the structure of that content, that you see displayed in your web browser.</p>
+<p>Unless you're reading a PDF or a printed version of this page, this content is made up of various HTML elements and text. HTML is the content layer of the web. HTML elements are the nodes that make up the Document Object Model.</p>
+<blockquote>
+  <p>HTML is the foundation of every website. Without it, the web wouldn't exist as we know it today.</p>
+</blockquote>
+<h2>What you'll learn</h2>
+<p>This course provides a comprehensive guide. If you're completely new to HTML, you'll learn how to build structurally sound content. If you've been building websites for years, this course may fill in gaps in knowledge that you didn't even know you had.</p>
+<h3>Course Modules Table</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Module</th>
+      <th>Topic</th>
+      <th>Difficulty</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>Fundamentals</td>
+      <td>Beginner</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Advanced Layout</td>
+      <td>Intermediate</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Web APIs</td>
+      <td>Advanced</td>
+    </tr>
+  </tbody>
+</table>
+<p>Here's what we will cover in depth:</p>
+<ul>
+  <li><strong>Document structure</strong>: Learn how to structure your HTML documents.</li>
+  <li><strong>Semantic HTML</strong>: Using the correct HTML elements to describe your content.</li>
+  <li><strong>Forms &amp; Media</strong>: Handling user input and multimedia.</li>
+</ul>
+<p>So, are you ready to learn HTML? <strong>Let's get started!</strong></p>`,
   },
 
   {
@@ -179,7 +179,10 @@ So, are you ready to learn HTML? Let's get started.`,
     module_index: 1,
     module_name: 'HTML Foundation',
     lecture_index: 2,
-    theory_content: 'HTML (HyperText Markup Language) is the standard markup language for documents designed to be displayed in a web browser...',
+    theory_content: `<h2>The Role of HTML</h2>
+<p>HTML (HyperText Markup Language) is the standard markup language for documents designed to be displayed in a web browser. It is often assisted by technologies such as Cascading Style Sheets (CSS) and scripting languages such as JavaScript.</p>
+<hr />
+<p>Web browsers receive HTML documents from a web server or from local storage and render the documents into multimedia web pages. HTML describes the structure of a web page semantically and originally included cues for the appearance of the document.</p>`,
   },
   {
     id: 'm1-l3',
