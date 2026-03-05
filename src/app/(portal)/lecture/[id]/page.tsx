@@ -194,11 +194,11 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   }, [nextItem, isFullyDone]);
 
   const headings = useMemo(() => {
-    if (lecture?.custom_toc && lecture.custom_toc.length > 0) {
-      return lecture.custom_toc;
+    if (Array.isArray(lecture?.content) && lecture.content.length > 0) {
+      return lecture.content;
     }
     return extractHeadings(lecture?.theory_content);
-  }, [lecture?.theory_content, lecture?.custom_toc]);
+  }, [lecture?.theory_content, lecture?.content]);
 
   if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
   if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;

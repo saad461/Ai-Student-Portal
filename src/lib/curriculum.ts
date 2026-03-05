@@ -42,7 +42,6 @@ export interface CurriculumItem {
   lecture_index?: number;
   sub_module_id?: string;
   sub_module_name?: string;
-  custom_toc?: { text: string; id: string; level: number }[];
 }
 
 export const DAY_MAP: Record<string, number> = {
