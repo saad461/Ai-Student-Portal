@@ -195,15 +195,34 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
   const headings = useMemo(() => {
     if (!lecture?.theory_content) return [];
+
+    const extracted: { level: number; text: string; id: string }[] = [];
     const lines = lecture.theory_content.split('\n');
-    return lines
-      .filter(line => line.startsWith('#'))
-      .map(line => {
-        const level = line.match(/^#+/)?.[0].length || 0;
-        const text = line.replace(/^#+\s*/, '').trim();
-        const id = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
-        return { level, text, id };
-      });
+
+    lines.forEach(line => {
+      // Markdown: # Heading
+      const mdMatch = line.match(/^(#{1,3})\s+(.+)$/);
+      if (mdMatch) {
+        const level = mdMatch[1].length;
+        const rawText = mdMatch[2];
+        const cleanText = rawText.replace(/[*_~`]/g, '').replace(/<[^>]*>/g, '').trim();
+        const id = cleanText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+        extracted.push({ level, text: cleanText, id });
+        return;
+      }
+
+      // HTML: <h1 style="...">Heading</h1>
+      const htmlMatch = line.match(/<(h[1-3])[^>]*>(.*?)<\/h[1-3]>/i);
+      if (htmlMatch) {
+        const level = parseInt(htmlMatch[1][1]);
+        const rawText = htmlMatch[2];
+        const cleanText = rawText.replace(/<[^>]*>/g, '').replace(/[*_~`]/g, '').trim();
+        const id = cleanText.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+        extracted.push({ level, text: cleanText, id });
+      }
+    });
+
+    return extracted;
   }, [lecture?.theory_content]);
 
   if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
@@ -212,29 +231,35 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const MarkdownComponents = {
     h1: ({ children }: any) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h1 id={id} className="text-4xl font-black mt-12 mb-6 border-b-4 border-primary/10 pb-4 text-slate-900 dark:text-white">{children}</h1>;
+      return <h1 id={id} className="text-4xl font-black mt-12 mb-6 text-slate-900 dark:text-white pb-2 border-b-2 border-slate-100 dark:border-slate-800">{children}</h1>;
     },
     h2: ({ children }: any) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-800 dark:text-slate-100 flex items-center gap-3">
-        <span className="h-8 w-1.5 bg-primary rounded-full" />
-        {children}
-      </h2>;
+      return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-800 dark:text-slate-100 pb-1 border-b border-slate-100 dark:border-slate-800">{children}</h2>;
     },
     h3: ({ children }: any) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h3 id={id} className="text-2xl font-bold mt-8 mb-4 text-slate-800 dark:text-slate-200">{children}</h3>;
     },
-    p: ({ children }: any) => <p className="text-lg leading-relaxed mb-6 text-slate-700 dark:text-slate-300 font-medium">{children}</p>,
+    p: ({ children }: any) => <p className="text-lg leading-relaxed mb-6 text-slate-600 dark:text-slate-400 font-medium">{children}</p>,
     ul: ({ children }: any) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
-    ol: ({ children }: any) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-700 dark:text-slate-300">{children}</ol>,
-    li: ({ children, ordered }: any) => (
-      <li className="text-lg flex items-start gap-3">
-        {!ordered && <div className="h-2 w-2 rounded-full bg-primary mt-2.5 shrink-0" />}
-        <span className="text-slate-700 dark:text-slate-300 font-medium">{children}</span>
-      </li>
-    ),
-    strong: ({ children }: any) => <strong className="font-black text-slate-900 dark:text-white underline decoration-primary/30 decoration-4 underline-offset-2">{children}</strong>,
+    ol: ({ children }: any) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-600 dark:text-slate-400">{children}</ol>,
+    li: ({ children, ordered, node }: any) => {
+      // Check if it's a task list item
+      const isTask = node?.children?.some((c: any) => c.tagName === 'input');
+
+      if (isTask) {
+        return <li className="text-lg flex items-start gap-3 mb-2">{children}</li>;
+      }
+
+      return (
+        <li className="text-lg flex items-start gap-3 mb-2">
+          {!ordered && <div className="h-2 w-2 rounded-full bg-primary mt-2.5 shrink-0" />}
+          <span className="text-slate-600 dark:text-slate-400 font-medium">{children}</span>
+        </li>
+      );
+    },
+    strong: ({ children }: any) => <strong className="font-black text-slate-900 dark:text-white">{children}</strong>,
     em: ({ children }: any) => <em className="italic text-primary/80 font-medium">{children}</em>,
     a: ({ href, children }: any) => (
       <a
@@ -267,6 +292,14 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         {alt && <p className="mt-4 text-sm text-muted-foreground font-bold italic">Above: {alt}</p>}
       </div>
     ),
+    table: ({ children }: any) => (
+      <div className="my-8 overflow-x-auto border rounded-xl shadow-sm">
+        <table className="w-full text-left border-collapse">{children}</table>
+      </div>
+    ),
+    thead: ({ children }: any) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
+    th: ({ children }: any) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
+    td: ({ children }: any) => <td className="p-4 border-b text-slate-600 dark:text-slate-400 text-sm md:text-base">{children}</td>,
   };
 
   const isDirectVideo = (url: string) => {
@@ -408,40 +441,33 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             {activeTab === 'theory' && (
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <div className="lg:col-span-3 space-y-8">
-                  {headings.length > 0 && (
-                    <Card className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 border-none shadow-inner p-8 rounded-3xl overflow-hidden relative group">
-                      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                         <List className="h-24 w-24" />
-                      </div>
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
-                           <List className="h-4 w-4" />
-                        </div>
-                        <div className="text-slate-900 dark:text-white font-black uppercase text-sm tracking-[0.2em]">Table of Contents</div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                        {headings.map((h, i) => (
-                          <a
-                            key={i}
-                            href={`#${h.id}`}
-                            className={cn(
-                              "text-sm transition-all flex items-center gap-3 group/item",
-                              h.level === 1
-                                ? "font-black text-slate-900 dark:text-white"
-                                : "pl-6 text-slate-500 dark:text-slate-400 font-bold"
-                            )}
-                          >
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover/item:bg-primary group-hover/item:scale-150 transition-all" />
-                            <span className="group-hover/item:translate-x-1 transition-transform">{h.text}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-
                   <Card className="border-none shadow-none bg-transparent">
                     <CardContent className="p-0 space-y-6">
                       <div className="max-w-none bg-white dark:bg-slate-900 p-8 md:p-12 rounded-3xl border shadow-sm transition-all hover:shadow-md">
+                        {headings.length > 0 && (
+                          <div className="mb-12 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center gap-2 mb-4 text-slate-400">
+                               <List className="h-4 w-4" />
+                               <span className="text-xs font-black uppercase tracking-widest">In this lecture</span>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              {headings.map((h, i) => (
+                                <a
+                                  key={i}
+                                  href={`#${h.id}`}
+                                  className={cn(
+                                    "text-sm hover:text-primary transition-colors flex items-center gap-2",
+                                    h.level === 1 ? "font-bold text-slate-700 dark:text-slate-300" : "pl-4 text-slate-500 dark:text-slate-500"
+                                  )}
+                                >
+                                  <div className="h-1 w-1 rounded-full bg-primary/30" />
+                                  {h.text}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {lecture.theory_content ? (
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
