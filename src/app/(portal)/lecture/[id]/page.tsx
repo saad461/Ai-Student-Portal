@@ -268,6 +268,10 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     ),
   };
 
+  const isDirectVideo = (url: string) => {
+    return url.match(/\.(mp4|webm|ogg|mov)$/) || url.includes('supabase.co/storage/v1/object/public/curriculum-videos/');
+  };
+
   const getEmbedUrl = (url: string) => {
     if (url.includes('youtube.com/watch?v=')) {
       return url.replace('watch?v=', 'embed/');
@@ -549,13 +553,24 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
             {activeTab === 'video' && (
               <div className="space-y-6 animate-in zoom-in-95 duration-500">
-                <div className="aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white dark:border-slate-800">
-                  <iframe
-                    src={getEmbedUrl(lecture.video_url || '')}
-                    className="w-full h-full"
-                    allowFullScreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  />
+                <div className="aspect-video w-full rounded-3xl overflow-hidden shadow-2xl bg-black border-4 border-white dark:border-slate-800 flex items-center justify-center">
+                  {lecture.video_url && isDirectVideo(lecture.video_url) ? (
+                    <video
+                      src={lecture.video_url}
+                      controls
+                      className="w-full h-full"
+                      poster={lecture.video_url.replace(/\.[^/.]+$/, ".jpg")} // Fallback poster attempt
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <iframe
+                      src={getEmbedUrl(lecture.video_url || '')}
+                      className="w-full h-full"
+                      allowFullScreen
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    />
+                  )}
                 </div>
                 <Card className="bg-white dark:bg-slate-900 border shadow-sm p-6 rounded-2xl">
                    <h3 className="text-xl font-bold mb-2">Video Overview</h3>
