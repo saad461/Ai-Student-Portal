@@ -493,9 +493,9 @@ export default function AdminDashboard() {
         <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
           <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
             <DialogHeader><DialogTitle>{editingItem?.id?.startsWith('new-') ? 'Add' : 'Edit'} Curriculum Item</DialogTitle></DialogHeader>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-8 py-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Parent Module</Label>
                     <select
@@ -600,10 +600,10 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="space-y-4 border-l pl-8 overflow-y-auto">
+              <div className="space-y-6">
                 {editingItem?.type === 'lecture' && (
                   <div className="space-y-2">
-                    <Label>Theory Content (Rich Text Editor)</Label>
+                    <Label className="text-lg font-bold">Theory Content</Label>
                     <RichTextEditor
                       key={editingItem.id}
                       content={editingItem.theory_content || ''}
@@ -613,8 +613,8 @@ export default function AdminDashboard() {
                 )}
 
                 {(editingItem?.type === 'assignment' || editingItem?.type === 'lecture') && (
-                   <div className="space-y-4 border-t pt-4">
-                      <h4 className="font-bold flex items-center gap-2"><Plus className="h-4 w-4" /> Attached Assignment</h4>
+                   <div className="space-y-4 border-t pt-6">
+                      <h4 className="font-bold text-lg flex items-center gap-2"><Plus className="h-4 w-4" /> Attached Assignment</h4>
                       <div className="space-y-2">
                          <Label>Assignment Title</Label>
                          <Input value={editingItem.attached_assignment?.title || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, attached_assignment: { ...prev!.attached_assignment!, title: e.target.value, description: prev!.attached_assignment?.description || '', requirements: prev!.attached_assignment?.requirements || [] } }))} />
