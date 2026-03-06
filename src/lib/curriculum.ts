@@ -65,7 +65,7 @@ export const getEstimatedReadTime = (content: string | undefined): number => {
 };
 
 export const extractHeadings = (content: string | undefined) => {
-  if (!content) return [];
+  if (!content || typeof content !== 'string') return [];
 
   const extracted: { level: number; text: string; id: string }[] = [];
   const lines = content.split('\n');

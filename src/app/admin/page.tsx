@@ -101,6 +101,7 @@ export default function AdminDashboard() {
   const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
@@ -153,12 +154,19 @@ export default function AdminDashboard() {
 
   const handleSaveCurriculum = async (item: Partial<CurriculumItem>) => {
     if (!item.id) return;
-    const res = await saveCurriculumItemAction(item);
-    if (res.success) {
-      setEditingItem(null);
-      fetchAdminData();
-    } else {
-      alert('Error saving curriculum: ' + JSON.stringify(res.error));
+    setIsSaving(true);
+    try {
+      const res = await saveCurriculumItemAction(item);
+      if (res.success) {
+        setEditingItem(null);
+        await fetchAdminData();
+      } else {
+        alert('Error saving curriculum: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
+      }
+    } catch (err) {
+      alert('An unexpected error occurred while saving.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -727,7 +735,11 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
-            <DialogFooter><Button onClick={() => handleSaveCurriculum(editingItem!)}>Save Curriculum Item</Button></DialogFooter>
+            <DialogFooter>
+              <Button disabled={isSaving} onClick={() => handleSaveCurriculum(editingItem!)}>
+                {isSaving ? 'Saving...' : 'Save Curriculum Item'}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
