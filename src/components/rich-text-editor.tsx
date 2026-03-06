@@ -26,28 +26,33 @@ const FontSize = Extension.create({
       types: ['textStyle'],
     }
   },
-  addAttributes() {
-    return {
-      fontSize: {
-        default: null,
-        parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
-        renderHTML: attributes => {
-          if (!attributes.fontSize) return {}
-          return { style: `font-size: ${attributes.fontSize}` }
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
+            renderHTML: attributes => {
+              if (!attributes.fontSize) return {}
+              return { style: `font-size: ${attributes.fontSize}` }
+            },
+          },
         },
       },
-    }
+    ]
   },
-  addCommands() {
+  addCommands(): any {
     return {
-      setFontSize: fontSize => ({ chain }: any) => {
+      setFontSize: (fontSize: string) => ({ chain }: any) => {
         return chain().setMark('textStyle', { fontSize }).run()
       },
       unsetFontSize: () => ({ chain }: any) => {
         return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run()
       },
     }
-  } as any,
+  },
 });
 import { Highlight } from '@tiptap/extension-highlight';
 import { Subscript } from '@tiptap/extension-subscript';
@@ -567,7 +572,6 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
           <BubbleMenu
             editor={editor}
             pluginKey="bubbleMenu"
-            tippyOptions={{ duration: 100 }}
             shouldShow={({ state, from, to }) => {
               return from !== to && !state.selection.empty && !editor.isActive('image');
             }}
@@ -667,7 +671,6 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
           <BubbleMenu
             editor={editor}
             pluginKey="tableBubbleMenu"
-            tippyOptions={{ duration: 100 }}
             shouldShow={({ editor }) => editor.isActive('table')}
             className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-1 gap-0.5 z-[9999]"
           >
@@ -685,7 +688,6 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
           <FloatingMenu
             editor={editor}
             pluginKey="floatingMenu"
-            tippyOptions={{ duration: 100 }}
             shouldShow={({ state }) => {
               const { $from } = state.selection;
               return $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
