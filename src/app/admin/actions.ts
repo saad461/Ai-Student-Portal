@@ -48,6 +48,9 @@ async function checkIsAdmin(supabase: any) {
 }
 
 export async function saveCurriculumItemAction(item: any) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -84,6 +87,9 @@ export async function saveCurriculumItemAction(item: any) {
 }
 
 export async function saveModuleAction(module: any) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -99,6 +105,9 @@ export async function saveModuleAction(module: any) {
 }
 
 export async function deleteModuleAction(id: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -113,15 +122,26 @@ export async function deleteModuleAction(id: string) {
 
 async function authorizeAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return false;
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) return false;
+  const { createServerActionClient } = await import('@supabase/auth-helpers-nextjs');
+  const { cookies } = await import('next/headers');
 
-  // For this specific system, admin access is often granted via the ADMIN_PASSWORD
-  // but for file uploads we want to be extra careful.
-  // In a real production app, we would verify the session/JWT here.
-  // Given the current architecture, we'll allow it if the environment is configured.
-  return true;
+  // Need to await cookies in Next.js 16/App Router
+  const cookieStore = await cookies();
+  const supabase = createServerActionClient({ cookies: () => cookieStore });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  return profile?.role === 'admin';
 }
 
 export async function uploadImageAction(formData: FormData) {
@@ -182,6 +202,9 @@ export async function uploadVideoAction(formData: FormData) {
 }
 
 export async function saveSubModuleAction(subModule: any) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -197,6 +220,9 @@ export async function saveSubModuleAction(subModule: any) {
 }
 
 export async function deleteSubModuleAction(id: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -210,6 +236,9 @@ export async function deleteSubModuleAction(id: string) {
 }
 
 export async function deleteCurriculumItemAction(id: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
