@@ -1,6 +1,7 @@
 'use client';
 
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Link } from '@tiptap/extension-link';
 import { Image } from '@tiptap/extension-image';
@@ -504,6 +505,56 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
   return (
     <div className="border rounded-md overflow-hidden bg-white dark:bg-slate-950 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
       <MenuBar editor={editor} />
+
+      {editor && (
+        <BubbleMenu
+          editor={editor}
+          className="flex bg-white dark:bg-slate-900 border rounded-lg shadow-xl overflow-hidden p-1 gap-1"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 w-8", editor.isActive('bold') && 'bg-slate-100 dark:bg-slate-800')}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 w-8", editor.isActive('italic') && 'bg-slate-100 dark:bg-slate-800')}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 w-8", editor.isActive('underline') && 'bg-slate-100 dark:bg-slate-800')}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
+            <UnderlineIcon className="h-4 w-4" />
+          </Button>
+          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 self-center mx-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 w-8", editor.isActive('heading', { level: 1 }) && 'bg-slate-100 dark:bg-slate-800')}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          >
+            <Heading1 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 w-8", editor.isActive('heading', { level: 2 }) && 'bg-slate-100 dark:bg-slate-800')}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          >
+            <Heading2 className="h-4 w-4" />
+          </Button>
+        </BubbleMenu>
+      )}
+
       <EditorContent editor={editor} />
     </div>
   );
