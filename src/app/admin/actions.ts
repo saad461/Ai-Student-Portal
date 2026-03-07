@@ -1,6 +1,8 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { CURRICULUM } from '@/lib/curriculum';
 
 export async function verifyAdminPassword(password: string) {
@@ -125,12 +127,23 @@ async function authorizeAdmin() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) return false;
 
-  const { createServerActionClient } = await import('@supabase/auth-helpers-nextjs');
-  const { cookies } = await import('next/headers');
-
-  // Need to await cookies in Next.js 16/App Router
   const cookieStore = await cookies();
-  const supabase = createServerActionClient({ cookies: () => cookieStore });
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        } catch {
+          // Handle cookie setting errors
+        }
+      },
+    },
+  });
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
