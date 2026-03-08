@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Layers,
   BookOpen,
   Clock,
   LogOut,
@@ -44,6 +45,7 @@ export function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Courses', href: '/courses', icon: Layers },
     { name: 'Curriculum', href: '/curriculum', icon: BookOpen },
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'GitHub Mastery', href: '/github-mastery', icon: Github },

@@ -4,8 +4,19 @@ export interface QuizQuestion {
   correctAnswer: number;
 }
 
+export interface Course {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  thumbnail_url?: string;
+  index: number;
+  status?: 'locked' | 'unlocked' | 'completed';
+}
+
 export interface Module {
   id: string;
+  course_id: string;
   index: number;
   name: string;
   description?: string;

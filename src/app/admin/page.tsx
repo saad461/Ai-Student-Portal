@@ -51,9 +51,12 @@ import {
   deleteModuleAction,
   saveSubModuleAction,
   deleteSubModuleAction,
-  uploadVideoAction
+  uploadVideoAction,
+  saveCourseAction,
+  deleteCourseAction,
+  unlockCourseForStudentAction
 } from './actions';
-import { CurriculumItem, QuizQuestion, Module, SubModule, extractHeadings } from '@/lib/curriculum';
+import { CurriculumItem, QuizQuestion, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
   Table,
   TableBody,
@@ -89,9 +92,11 @@ export default function AdminDashboard() {
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [subModules, setSubModules] = useState<SubModule[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'curriculum' | 'attendance' | 'structure'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure'>('students');
 
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
@@ -99,6 +104,7 @@ export default function AdminDashboard() {
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
   const [editingModule, setEditingModule] = useState<Partial<Module> | null>(null);
   const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
+  const [editingCourse, setEditingCourse] = useState<Partial<Course> | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -117,6 +123,18 @@ export default function AdminDashboard() {
       .order('created_at', { ascending: false });
 
     setMessages((msgs as unknown as SorryMessage[]) || []);
+
+    const { data: coursesData } = await supabase
+      .from('courses')
+      .select('*')
+      .order('index', { ascending: true });
+    const fetchedCourses = (coursesData as Course[]) || [];
+    setCourses(fetchedCourses);
+
+    // Set default selected course if not set
+    if (fetchedCourses.length > 0 && !selectedCourseId) {
+       setSelectedCourseId(fetchedCourses[0].id);
+    }
 
     const { data: curriculumData } = await supabase
       .from('curriculum')
@@ -202,6 +220,31 @@ export default function AdminDashboard() {
     if (res.success) fetchAdminData();
   };
 
+  const handleSaveCourse = async (course: Partial<Course>) => {
+    const res = await saveCourseAction(course);
+    if (res.success) {
+      setEditingCourse(null);
+      fetchAdminData();
+    } else {
+      alert('Error saving course: ' + JSON.stringify(res.error));
+    }
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    if (!confirm('Are you sure? This will delete the entire course and all its content.')) return;
+    const res = await deleteCourseAction(id);
+    if (res.success) fetchAdminData();
+  };
+
+  const handleUnlockCourse = async (email: string, courseId: string) => {
+    const res = await unlockCourseForStudentAction(email, courseId);
+    if (res.success) {
+      alert('Course unlocked successfully!');
+    } else {
+      alert('Error unlocking course: ' + res.error);
+    }
+  };
+
   const handleDeleteCurriculum = async (id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
     const res = await deleteCurriculumItemAction(id);
@@ -251,12 +294,53 @@ export default function AdminDashboard() {
 
         <div className="flex gap-4 border-b pb-4 overflow-x-auto">
           <Button variant={activeTab === 'students' ? 'default' : 'ghost'} onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-2" /> Students</Button>
-          <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-2" /> Course Structure</Button>
-          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Lectures & Content</Button>
+          <Button variant={activeTab === 'courses' ? 'default' : 'ghost'} onClick={() => setActiveTab('courses')}><Layers className="h-4 w-4 mr-2" /> Courses</Button>
+          <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-2" /> Structure</Button>
+          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Content</Button>
           <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-2" /> Attendance</Button>
         </div>
 
-        {activeTab === 'students' ? (
+        {activeTab === 'courses' ? (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold">Manage Courses</h2>
+                <p className="text-sm text-muted-foreground">Add and manage different training programs.</p>
+              </div>
+              <Button onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}>
+                <Plus className="h-4 w-4 mr-2" /> Add Course
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courses.map(course => (
+                <Card key={course.id} className="overflow-hidden group">
+                  <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
+                     {course.thumbnail_url ? (
+                       <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
+                     ) : (
+                       <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          <BookOpen className="h-12 w-12" />
+                       </div>
+                     )}
+                     <div className="absolute top-2 right-2 flex gap-1">
+                        <Button variant="secondary" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
+                     </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-bold text-lg">{course.name}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{course.description || 'No description provided.'}</p>
+                    <div className="flex justify-between items-center mt-4">
+                       <Badge variant="outline">{course.slug}</Badge>
+                       <span className="text-xs text-muted-foreground font-medium">Index: {course.index}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ) : activeTab === 'students' ? (
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> Enrolled Students</h2>
@@ -286,17 +370,29 @@ export default function AdminDashboard() {
         ) : activeTab === 'structure' ? (
           <div className="space-y-8">
             <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold">Course Modules & Sub-Modules</h2>
-                <p className="text-sm text-muted-foreground">Define the high-level hierarchy of your course.</p>
+              <div className="flex items-center gap-6">
+                <div>
+                  <h2 className="text-2xl font-bold">Structure</h2>
+                  <p className="text-sm text-muted-foreground">Modules & Sub-Modules.</p>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border">
+                   <Label className="pl-3 text-xs font-bold uppercase text-slate-500">Course:</Label>
+                   <select
+                     className="bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
+                     value={selectedCourseId}
+                     onChange={(e) => setSelectedCourseId(e.target.value)}
+                   >
+                     {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                   </select>
+                </div>
               </div>
-              <Button onClick={() => setEditingModule({ index: modules.length + 1, name: '' })}>
+              <Button onClick={() => setEditingModule({ course_id: selectedCourseId, index: modules.filter(m => m.course_id === selectedCourseId).length + 1, name: '' })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Module
               </Button>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {modules.map(mod => (
+              {modules.filter(m => m.course_id === selectedCourseId).map(mod => (
                 <Card key={mod.id} className="overflow-hidden">
                   <div className="bg-slate-100 dark:bg-slate-900 p-4 flex justify-between items-center border-b">
                     <div className="flex items-center gap-3">
@@ -345,9 +441,22 @@ export default function AdminDashboard() {
         ) : activeTab === 'curriculum' ? (
           <div className="space-y-12">
             <div className="flex justify-between items-center">
-              <div><h2 className="text-2xl font-bold">Course Content</h2><p className="text-sm text-muted-foreground">Manage lectures, assignments, and quizzes.</p></div>
+              <div className="flex items-center gap-6">
+                <div><h2 className="text-2xl font-bold">Content</h2><p className="text-sm text-muted-foreground">Lectures & Tasks.</p></div>
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border">
+                   <Label className="pl-3 text-xs font-bold uppercase text-slate-500">Course:</Label>
+                   <select
+                     className="bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
+                     value={selectedCourseId}
+                     onChange={(e) => setSelectedCourseId(e.target.value)}
+                   >
+                     {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                   </select>
+                </div>
+              </div>
               <Button onClick={() => {
-                const lastMod = modules[modules.length - 1];
+                const courseModules = modules.filter(m => m.course_id === selectedCourseId).sort((a,b) => a.index - b.index);
+                const lastMod = courseModules[courseModules.length - 1];
                 const lastSub = subModules.filter(s => s.module_id === lastMod?.id).pop();
                 setEditingItem({
                   id: `new-${Date.now()}`,
@@ -365,7 +474,7 @@ export default function AdminDashboard() {
                 <Plus className="h-4 w-4 mr-2" /> Add New Lecture
               </Button>
             </div>
-            {modules.length > 0 ? modules.map(mod => {
+            {modules.filter(m => m.course_id === selectedCourseId).length > 0 ? modules.filter(m => m.course_id === selectedCourseId).map(mod => {
               const moduleSubModules = subModules.filter(s => s.module_id === mod.id);
               const moduleLectures = curriculum.filter(i => i.week === mod.index);
 
@@ -780,6 +889,22 @@ export default function AdminDashboard() {
               <div className="space-y-2"><Label>Sub-Module Name</Label><Input value={editingSubModule?.name || ''} onChange={(e) => setEditingSubModule(prev => ({ ...prev!, name: e.target.value }))} /></div>
             </div>
             <DialogFooter><Button onClick={() => handleSaveSubModule(editingSubModule!)}>Save Sub-Module</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingCourse} onOpenChange={(open) => !open && setEditingCourse(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{editingCourse?.id ? 'Edit' : 'Add'} Course</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Course Name</Label><Input value={editingCourse?.name || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} /></div>
+                <div className="space-y-2"><Label>Slug</Label><Input value={editingCourse?.slug || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, slug: e.target.value }))} /></div>
+              </div>
+              <div className="space-y-2"><Label>Index</Label><Input type="number" value={editingCourse?.index || 1} onChange={(e) => setEditingCourse(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
+              <div className="space-y-2"><Label>Description</Label><Textarea value={editingCourse?.description || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, description: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Thumbnail URL (Optional)</Label><Input value={editingCourse?.thumbnail_url || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, thumbnail_url: e.target.value }))} /></div>
+            </div>
+            <DialogFooter><Button onClick={() => handleSaveCourse(editingCourse!)}>Save Course</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
