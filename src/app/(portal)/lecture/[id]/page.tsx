@@ -430,11 +430,13 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                                   key={i}
                                   href={`#${h.id}`}
                                   className={cn(
-                                    "text-sm hover:text-primary transition-colors flex items-center gap-2",
-                                    h.level === 1 ? "font-bold text-slate-700 dark:text-slate-300" : "pl-4 text-slate-500 dark:text-slate-500"
+                                    "text-sm hover:text-primary transition-colors flex items-center gap-2 py-1",
+                                    h.level === 1 ? "font-bold text-slate-700 dark:text-slate-300" :
+                                    h.level === 2 ? "pl-4 text-slate-500 dark:text-slate-500 border-l-2 ml-1" :
+                                    "pl-8 text-slate-400 dark:text-slate-600 border-l ml-1 italic"
                                   )}
                                 >
-                                  <div className="h-1 w-1 rounded-full bg-primary/30" />
+                                  {h.level === 1 && <div className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" />}
                                   {h.text}
                                 </a>
                               ))}
