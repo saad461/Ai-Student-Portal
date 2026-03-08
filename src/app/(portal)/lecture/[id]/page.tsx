@@ -296,8 +296,18 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="fixed top-0 left-0 w-full h-1 bg-slate-200 dark:bg-slate-800 z-[100]">
+        <div
+          className={cn(
+            "h-full transition-all duration-500",
+            isFullyDone ? "bg-green-500" : "bg-primary"
+          )}
+          style={{ width: `${((isTheoryDone ? 1 : 0) + (isAssignmentDone ? 1 : 0) + (isQuizDone ? 1 : 0)) / (1 + (lecture.attached_assignment ? 1 : 0) + (lecture.attached_quiz ? 1 : 0)) * 100}%` }}
+        />
+      </div>
+
       <main className="p-4 md:p-12 lg:p-16 overflow-y-auto">
-        <div className="max-w-6xl mx-auto space-y-8 pb-20">
+        <div className="max-w-6xl mx-auto space-y-8 pb-32 md:pb-20">
 
           <div className="flex justify-between items-center">
             <Link href="/curriculum" className="text-sm flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
@@ -352,18 +362,18 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             <p className="text-xl text-muted-foreground max-w-3xl leading-relaxed">{lecture.description}</p>
           </header>
 
-          <div className="flex gap-2 border-b pb-px overflow-x-auto no-scrollbar sticky top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10 pt-2">
+          <div className="flex border-b pb-px overflow-x-auto no-scrollbar sticky top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-40 pt-2">
             {lecture.theory_content && (
               <Button
                 variant="ghost"
                 className={cn(
-                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  "rounded-none border-b-2 px-4 md:px-6 h-12 text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                   activeTab === 'theory' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
                 )}
                 onClick={() => setActiveTab('theory')}
               >
                 <FileText className="h-4 w-4 mr-2" /> Theory
-                {isTheoryDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
+                {isTheoryDone && <CheckCircle2 className="h-3 w-3 ml-1 md:ml-2 text-green-600" />}
               </Button>
             )}
 
@@ -371,12 +381,12 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <Button
                 variant="ghost"
                 className={cn(
-                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  "rounded-none border-b-2 px-4 md:px-6 h-12 text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                   activeTab === 'video' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
                 )}
                 onClick={() => setActiveTab('video')}
               >
-                <Video className="h-4 w-4 mr-2" /> Video Lecture
+                <Video className="h-4 w-4 mr-2" /> Video
               </Button>
             )}
 
@@ -384,14 +394,14 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <Button
                 variant="ghost"
                 className={cn(
-                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  "rounded-none border-b-2 px-4 md:px-6 h-12 text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                   activeTab === 'assignment' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
                   !isTheoryDone && "opacity-50 cursor-not-allowed"
                 )}
                 onClick={() => isTheoryDone && setActiveTab('assignment')}
               >
                 <Github className="h-4 w-4 mr-2" /> Assignment
-                {isAssignmentDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
+                {isAssignmentDone && <CheckCircle2 className="h-3 w-3 ml-1 md:ml-2 text-green-600" />}
               </Button>
             )}
 
@@ -399,14 +409,14 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <Button
                 variant="ghost"
                 className={cn(
-                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  "rounded-none border-b-2 px-4 md:px-6 h-12 text-[10px] md:text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                   activeTab === 'quiz' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
                   (!isTheoryDone || (lecture.attached_assignment && !isAssignmentDone)) && "opacity-50 cursor-not-allowed"
                 )}
                 onClick={() => isTheoryDone && (!lecture.attached_assignment || isAssignmentDone) && setActiveTab('quiz')}
               >
                 <HelpCircle className="h-4 w-4 mr-2" /> Quiz
-                {isQuizDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
+                {isQuizDone && <CheckCircle2 className="h-3 w-3 ml-1 md:ml-2 text-green-600" />}
               </Button>
             )}
           </div>
@@ -674,6 +684,35 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
           )}
         </div>
       </main>
+
+      {/* Mobile Navigation Sticky Bottom */}
+      <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-background/80 backdrop-blur-md border-t z-50 flex gap-4">
+          {prevItem && (
+            <Button variant="outline" className="flex-1 h-12 font-bold" asChild>
+              <Link href={`/lecture/${prevItem.id}`}>
+                <ChevronLeft className="h-5 w-5 mr-1" /> Previous
+              </Link>
+            </Button>
+          )}
+          {nextItem && (
+            <Button
+              className="flex-[2] h-12 font-black"
+              variant={isNextUnlocked ? "default" : "secondary"}
+              disabled={!isNextUnlocked}
+              asChild={isNextUnlocked}
+            >
+              {isNextUnlocked ? (
+                <Link href={`/lecture/${nextItem.id}`}>
+                  Next Module <ChevronRight className="h-5 w-5 ml-1" />
+                </Link>
+              ) : (
+                <span className="flex items-center">
+                  Next Module <Lock className="h-4 w-4 ml-1" />
+                </span>
+              )}
+            </Button>
+          )}
+      </div>
     </div>
   );
 }

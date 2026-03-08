@@ -9,6 +9,7 @@ import { Course } from '@/lib/curriculum';
 import { Lock, Play, CheckCircle2, Star, Sparkles, Shield, Cpu, Code } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { PortalNavbar } from '@/components/portal-navbar';
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -65,11 +66,21 @@ export default function CoursesPage() {
     }
   };
 
-  if (loading) return <div className="p-12 text-center">Loading your learning path...</div>;
+  if (loading) return (
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
+      <main className="flex-1 p-4 md:p-8">
+        <div className="p-12 text-center animate-pulse text-muted-foreground font-bold">Loading your learning path...</div>
+      </main>
+    </div>
+  );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12">
-      <div className="space-y-4">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-8 md:space-y-12">
+          <div className="space-y-4">
         <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">Explore Courses</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
           Master the most in-demand tech skills with our premium, project-based curriculum.
@@ -140,7 +151,9 @@ export default function CoursesPage() {
             </Card>
           );
         })}
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

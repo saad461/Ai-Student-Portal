@@ -10,13 +10,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return day === 0 || day === 6; // Sunday or Saturday
   }, []);
 
-  if (isWeekend) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-8">
-        <RestScreen />
-      </div>
-    );
-  }
 
   return (
     <>

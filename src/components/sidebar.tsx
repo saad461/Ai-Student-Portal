@@ -13,14 +13,15 @@ import {
   Zap,
   Milestone,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
-export function Sidebar() {
+export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { theme } = useTheme();
   const router = useRouter();
@@ -32,6 +33,15 @@ export function Sidebar() {
     if (saved === 'true') setIsCollapsed(true);
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+       document.body.style.overflow = 'hidden';
+    } else {
+       document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isOpen]);
 
   const toggleSidebar = () => {
     const newState = !isCollapsed;
@@ -57,9 +67,23 @@ export function Sidebar() {
   if (!mounted) return <aside className="w-64 border-r h-screen sticky top-0 bg-background" />;
 
   return (
+    <>
+    {/* Mobile Overlay */}
+    {isOpen && (
+      <div
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 lg:hidden"
+        onClick={onClose}
+      />
+    )}
+
     <aside className={cn(
-      "transition-all duration-300 border-r flex flex-col h-screen sticky top-0 bg-background z-40",
-      isCollapsed ? "w-20" : "w-64",
+      "transition-all duration-300 border-r flex flex-col h-screen bg-background z-[60]",
+      // Desktop positioning
+      "sticky top-0 hidden lg:flex",
+      // Mobile positioning
+      isOpen ? "fixed inset-y-0 left-0 w-72 flex" : "fixed inset-y-0 -left-full",
+      // Collapse state (desktop only)
+      !isOpen && (isCollapsed ? "w-20" : "w-64"),
       theme === 'pro' ? "border-primary/20" : "border-border"
     )}>
       <div className={cn(
@@ -78,10 +102,13 @@ export function Sidebar() {
         {isCollapsed && <Zap className="h-8 w-8 fill-primary" />}
 
         <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-md hover:bg-muted transition-colors absolute -right-3 top-16 bg-background border shadow-sm"
+          onClick={onClose || toggleSidebar}
+          className={cn(
+            "p-2 rounded-md hover:bg-muted transition-colors bg-background border shadow-sm",
+            onClose ? "lg:hidden" : "absolute -right-3 top-16"
+          )}
         >
-          {isCollapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {onClose ? <X className="h-4 w-4" /> : (isCollapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />)}
         </button>
       </div>
 
@@ -99,9 +126,10 @@ export function Sidebar() {
                 : "hover:bg-muted text-muted-foreground",
               theme === 'pro' && pathname === item.href && "hacker-border shadow-primary/50"
             )}
+            onClick={onClose}
           >
-            <item.icon className={cn("shrink-0", isCollapsed ? "h-6 w-6" : "h-5 w-5")} />
-            {!isCollapsed && <span className="overflow-hidden whitespace-nowrap">{item.name}</span>}
+            <item.icon className={cn("shrink-0", (isCollapsed && !isOpen) ? "h-6 w-6" : "h-5 w-5")} />
+            {(!isCollapsed || isOpen) && <span className="overflow-hidden whitespace-nowrap">{item.name}</span>}
           </Link>
         ))}
       </nav>
@@ -112,13 +140,14 @@ export function Sidebar() {
           title={isCollapsed ? "Logout" : ""}
           className={cn(
             "flex items-center w-full rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
-            isCollapsed ? "justify-center p-3" : "gap-3 px-3 py-2"
+            isCollapsed && !isOpen ? "justify-center p-3" : "gap-3 px-3 py-2"
           )}
         >
-          <LogOut className={cn("shrink-0", isCollapsed ? "h-6 w-6" : "h-5 w-5")} />
-          {!isCollapsed && <span className="overflow-hidden whitespace-nowrap">Logout</span>}
+          <LogOut className={cn("shrink-0", isCollapsed && !isOpen ? "h-6 w-6" : "h-5 w-5")} />
+          {(!isCollapsed || isOpen) && <span className="overflow-hidden whitespace-nowrap">Logout</span>}
         </button>
       </div>
     </aside>
+    </>
   );
 }

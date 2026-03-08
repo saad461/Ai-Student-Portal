@@ -1,6 +1,6 @@
 'use client';
 
-import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 import { DeepWorkTimer } from '@/components/timer';
 import { FocusHistory } from '@/components/focus-history';
 import { useTheme } from '@/components/theme-provider';
@@ -11,8 +11,8 @@ export default function TimerPage() {
   const { theme } = useTheme();
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <Sidebar />
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto space-y-8">
           <header>

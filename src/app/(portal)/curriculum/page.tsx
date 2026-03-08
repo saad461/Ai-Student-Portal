@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, isItemUnlocked, Module, SubModule, Course } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { TermsModal } from '@/components/terms-modal';
+import { useToast } from '@/components/ui/toast-provider';
+import { CurriculumSkeleton } from '@/components/skeletons';
 
 interface Submission {
   id: string;
@@ -32,6 +34,7 @@ interface Submission {
 
 export default function CurriculumPage() {
   const searchParams = useSearchParams();
+  const { success, error: toastError } = useToast();
   const courseIdParam = searchParams.get('course');
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -159,7 +162,7 @@ export default function CurriculumPage() {
 
   const handleSkip = async (itemId: string) => {
     if (skipPin !== '7323') {
-      alert('Invalid PIN');
+      toastError('Invalid PIN', 'Please enter the correct skip PIN.');
       return;
     }
 
@@ -180,17 +183,20 @@ export default function CurriculumPage() {
   const displayModules = modules.length > 0 ? modules : Array.from({ length: 24 }, (_, i) => ({ id: (i + 1).toString(), index: i + 1, name: `Module ${i + 1}` }));
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
+      <main className="flex-1 p-4 md:p-8">
+        <CurriculumSkeleton />
+      </main>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <Sidebar />
-      <main className="flex-1 p-8">
-        <div className="max-w-5xl mx-auto space-y-8">
-          <header className="flex justify-between items-end">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
+          <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold">{currentCourse?.name || 'Course'} Curriculum</h1>
               <p className="text-muted-foreground mt-2">Your sequential path to mastery.</p>

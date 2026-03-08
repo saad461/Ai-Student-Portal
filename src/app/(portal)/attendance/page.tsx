@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 import {
   Card,
   CardHeader,
@@ -81,8 +81,8 @@ export default function StudentAttendancePage() {
   );
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <Sidebar />
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
       <main className="flex-1 p-8">
         <div className="max-w-5xl mx-auto space-y-8">
           <header>

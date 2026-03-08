@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Terminal, GitBranch, GitPullRequest, GitMerge, CheckCircle2 } from 'lucide-react';
@@ -106,8 +106,8 @@ export default function GitHubTopicPage({ params }: { params: Promise<{ id: stri
   if (!topic) notFound();
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <Sidebar />
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
       <main className="flex-1 p-8">
         <div className="max-w-4xl mx-auto space-y-8">
           <Link href="/github-mastery">
