@@ -1,0 +1,235 @@
+'use client';
+
+import { motion, useScroll, useSpring } from 'framer-motion';
+import { useRef } from 'react';
+import {
+  Code,
+  Database,
+  Sparkles,
+  Bot,
+  ArrowRight,
+  Cpu,
+  Globe,
+  Terminal,
+  Activity,
+  Layers,
+  Zap
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface RoadmapPhase {
+  id: number;
+  title: string;
+  tagline: string;
+  goal: string;
+  skills: string[];
+  toolbox: { name: string; icon: any }[];
+  color: string;
+  glowColor: string;
+  icon: any;
+}
+
+const PHASES: RoadmapPhase[] = [
+  {
+    id: 1,
+    title: "Phase 1: The Digital Foundation",
+    tagline: "Web Architecture",
+    goal: "Build high-performance, responsive web applications that serve as the 'body' for your AI.",
+    skills: ["HTML5 & CSS3 (Tailwind)", "JavaScript (ES6+)", "Next.js & React", "Node.js & Python (FastAPI)", "PostgreSQL"],
+    toolbox: [
+      { name: "React", icon: Globe },
+      { name: "Next.js", icon: Layers },
+      { name: "Tailwind", icon: Zap },
+      { name: "FastAPI", icon: Terminal }
+    ],
+    color: "text-blue-500",
+    glowColor: "bg-blue-500",
+    icon: Code
+  },
+  {
+    id: 2,
+    title: "Phase 2: Data Intelligence",
+    tagline: "The Analytical Mind",
+    goal: "Clean, process, and visualize raw data to extract actionable business insights.",
+    skills: ["Advanced Python", "SQL & Statistics", "Pandas & NumPy", "Matplotlib & Seaborn", "Feature Engineering"],
+    toolbox: [
+      { name: "Python", icon: Terminal },
+      { name: "Pandas", icon: Activity },
+      { name: "SQL", icon: Database },
+      { name: "NumPy", icon: Cpu }
+    ],
+    color: "text-emerald-500",
+    glowColor: "bg-emerald-500",
+    icon: Database
+  },
+  {
+    id: 3,
+    title: "Phase 3: Cognitive Integration",
+    tagline: "Generative AI",
+    goal: "Integrate 'brains' into your apps so they can think, chat, and generate content.",
+    skills: ["LLMs (OpenAI, Gemini)", "Prompt Engineering", "VectorDBs (Pinecone, Weaviate)", "RAG Systems", "LangGraph"],
+    toolbox: [
+      { name: "OpenAI", icon: Sparkles },
+      { name: "Pinecone", icon: Layers },
+      { name: "Gemini", icon: Zap },
+      { name: "Weaviate", icon: Database }
+    ],
+    color: "text-purple-500",
+    glowColor: "bg-purple-500",
+    icon: Sparkles
+  },
+  {
+    id: 4,
+    title: "Phase 4: Autonomous Operations",
+    tagline: "Agentic AI",
+    goal: "Create self-operating systems that perform complex tasks with zero human intervention.",
+    skills: ["LangChain & CrewAI", "AutoGPT & Task Automation", "Multi-Agent Orchestration", "Tool-Use & Function Calling", "Autonomous Workflows"],
+    toolbox: [
+      { name: "LangChain", icon: Code },
+      { name: "CrewAI", icon: Bot },
+      { name: "AutoGPT", icon: Zap },
+      { name: "Automation", icon: Cpu }
+    ],
+    color: "text-amber-500",
+    glowColor: "bg-amber-500",
+    icon: Bot
+  }
+];
+
+export function TechRoadmap() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start center", "end center"]
+  });
+
+  const scaleY = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
+  return (
+    <div ref={containerRef} className="relative max-w-6xl mx-auto py-20 px-6">
+      {/* Central Connectivity Line */}
+      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-800 -translate-x-1/2 hidden md:block" />
+
+      {/* Progress Glow Line */}
+      <motion.div
+        style={{ scaleY, originY: 0 }}
+        className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-amber-500 -translate-x-1/2 z-10 blur-[1px] hidden md:block"
+      />
+
+      <div className="space-y-24 md:space-y-40">
+        {PHASES.map((phase, index) => (
+          <PhaseCard
+            key={phase.id}
+            phase={phase}
+            isLeft={index % 2 === 0}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PhaseCard({ phase, isLeft }: { phase: RoadmapPhase, isLeft: boolean }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className={cn(
+        "relative flex flex-col md:flex-row items-center gap-8 w-full",
+        isLeft ? "md:flex-row" : "md:flex-row-reverse"
+      )}
+    >
+      {/* Central Connector Dot */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 hidden md:block">
+        <div className={cn("h-4 w-4 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)] bg-white", phase.glowColor)} />
+      </div>
+
+      {/* Content Card */}
+      <div className={cn(
+        "w-full md:w-1/2 group",
+        isLeft ? "md:text-right" : "md:text-left"
+      )}>
+        <div className="relative p-8 rounded-3xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:bg-slate-900/80 hover:shadow-2xl hover:shadow-black/50 overflow-hidden">
+          {/* Subtle Mesh Gradient Overlay */}
+          <div className={cn(
+            "absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[100px] opacity-20 transition-opacity group-hover:opacity-40",
+            phase.glowColor
+          )} />
+
+          <div className={cn(
+            "flex items-center gap-4 mb-4",
+            isLeft ? "md:flex-row-reverse" : "md:flex-row"
+          )}>
+            <div className={cn("p-3 rounded-2xl bg-white/5 border border-white/10", phase.color)}>
+              <phase.icon className="h-8 w-8" />
+            </div>
+            <div>
+              <h3 className={cn("text-xs font-bold uppercase tracking-widest", phase.color)}>
+                {phase.tagline}
+              </h3>
+              <h2 className="text-2xl font-black text-white">{phase.title}</h2>
+            </div>
+          </div>
+
+          <p className="text-slate-400 leading-relaxed mb-6">
+            {phase.goal}
+          </p>
+
+          <div className={cn(
+            "flex flex-wrap gap-2 mb-8",
+            isLeft ? "md:justify-end" : "md:justify-start"
+          )}>
+            {phase.skills.map(skill => (
+              <Badge key={skill} className="bg-white/5 text-slate-300 border-white/10 hover:bg-white/10">
+                {skill}
+              </Badge>
+            ))}
+          </div>
+
+          {/* Toolbox Tooltip Area */}
+          <div className={cn(
+            "flex items-center gap-4 pt-6 border-t border-white/5",
+            isLeft ? "md:justify-end" : "md:justify-start"
+          )}>
+            <span className="text-[10px] font-bold uppercase text-slate-500 tracking-tighter">Toolbox</span>
+            <div className="flex gap-3">
+              {phase.toolbox.map(tool => (
+                <div key={tool.name} className="group/tool relative cursor-help">
+                  <tool.icon className="h-5 w-5 text-slate-400 transition-colors hover:text-white" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded bg-black text-white text-[10px] font-bold whitespace-nowrap opacity-0 group-hover/tool:opacity-100 transition-opacity z-50">
+                    {tool.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Decorative Phase Number (Mobile or Side) */}
+      <div className={cn(
+        "hidden lg:block w-1/2 text-[10rem] font-black opacity-5 select-none transition-all duration-700 group-hover:opacity-10 pointer-events-none",
+        isLeft ? "text-left pl-20" : "text-right pr-20"
+      )}>
+        0{phase.id}
+      </div>
+    </motion.div>
+  );
+}
+
+function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+  return (
+    <span className={cn(
+      "px-3 py-1 rounded-full text-xs font-medium border",
+      className
+    )}>
+      {children}
+    </span>
+  );
+}
