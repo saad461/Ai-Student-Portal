@@ -241,7 +241,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-primary font-bold underline decoration-primary/30 hover:decoration-primary transition-all underline-offset-4"
+        className="text-blue-600 dark:text-blue-400 font-bold underline decoration-blue-600/30 hover:decoration-blue-600 transition-all underline-offset-4"
       >
         {children}
       </a>
