@@ -641,9 +641,26 @@ export default function AdminDashboard() {
                       <div className="space-y-3">
                         {((Array.isArray(editingItem.content) ? editingItem.content : null) || extractHeadings(editingItem.theory_content)).map((entry: any, idx: number) => (
                           <div key={idx} className="flex gap-2 items-center group">
-                            <Badge variant="outline" className="h-6 w-8 flex justify-center p-0">H{entry.level}</Badge>
+                            <select
+                              className="h-8 text-[10px] font-bold border rounded bg-transparent px-1 outline-none w-14 shrink-0"
+                              value={entry.level}
+                              onChange={(e) => {
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const newToc = [...currentToc];
+                                newToc[idx] = { ...newToc[idx], level: parseInt(e.target.value) };
+                                setEditingItem(prev => ({ ...prev!, content: newToc }));
+                              }}
+                            >
+                              <option value={1}>H1</option>
+                              <option value={2}>H2</option>
+                              <option value={3}>H3</option>
+                            </select>
                             <Input
-                              className="h-8 text-sm"
+                              className={cn(
+                                "h-8 text-sm transition-all",
+                                entry.level === 2 && "ml-4 border-l-4 border-l-slate-200",
+                                entry.level === 3 && "ml-8 border-l-4 border-l-slate-400"
+                              )}
                               value={entry.text}
                               onChange={(e) => {
                                 const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
