@@ -1,97 +1,67 @@
 'use client';
 
-import { motion, useScroll, useSpring } from 'framer-motion';
-import { useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring, useInView } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
 import {
-  Code,
-  Database,
-  Sparkles,
-  Bot,
-  ArrowRight,
-  Cpu,
+  LayoutTemplate,
   Globe,
-  Terminal,
-  Activity,
-  Layers,
-  Zap
+  Database,
+  Brain,
+  Bot,
+  CheckCircle2,
+  Circle,
+  LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface RoadmapPhase {
-  id: number;
+interface PhaseNode {
+  id: string;
+  number: string;
   title: string;
-  tagline: string;
-  goal: string;
   skills: string[];
-  toolbox: { name: string; icon: any }[];
-  color: string;
-  glowColor: string;
-  icon: any;
+  icon: LucideIcon;
+  description: string;
 }
 
-const PHASES: RoadmapPhase[] = [
+const PHASES: PhaseNode[] = [
   {
-    id: 1,
-    title: "Phase 1: The Digital Foundation",
-    tagline: "Web Architecture",
-    goal: "Build high-performance, responsive web applications that serve as the 'body' for your AI.",
-    skills: ["HTML5 & CSS3 (Tailwind)", "JavaScript (ES6+)", "Next.js & React", "Node.js & Python (FastAPI)", "PostgreSQL"],
-    toolbox: [
-      { name: "React", icon: Globe },
-      { name: "Next.js", icon: Layers },
-      { name: "Tailwind", icon: Zap },
-      { name: "FastAPI", icon: Terminal }
-    ],
-    color: "text-blue-500",
-    glowColor: "bg-blue-500",
-    icon: Code
+    id: 'foundation',
+    number: '01',
+    title: "The Foundation",
+    description: "Establishing the structural core of modern interfaces.",
+    skills: ["HTML5", "CSS3", "Tailwind", "JavaScript (ES6+)"],
+    icon: LayoutTemplate
   },
   {
-    id: 2,
-    title: "Phase 2: Data Intelligence",
-    tagline: "The Analytical Mind",
-    goal: "Clean, process, and visualize raw data to extract actionable business insights.",
-    skills: ["Advanced Python", "SQL & Statistics", "Pandas & NumPy", "Matplotlib & Seaborn", "Feature Engineering"],
-    toolbox: [
-      { name: "Python", icon: Terminal },
-      { name: "Pandas", icon: Activity },
-      { name: "SQL", icon: Database },
-      { name: "NumPy", icon: Cpu }
-    ],
-    color: "text-emerald-500",
-    glowColor: "bg-emerald-500",
+    id: 'architecture',
+    number: '02',
+    title: "Web Architecture",
+    description: "Building scalable, high-performance web ecosystems.",
+    skills: ["Next.js", "React", "Node.js", "PostgreSQL"],
+    icon: Globe
+  },
+  {
+    id: 'data',
+    number: '03',
+    title: "Data Intelligence",
+    description: "Processing raw data into actionable intelligence.",
+    skills: ["Python", "Pandas", "NumPy", "SQL", "Visualization"],
     icon: Database
   },
   {
-    id: 3,
-    title: "Phase 3: Cognitive Integration",
-    tagline: "Generative AI",
-    goal: "Integrate 'brains' into your apps so they can think, chat, and generate content.",
-    skills: ["LLMs (OpenAI, Gemini)", "Prompt Engineering", "VectorDBs (Pinecone, Weaviate)", "RAG Systems", "LangGraph"],
-    toolbox: [
-      { name: "OpenAI", icon: Sparkles },
-      { name: "Pinecone", icon: Layers },
-      { name: "Gemini", icon: Zap },
-      { name: "Weaviate", icon: Database }
-    ],
-    color: "text-purple-500",
-    glowColor: "bg-purple-500",
-    icon: Sparkles
+    id: 'cognitive',
+    number: '04',
+    title: "Cognitive AI",
+    description: "Integrating generative brains into applications.",
+    skills: ["LLMs", "OpenAI/Gemini APIs", "Vector DBs (Pinecone)", "RAG"],
+    icon: Brain
   },
   {
-    id: 4,
-    title: "Phase 4: Autonomous Operations",
-    tagline: "Agentic AI",
-    goal: "Create self-operating systems that perform complex tasks with zero human intervention.",
-    skills: ["LangChain & CrewAI", "AutoGPT & Task Automation", "Multi-Agent Orchestration", "Tool-Use & Function Calling", "Autonomous Workflows"],
-    toolbox: [
-      { name: "LangChain", icon: Code },
-      { name: "CrewAI", icon: Bot },
-      { name: "AutoGPT", icon: Zap },
-      { name: "Automation", icon: Cpu }
-    ],
-    color: "text-amber-500",
-    glowColor: "bg-amber-500",
+    id: 'agentic',
+    number: '05',
+    title: "Agentic AI",
+    description: "Orchestrating autonomous multi-agent systems.",
+    skills: ["LangChain", "CrewAI", "Autonomous Task Automation"],
     icon: Bot
   }
 ];
@@ -100,32 +70,59 @@ export function TechRoadmap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start center", "end center"]
+    offset: ["start center", "end end"]
   });
 
-  const scaleY = useSpring(scrollYProgress, {
+  const pathLength = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
     restDelta: 0.001
   });
 
   return (
-    <div ref={containerRef} className="relative max-w-6xl mx-auto py-20 px-6">
-      {/* Central Connectivity Line */}
-      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-800 -translate-x-1/2 hidden md:block" />
+    <div ref={containerRef} className="relative w-full max-w-5xl mx-auto py-20 min-h-[2000px]">
+      {/* Central Trunk - SVG Layer */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="line-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#10B981" /> {/* Emerald */}
+              <stop offset="50%" stopColor="#3B82F6" /> {/* Blue */}
+              <stop offset="100%" stopColor="#8B5CF6" /> {/* Purple */}
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-      {/* Progress Glow Line */}
-      <motion.div
-        style={{ scaleY, originY: 0 }}
-        className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-amber-500 -translate-x-1/2 z-10 blur-[1px] hidden md:block"
-      />
+          {/* Background Dashed Trunk */}
+          <line
+            x1="50%" y1="50" x2="50%" y2="98%"
+            stroke="#1e293b" strokeWidth="2" strokeDasharray="10 10"
+          />
 
-      <div className="space-y-24 md:space-y-40">
+          {/* Animated Solid Glow Trunk */}
+          <motion.line
+            x1="50%" y1="50" x2="50%" y2="98%"
+            stroke="url(#line-gradient)" strokeWidth="4"
+            style={{ pathLength }}
+            filter="url(#glow)"
+          />
+        </svg>
+      </div>
+
+      {/* Content Nodes */}
+      <div className="relative z-10 space-y-[300px]">
         {PHASES.map((phase, index) => (
-          <PhaseCard
+          <RoadmapNode
             key={phase.id}
             phase={phase}
-            isLeft={index % 2 === 0}
+            index={index}
+            scrollYProgress={scrollYProgress}
           />
         ))}
       </div>
@@ -133,103 +130,149 @@ export function TechRoadmap() {
   );
 }
 
-function PhaseCard({ phase, isLeft }: { phase: RoadmapPhase, isLeft: boolean }) {
+function RoadmapNode({
+  phase,
+  index,
+  scrollYProgress
+}: {
+  phase: PhaseNode;
+  index: number;
+  scrollYProgress: any
+}) {
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(nodeRef, { margin: "-200px 0px -200px 0px" });
+
+  // Calculate if this node is "active" based on scroll position
+  // 5 nodes, so each has roughly 20% of the scroll space
+  const step = 1 / PHASES.length;
+  const start = index * step;
+  const end = (index + 1) * step;
+
+  const isActive = useTransform(scrollYProgress, (pos: number) => pos >= start && pos < end);
+  const isPast = useTransform(scrollYProgress, (pos: number) => pos >= end);
+
+  const [status, setStatus] = useState<'future' | 'active' | 'completed'>('future');
+
+  useEffect(() => {
+    const unsubscribeActive = isActive.on("change", (val) => {
+      if (val) setStatus('active');
+    });
+    const unsubscribePast = isPast.on("change", (val) => {
+      if (val) {
+        setStatus('completed');
+      } else {
+        const currentPos = scrollYProgress.get();
+        if (currentPos < start) setStatus('future');
+        else if (currentPos >= start && currentPos < end) setStatus('active');
+      }
+    });
+
+    // Initial check
+    const pos = scrollYProgress.get();
+    if (pos >= end) setStatus('completed');
+    else if (pos >= start) setStatus('active');
+    else setStatus('future');
+
+    return () => {
+      unsubscribeActive();
+      unsubscribePast();
+    };
+  }, [isActive, isPast, index, start, end, scrollYProgress]);
+
+  const isLeft = index % 2 === 0;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-      className={cn(
-        "relative flex flex-col md:flex-row items-center gap-8 w-full",
-        isLeft ? "md:flex-row" : "md:flex-row-reverse"
-      )}
-    >
-      {/* Central Connector Dot */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 hidden md:block">
-        <div className={cn("h-4 w-4 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)] bg-white", phase.glowColor)} />
+    <div ref={nodeRef} className="relative flex items-center justify-center w-full min-h-[200px]">
+      {/* Branch Line (Curved Bezier) */}
+      <div className="absolute inset-0 pointer-events-none overflow-visible">
+        <svg className="w-full h-full" viewBox="0 0 1000 200" preserveAspectRatio="none">
+          <motion.path
+            d={isLeft ? "M 500 100 Q 400 100, 300 100" : "M 500 100 Q 600 100, 700 100"}
+            fill="none"
+            stroke={status === 'completed' ? '#10b981' : status === 'active' ? '#3b82f6' : '#1e293b'}
+            strokeWidth="3"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: status !== 'future' ? 1 : 0 }}
+            transition={{ duration: 1 }}
+          />
+        </svg>
       </div>
 
-      {/* Content Card */}
-      <div className={cn(
-        "w-full md:w-1/2 group",
-        isLeft ? "md:text-right" : "md:text-left"
-      )}>
-        <div className="relative p-8 rounded-3xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:bg-slate-900/80 hover:shadow-2xl hover:shadow-black/50 overflow-hidden">
-          {/* Subtle Mesh Gradient Overlay */}
-          <div className={cn(
-            "absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[100px] opacity-20 transition-opacity group-hover:opacity-40",
-            phase.glowColor
-          )} />
+      {/* Center Point Circle */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+        <motion.div
+          animate={{
+            scale: status === 'active' ? [1, 1.5, 1] : 1,
+            backgroundColor: status === 'completed' ? '#10b981' : status === 'active' ? '#3b82f6' : '#1e293b'
+          }}
+          transition={{ repeat: status === 'active' ? Infinity : 0, duration: 2 }}
+          className="w-6 h-6 rounded-full border-4 border-slate-950 shadow-2xl"
+        />
+      </div>
 
+      {/* Main Content Box */}
+      <motion.div
+        initial={{ opacity: 0, x: isLeft ? -100 : 100, scale: 0.8 }}
+        whileInView={{ opacity: 1, x: 0, scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className={cn(
+          "absolute w-[90%] md:w-[400px] p-8 rounded-3xl border transition-all duration-700",
+          isLeft ? "right-[55%] md:right-[58%]" : "left-[55%] md:left-[58%]",
+          status === 'completed' ? "border-emerald-500/50 bg-emerald-950/10" :
+          status === 'active' ? "border-blue-500/50 bg-blue-950/10 shadow-[0_0_30px_rgba(59,130,246,0.2)]" :
+          "border-slate-800 bg-slate-900/30 opacity-40 grayscale"
+        )}
+      >
+        <div className="flex items-center gap-4 mb-6">
           <div className={cn(
-            "flex items-center gap-4 mb-4",
-            isLeft ? "md:flex-row-reverse" : "md:flex-row"
+            "p-3 rounded-2xl bg-slate-950/50 border",
+            status === 'completed' ? "border-emerald-500/30 text-emerald-400" :
+            status === 'active' ? "border-blue-500/30 text-blue-400" : "border-slate-700 text-slate-500"
           )}>
-            <div className={cn("p-3 rounded-2xl bg-white/5 border border-white/10", phase.color)}>
-              <phase.icon className="h-8 w-8" />
-            </div>
-            <div>
-              <h3 className={cn("text-xs font-bold uppercase tracking-widest", phase.color)}>
-                {phase.tagline}
-              </h3>
-              <h2 className="text-2xl font-black text-white">{phase.title}</h2>
-            </div>
+            <phase.icon className="h-8 w-8" />
           </div>
-
-          <p className="text-slate-400 leading-relaxed mb-6">
-            {phase.goal}
-          </p>
-
-          <div className={cn(
-            "flex flex-wrap gap-2 mb-8",
-            isLeft ? "md:justify-end" : "md:justify-start"
-          )}>
-            {phase.skills.map(skill => (
-              <Badge key={skill} className="bg-white/5 text-slate-300 border-white/10 hover:bg-white/10">
-                {skill}
-              </Badge>
-            ))}
-          </div>
-
-          {/* Toolbox Tooltip Area */}
-          <div className={cn(
-            "flex items-center gap-4 pt-6 border-t border-white/5",
-            isLeft ? "md:justify-end" : "md:justify-start"
-          )}>
-            <span className="text-[10px] font-bold uppercase text-slate-500 tracking-tighter">Toolbox</span>
-            <div className="flex gap-3">
-              {phase.toolbox.map(tool => (
-                <div key={tool.name} className="group/tool relative cursor-help">
-                  <tool.icon className="h-5 w-5 text-slate-400 transition-colors hover:text-white" />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded bg-black text-white text-[10px] font-bold whitespace-nowrap opacity-0 group-hover/tool:opacity-100 transition-opacity z-50">
-                    {tool.name}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div>
+            <span className="text-xs font-black text-slate-500 tracking-tighter block uppercase">Phase {phase.number}</span>
+            <h3 className="text-2xl font-black text-white leading-tight">{phase.title}</h3>
           </div>
         </div>
-      </div>
 
-      {/* Decorative Phase Number (Mobile or Side) */}
-      <div className={cn(
-        "hidden lg:block w-1/2 text-[10rem] font-black opacity-5 select-none transition-all duration-700 group-hover:opacity-10 pointer-events-none",
-        isLeft ? "text-left pl-20" : "text-right pr-20"
-      )}>
-        0{phase.id}
-      </div>
-    </motion.div>
-  );
-}
+        <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+          {phase.description}
+        </p>
 
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
-  return (
-    <span className={cn(
-      "px-3 py-1 rounded-full text-xs font-medium border",
-      className
-    )}>
-      {children}
-    </span>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {phase.skills.map(skill => (
+            <span key={skill} className="px-3 py-1 rounded-lg bg-slate-950/50 border border-slate-800 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+              {skill}
+            </span>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between pt-6 border-t border-slate-800/50">
+          <div className="flex items-center gap-2">
+            {status === 'completed' ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            ) : status === 'active' ? (
+              <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+                <Circle className="h-4 w-4 text-blue-500 fill-blue-500" />
+              </motion.div>
+            ) : (
+              <Circle className="h-4 w-4 text-slate-700" />
+            )}
+            <span className={cn(
+              "text-[10px] font-black uppercase tracking-widest",
+              status === 'completed' ? "text-emerald-500" : status === 'active' ? "text-blue-500" : "text-slate-700"
+            )}>
+              {status}
+            </span>
+          </div>
+          <div className="text-[10px] font-bold text-slate-500 italic">
+            {status === 'active' ? 'Signal Incoming...' : status === 'completed' ? 'Synced' : 'Waiting...'}
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
