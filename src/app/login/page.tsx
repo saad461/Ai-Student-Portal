@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -10,18 +10,37 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Captcha } from '@/components/captcha';
 import { ShieldAlert, Loader2 } from 'lucide-react';
+import { safeEncode, safeDecode } from '@/lib/auth-utils';
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     pin: '',
   });
+
+  useEffect(() => {
+    const savedData = localStorage.getItem('login_remember');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setFormData({
+          email: safeDecode(parsed.e),
+          password: safeDecode(parsed.p),
+          pin: safeDecode(parsed.pin),
+        });
+        setRememberMe(true);
+      } catch (e) {
+        console.error('Error loading remembered credentials', e);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +85,16 @@ export default function LoginPage() {
       if (profile.login_pin && profile.login_pin !== formData.pin) {
         await supabase.auth.signOut();
         throw new Error('Invalid Security PIN. Please check your credentials.');
+      }
+
+      if (rememberMe) {
+        localStorage.setItem('login_remember', JSON.stringify({
+          e: safeEncode(formData.email),
+          p: safeEncode(formData.password),
+          pin: safeEncode(formData.pin)
+        }));
+      } else {
+        localStorage.removeItem('login_remember');
       }
 
       router.push('/dashboard');
@@ -134,6 +163,19 @@ export default function LoginPage() {
                 onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
                 className="text-center text-2xl tracking-[0.5em] font-mono"
               />
+            </div>
+
+            <div className="flex items-center space-x-2 py-2">
+              <input
+                id="remember"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+              />
+              <Label htmlFor="remember" className="text-sm font-medium leading-none cursor-pointer">
+                Remember me
+              </Label>
             </div>
 
             <div className="space-y-2 pt-4 border-t">

@@ -1,18 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { verifyAdminPassword } from '../actions';
+import { safeEncode, safeDecode } from '@/lib/auth-utils';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('admin_remember');
+    if (saved) {
+      const decoded = safeDecode(saved);
+      if (decoded) {
+        setPassword(decoded);
+        setRememberMe(true);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +36,11 @@ export default function AdminLoginPage() {
 
     if (isValid) {
       localStorage.setItem('admin_auth', 'true');
+      if (rememberMe) {
+        localStorage.setItem('admin_remember', safeEncode(password));
+      } else {
+        localStorage.removeItem('admin_remember');
+      }
       router.push('/admin');
     } else {
       setError('Invalid admin password');
@@ -50,6 +68,18 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+            <div className="flex items-center space-x-2 py-2">
+              <input
+                id="remember"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <Label htmlFor="remember" className="text-sm font-medium leading-none cursor-pointer text-slate-300">
+                Remember me
+              </Label>
             </div>
           </CardContent>
           <CardFooter>
