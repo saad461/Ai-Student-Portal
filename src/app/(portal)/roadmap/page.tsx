@@ -45,10 +45,12 @@ export default function RoadmapPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.8 }}
-              className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed"
+              className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed"
             >
-              From building the web to orchestrating autonomous AI agents.
-              Master the flow from digital foundations to agentic operations.
+              Our curriculum follows a modular implementation strategy. We don&apos;t just teach isolated skills;
+              we build a cohesive ecosystem where each new domain serves as a functional upgrade to the previous one.
+              From the structural integrity of Web Architecture to the autonomous decision-making of Agentic AI,
+              our roadmap is designed to transform you into a <strong>Full-Stack AI Architect</strong>.
             </motion.p>
           </div>
         </section>
