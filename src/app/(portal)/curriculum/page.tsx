@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
-import { CurriculumItem, isItemUnlocked, Module, SubModule } from '@/lib/curriculum';
+import { CurriculumItem, isItemUnlocked, Module, SubModule, Course } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -30,10 +31,14 @@ interface Submission {
 }
 
 export default function CurriculumPage() {
+  const searchParams = useSearchParams();
+  const courseIdParam = searchParams.get('course');
+
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [subModules, setSubModules] = useState<SubModule[]>([]);
+  const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [agreedTC, setAgreedTC] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -65,18 +70,59 @@ export default function CurriculumPage() {
 
     setSubmissions((subs as unknown as Submission[]) || []);
 
-    const { data: curriculumData } = await supabase
-      .from('curriculum')
-      .select('*')
-      .order('week', { ascending: true });
+    // Fetch active course ID if not in URL
+    let targetCourseId = courseIdParam;
+    if (!targetCourseId) {
+      if (profile?.current_course_id) {
+        targetCourseId = profile.current_course_id;
+      } else {
+        // Fallback to first unlocked course
+        const { data: userCourses } = await supabase
+          .from('user_courses')
+          .select('course_id')
+          .eq('user_id', user.id)
+          .eq('status', 'unlocked')
+          .order('unlocked_at', { ascending: true })
+          .limit(1);
 
-    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+        if (userCourses && userCourses.length > 0) {
+          targetCourseId = userCourses[0].course_id;
+        }
+      }
+    }
+
+    if (targetCourseId) {
+       const { data: courseData } = await supabase
+         .from('courses')
+         .select('*')
+         .eq('id', targetCourseId)
+         .single();
+       setCurrentCourse(courseData as Course);
+
+       // Update current course in profile if changed
+       if (targetCourseId !== profile?.current_course_id) {
+         await supabase.from('profiles').update({ current_course_id: targetCourseId }).eq('id', user.id);
+       }
+    }
 
     const { data: modulesData } = await supabase
       .from('modules')
       .select('*')
+      .eq('course_id', targetCourseId)
       .order('index', { ascending: true });
-    setModules(modulesData || []);
+
+    const fetchedModules = modulesData || [];
+    setModules(fetchedModules);
+
+    const moduleIndices = fetchedModules.map(m => m.index);
+
+    const { data: curriculumData } = await supabase
+      .from('curriculum')
+      .select('*')
+      .in('week', moduleIndices)
+      .order('week', { ascending: true });
+
+    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
 
     const { data: subModulesData } = await supabase
       .from('sub_modules')
@@ -144,9 +190,14 @@ export default function CurriculumPage() {
       <Sidebar />
       <main className="flex-1 p-8">
         <div className="max-w-5xl mx-auto space-y-8">
-          <header>
-            <h1 className="text-3xl font-bold">Course Curriculum</h1>
-            <p className="text-muted-foreground mt-2">Your sequential path to mastery.</p>
+          <header className="flex justify-between items-end">
+            <div>
+              <h1 className="text-3xl font-bold">{currentCourse?.name || 'Course'} Curriculum</h1>
+              <p className="text-muted-foreground mt-2">Your sequential path to mastery.</p>
+            </div>
+            <Link href="/courses">
+              <Button variant="outline" size="sm">Switch Course</Button>
+            </Link>
           </header>
 
           <Tabs defaultValue={displayModules[0]?.index.toString()} className="w-full">

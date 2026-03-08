@@ -1,0 +1,18 @@
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3006
+- Network:       http://192.168.0.2:3006
+
+✓ Starting...
+✓ Ready in 4.1s
+○ Compiling /login ...
+ GET /login 200 in 4.4s (compile: 4.0s, render: 418ms)
+ GET /admin/login 200 in 773ms (compile: 508ms, render: 265ms)
+ POST /admin/login 200 in 46ms (compile: 8ms, render: 38ms)
+○ Compiling /admin ...
+ GET /admin 200 in 4.6s (compile: 4.6s, render: 33ms)
+ GET /courses 200 in 935ms (compile: 809ms, render: 126ms)
+ GET /login 200 in 130ms (compile: 16ms, render: 114ms)
+ GET /admin/login 200 in 136ms (compile: 15ms, render: 121ms)
+ POST /admin/login 200 in 29ms (compile: 4ms, render: 25ms)
+ GET /admin 200 in 57ms (compile: 9ms, render: 48ms)
+ GET /courses 200 in 488ms (compile: 127ms, render: 361ms)

@@ -136,9 +136,18 @@ export default function DashboardPage() {
 
     setExtraTasks((tasks as unknown as ExtraTask[]) || []);
 
+    const { data: modulesData } = await supabase
+      .from('modules')
+      .select('index')
+      .eq('course_id', profileData.current_course_id)
+      .order('index', { ascending: true });
+
+    const moduleIndices = (modulesData || []).map(m => m.index);
+
     const { data: curriculumData } = await supabase
       .from('curriculum')
-      .select('*');
+      .select('*')
+      .in('week', moduleIndices);
 
     setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
 

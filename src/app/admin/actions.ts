@@ -21,12 +21,43 @@ export async function seedCurriculumAction() {
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+  // 1. Create Web Dev Course
+  const { data: webDevCourse } = await supabaseAdmin
+    .from('courses')
+    .upsert({ slug: 'web-dev', name: 'Web Development', index: 1 })
+    .select()
+    .single();
+
+  if (!webDevCourse) return { success: false, error: 'Failed to create web dev course' };
+
+  // 2. Create other courses as placeholders
+  await supabaseAdmin.from('courses').upsert([
+    { slug: 'cyber-security', name: 'Cyber Security', index: 2 },
+    { slug: 'ethical-hacking', name: 'Ethical Hacking', index: 3 },
+    { slug: 'gen-ai', name: 'Gen AI / Agentic AI', index: 4 },
+    { slug: 'ai-masterclass', name: 'AI Masterclass', index: 5 },
+  ]);
+
+  // 3. Create initial module linked to web-dev
+  const { data: webDevMod } = await supabaseAdmin
+    .from('modules')
+    .upsert({
+       course_id: webDevCourse.id,
+       index: 1,
+       name: 'HTML Foundation',
+       description: 'Foundations of web development with HTML.'
+    })
+    .select()
+    .single();
+
+  if (!webDevMod) return { success: false, error: 'Failed to create web dev module' };
+
   // Delete all existing curriculum items before seeding new ones
   await supabaseAdmin.from('curriculum').delete().neq('id', 'placeholder-to-delete-all');
 
   const { data, error } = await supabaseAdmin
     .from('curriculum')
-    .upsert(CURRICULUM);
+    .upsert(CURRICULUM.map(item => ({ ...item, module_index: 1 })));
 
   if (error) {
     console.error('Error seeding curriculum:', error);
@@ -118,6 +149,75 @@ export async function deleteModuleAction(id: string) {
 
   const { error } = await supabaseAdmin
     .from('modules').delete().eq('id', id);
+
+  return { success: !error, error };
+}
+
+export async function saveCourseAction(course: any) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('courses')
+    .upsert(course)
+    .select();
+
+  return { success: !error, data: data?.[0], error };
+}
+
+export async function deleteCourseAction(id: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { error } = await supabaseAdmin
+    .from('courses').delete().eq('id', id);
+
+  return { success: !error, error };
+}
+
+export async function unlockCourseForStudentAction(email: string, courseId: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  // Find user by email
+  const { data: userData, error: userError } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  // If email is not in profiles (legacy or different structure), try auth.users
+  // But profiles is our source of truth for students.
+
+  if (userError || !userData) {
+    // If profiles doesn't have email, we might need to join or assume ID for now.
+    // Based on schema, profiles doesn't have email. It's in auth.users.
+    // Let's assume the admin provides the student name or we search differently.
+    // Usually we have student_id available from the students list.
+    return { success: false, error: 'Student not found. Please use the student ID.' };
+  }
+
+  const { error } = await supabaseAdmin
+    .from('user_courses')
+    .upsert({ user_id: userData.id, course_id: courseId, status: 'unlocked' });
 
   return { success: !error, error };
 }
