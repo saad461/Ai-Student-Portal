@@ -42,6 +42,17 @@ export interface CurriculumItem {
   content?: any;
   theory_content?: string;
   video_url?: string;
+  enable_compiler?: boolean;
+  compiler_initial_code?: {
+    html?: string;
+    css?: string;
+    js?: string;
+  };
+  external_resources?: {
+    title: string;
+    url: string;
+    type: 'link' | 'video' | 'doc' | 'github';
+  }[];
   attached_assignment?: {
     title: string;
     description: string;

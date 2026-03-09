@@ -24,16 +24,20 @@ import {
   ChevronLeft,
   ChevronRight,
   List,
-  Clock
+  Clock,
+  Link as LinkIcon,
+  Terminal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { CodeCompiler } from '@/components/code-compiler';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { ExternalLink } from 'lucide-react';
 
 interface Submission {
   id: string;
@@ -444,6 +448,19 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             {activeTab === 'theory' && (
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <div className="lg:col-span-3 space-y-8">
+                  {lecture.enable_compiler && (
+                    <div className="space-y-4">
+                       <h3 className="text-xl font-bold flex items-center gap-2">
+                         <Terminal className="h-5 w-5" /> Interactive Sandbox
+                       </h3>
+                       <CodeCompiler
+                         initialHtml={lecture.compiler_initial_code?.html}
+                         initialCss={lecture.compiler_initial_code?.css}
+                         initialJs={lecture.compiler_initial_code?.js}
+                       />
+                    </div>
+                  )}
+
                   <Card className="border-none shadow-none bg-transparent">
                     <CardContent className="p-0 space-y-6">
                       <div className="max-w-none bg-white dark:bg-slate-900 p-8 md:p-12 rounded-3xl border shadow-sm transition-all hover:shadow-md">
@@ -545,6 +562,35 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                            <p className="text-[10px] text-muted-foreground uppercase mt-1">Required focus for this lecture</p>
                         </CardContent>
                       </Card>
+
+                      {lecture.external_resources && lecture.external_resources.length > 0 && (
+                        <Card className="bg-slate-900 text-white border-none overflow-hidden shadow-xl">
+                           <CardHeader className="p-4 bg-white/5 border-b border-white/10">
+                              <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-primary">
+                                 <ExternalLink className="h-3 w-3" /> Resources
+                              </CardTitle>
+                           </CardHeader>
+                           <CardContent className="p-4 space-y-3">
+                              {lecture.external_resources.map((res, i) => (
+                                <a
+                                  key={i}
+                                  href={res.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group"
+                                >
+                                   <div className="h-8 w-8 rounded-md bg-white/10 flex items-center justify-center group-hover:bg-primary transition-colors">
+                                      <LinkIcon className="h-4 w-4" />
+                                   </div>
+                                   <div className="flex-1 min-w-0">
+                                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{res.title}</div>
+                                      <div className="text-[9px] text-slate-500 truncate">{res.url}</div>
+                                   </div>
+                                </a>
+                              ))}
+                           </CardContent>
+                        </Card>
+                      )}
 
                       {effectiveReadMinutes > 0 && (
                         <Card className={cn(
