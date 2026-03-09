@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 
@@ -25,6 +26,7 @@ export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) 
     { role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` }
   ]);
   const [loading, setLoading] = useState(false);
+  const [aiProvider, setAiProvider] = useState<'cloud' | 'native'>('cloud');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,6 +34,22 @@ export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) 
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  useEffect(() => {
+    const checkNativeAI = async () => {
+      if (typeof window !== 'undefined' && (window as any).ai?.assistant) {
+        try {
+          const capabilities = await (window as any).ai.assistant.capabilities();
+          if (capabilities.available === 'readily') {
+            setAiProvider('native');
+          }
+        } catch (e) {
+          console.log("Native AI detection failed", e);
+        }
+      }
+    };
+    checkNativeAI();
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -42,25 +60,35 @@ export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) 
     setLoading(true);
 
     try {
-      const res = await fetch('/api/ai-assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: userMessage,
-          lectureTitle,
-          lectureContent,
-          history: messages.slice(-5) // Send last 5 messages for context
-        })
-      });
-
-      const data = await res.json();
-      if (data.answer) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+      if (aiProvider === 'native') {
+        const session = await (window as any).ai.assistant.create({
+          systemPrompt: `You are an expert software engineering tutor. Context: ${lectureTitle}. Content: ${lectureContent}`
+        });
+        const response = await session.prompt(userMessage);
+        setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+        session.destroy();
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
+        const res = await fetch('/api/ai-assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: userMessage,
+            lectureTitle,
+            lectureContent,
+            history: messages.slice(-5) // Send last 5 messages for context
+          })
+        });
+
+        const data = await res.json();
+        if (data.answer) {
+          setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+        } else {
+          setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
+        }
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Failed to connect to the AI service." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "AI service error. Switching to cloud backup..." }]);
+      setAiProvider('cloud'); // Fallback if native fails
     } finally {
       setLoading(false);
     }
@@ -91,8 +119,13 @@ export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) 
                     <Sparkles className="h-4 w-4" />
                  </div>
                  <div>
-                    <div className="text-sm font-black uppercase tracking-widest">AI Tutor</div>
-                    <div className="text-[10px] opacity-70">Powered by Gemini 2.0 Flash</div>
+                    <div className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                       AI Tutor
+                       {aiProvider === 'native' && <Badge className="bg-green-400 text-black border-none text-[8px] h-4 py-0 px-1 font-black">LOCAL</Badge>}
+                    </div>
+                    <div className="text-[10px] opacity-70">
+                       {aiProvider === 'native' ? 'Running locally on your device' : 'Powered by Gemini 2.0 Flash'}
+                    </div>
                  </div>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="hover:bg-white/10 text-white">
