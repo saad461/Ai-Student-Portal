@@ -34,6 +34,8 @@ import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CodeCompiler } from '@/components/code-compiler';
+import { AIAssistant } from '@/components/ai-assistant';
+import { AudioReader } from '@/components/audio-reader';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -333,9 +335,12 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         <div className="max-w-6xl mx-auto space-y-8 pb-20">
 
           <div className="flex justify-between items-center">
-            <Link href="/curriculum" className="hidden md:flex text-sm items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
-               <ArrowRight className="h-4 w-4 rotate-180" /> Back to Curriculum
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link href="/curriculum" className="hidden md:flex text-sm items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                 <ArrowRight className="h-4 w-4 rotate-180" /> Back to Curriculum
+              </Link>
+              {lecture.theory_content && <AudioReader content={lecture.theory_content} />}
+            </div>
 
             <div className="flex gap-2 w-full md:w-auto justify-between md:justify-end">
                {prevItem && (
@@ -749,6 +754,11 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
           )}
         </div>
       </main>
+
+      <AIAssistant
+        lectureTitle={lecture.title}
+        lectureContent={lecture.theory_content || ''}
+      />
     </div>
   );
 }

@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { GlobalSearch } from './global-search';
+import { NotificationBell } from './notifications';
 
 export function PortalNavbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,9 +62,12 @@ export function PortalNavbar() {
            <GlobalSearch />
         </div>
 
-        <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
-          <Menu className="h-6 w-6" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
+            <Menu className="h-6 w-6" />
+          </Button>
+        </div>
       </div>
 
       <AnimatePresence>

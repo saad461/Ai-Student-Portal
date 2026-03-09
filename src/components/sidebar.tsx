@@ -20,6 +20,7 @@ import { useTheme } from '@/components/theme-provider';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { GlobalSearch } from './global-search';
+import { NotificationBell } from './notifications';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -84,6 +85,11 @@ export function Sidebar() {
         >
           {isCollapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
+      </div>
+
+      <div className="px-6 flex justify-between items-center mb-2">
+         {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Alerts</span>}
+         <NotificationBell />
       </div>
 
       <div className="px-4 mt-6">

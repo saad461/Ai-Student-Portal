@@ -68,7 +68,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2 } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass } from 'lucide-react';
 
 interface StudentProfile {
   id: string;
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights'>('students');
 
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
@@ -305,6 +305,7 @@ export default function AdminDashboard() {
           <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-2" /> Structure</Button>
           <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Content</Button>
           <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-2" /> Attendance</Button>
+          <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-2" /> Insights</Button>
         </div>
 
         {activeTab === 'courses' ? (
@@ -577,7 +578,7 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'attendance' ? (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold flex items-center gap-2"><Clock className="h-5 w-5" /> Attendance Log</h2>
             <Card>
@@ -590,6 +591,102 @@ export default function AdminDashboard() {
                 </TableBody>
               </Table>
             </Card>
+          </div>
+        ) : (
+          <div className="space-y-8 animate-in fade-in duration-500">
+             <div className="flex justify-between items-end">
+               <div>
+                 <h2 className="text-2xl font-bold">Cohort Insights</h2>
+                 <p className="text-sm text-muted-foreground">Performance metrics and student health.</p>
+               </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="bg-blue-500 text-white border-none shadow-xl">
+                   <CardHeader className="pb-2">
+                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                        <Users className="h-4 w-4" /> Active Students
+                      </CardTitle>
+                      <div className="text-3xl font-black">{students.length}</div>
+                   </CardHeader>
+                   <CardContent className="text-xs opacity-90">Total enrolled across all courses.</CardContent>
+                </Card>
+                <Card className="bg-emerald-500 text-white border-none shadow-xl">
+                   <CardHeader className="pb-2">
+                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                        <Check className="h-4 w-4" /> Avg Completion
+                      </CardTitle>
+                      <div className="text-3xl font-black">
+                         {students.length > 0 ? Math.round(students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0) / (students.length * curriculum.length || 1) * 100) : 0}%
+                      </div>
+                   </CardHeader>
+                   <CardContent className="text-xs opacity-90">Average progress per student.</CardContent>
+                </Card>
+                <Card className="bg-purple-600 text-white border-none shadow-xl">
+                   <CardHeader className="pb-2">
+                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" /> Total Submissions
+                      </CardTitle>
+                      <div className="text-3xl font-black">{students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0)}</div>
+                   </CardHeader>
+                   <CardContent className="text-xs opacity-90">Total assignments & quizzes turned in.</CardContent>
+                </Card>
+             </div>
+
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card>
+                   <CardHeader>
+                      <CardTitle className="text-lg font-bold flex items-center gap-2 text-destructive">
+                        <UserMinus className="h-5 w-5" /> At Risk Students
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">Students with 0 submissions in the last 7 days.</p>
+                   </CardHeader>
+                   <CardContent>
+                      <div className="space-y-4">
+                         {students.filter(s => {
+                            const lastSub = s.submissions?.[s.submissions.length - 1]?.submitted_at;
+                            if (!lastSub) return true;
+                            return new Date().getTime() - new Date(lastSub).getTime() > 7 * 24 * 60 * 60 * 1000;
+                         }).slice(0, 5).map(s => (
+                           <div key={s.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border">
+                              <div className="font-bold text-sm">{s.full_name}</div>
+                              <Badge variant="destructive" className="text-[10px]">INACTIVE</Badge>
+                           </div>
+                         ))}
+                      </div>
+                   </CardContent>
+                </Card>
+
+                <Card>
+                   <CardHeader>
+                      <CardTitle className="text-lg font-bold flex items-center gap-2 text-primary">
+                        <Hourglass className="h-5 w-5" /> Top Bottlenecks
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">Lectures with the fewest completions.</p>
+                   </CardHeader>
+                   <CardContent>
+                      <div className="space-y-4">
+                         {curriculum.slice(0, 5).map(item => {
+                            const completionCount = students.filter(s => s.submissions?.some(sub => sub.curriculum_id === item.id)).length;
+                            return (
+                              <div key={item.id} className="space-y-2">
+                                 <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                                    <span className="truncate max-w-[200px]">{item.title}</span>
+                                    <span>{completionCount}/{students.length} DONE</span>
+                                 </div>
+                                 <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-primary transition-all"
+                                      style={{ width: `${(completionCount / (students.length || 1)) * 100}%` }}
+                                    />
+                                 </div>
+                              </div>
+                            )
+                         })}
+                      </div>
+                   </CardContent>
+                </Card>
+             </div>
           </div>
         )}
 
