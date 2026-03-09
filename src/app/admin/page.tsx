@@ -67,6 +67,7 @@ import {
 } from "@/components/ui/table";
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast-provider';
 
 interface StudentProfile {
   id: string;
@@ -87,6 +88,7 @@ interface SorryMessage {
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [messages, setMessages] = useState<SorryMessage[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
@@ -176,13 +178,14 @@ export default function AdminDashboard() {
     try {
       const res = await saveCurriculumItemAction(item);
       if (res.success) {
+        success('Curriculum item saved successfully!');
         setEditingItem(null);
         await fetchAdminData();
       } else {
-        alert('Error saving curriculum: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
+        toastError('Error saving curriculum: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
       }
     } catch (err) {
-      alert('An unexpected error occurred while saving.');
+      toastError('An unexpected error occurred while saving.');
     } finally {
       setIsSaving(false);
     }
@@ -191,10 +194,11 @@ export default function AdminDashboard() {
   const handleSaveModule = async (mod: Partial<Module>) => {
     const res = await saveModuleAction(mod);
     if (res.success) {
+      success('Module saved successfully!');
       setEditingModule(null);
       fetchAdminData();
     } else {
-      alert('Error saving module: ' + JSON.stringify(res.error));
+      toastError('Error saving module: ' + JSON.stringify(res.error));
     }
   };
 
@@ -207,10 +211,11 @@ export default function AdminDashboard() {
   const handleSaveSubModule = async (sub: Partial<SubModule>) => {
     const res = await saveSubModuleAction(sub);
     if (res.success) {
+      success('Sub-module saved successfully!');
       setEditingSubModule(null);
       fetchAdminData();
     } else {
-      alert('Error saving sub-module: ' + JSON.stringify(res.error));
+      toastError('Error saving sub-module: ' + JSON.stringify(res.error));
     }
   };
 
@@ -223,10 +228,11 @@ export default function AdminDashboard() {
   const handleSaveCourse = async (course: Partial<Course>) => {
     const res = await saveCourseAction(course);
     if (res.success) {
+      success('Course saved successfully!');
       setEditingCourse(null);
       fetchAdminData();
     } else {
-      alert('Error saving course: ' + JSON.stringify(res.error));
+      toastError('Error saving course: ' + JSON.stringify(res.error));
     }
   };
 
@@ -239,9 +245,9 @@ export default function AdminDashboard() {
   const handleUnlockCourse = async (email: string, courseId: string) => {
     const res = await unlockCourseForStudentAction(email, courseId);
     if (res.success) {
-      alert('Course unlocked successfully!');
+      success('Course unlocked successfully!');
     } else {
-      alert('Error unlocking course: ' + res.error);
+      toastError('Error unlocking course: ' + res.error);
     }
   };
 
@@ -281,8 +287,8 @@ export default function AdminDashboard() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={async () => {
               const res = await seedCurriculumAction();
-              if (res.success) alert('Curriculum seeded successfully!');
-              else alert('Error: ' + JSON.stringify(res.error));
+              if (res.success) success('Curriculum seeded successfully!');
+              else toastError('Error: ' + JSON.stringify(res.error));
             }}>
               <Database className="h-4 w-4 mr-2" /> Seed Curriculum
             </Button>
@@ -704,9 +710,12 @@ export default function AdminDashboard() {
                       fd.append('file', file);
                       try {
                         const res = await uploadVideoAction(fd);
-                        if (res.success) setEditingItem(prev => ({ ...prev!, video_url: res.url }));
-                        else alert('Upload failed: ' + res.error);
-                      } catch (err) { alert('Upload error'); }
+                        if (res.success) {
+                          success('Video uploaded successfully!');
+                          setEditingItem(prev => ({ ...prev!, video_url: res.url }));
+                        }
+                        else toastError('Upload failed: ' + res.error);
+                      } catch (err) { toastError('Upload error'); }
                       finally {
                         setIsVideoUploading(false);
                         if (videoInputRef.current) videoInputRef.current.value = '';

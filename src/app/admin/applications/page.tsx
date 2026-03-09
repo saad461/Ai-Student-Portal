@@ -22,8 +22,10 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Loader2, Check, X, Eye, Copy, ExternalLink } from 'lucide-react';
+import { useToast } from '@/components/ui/toast-provider';
 
 export default function AdminApplicationsPage() {
+  const { success, error: toastError } = useToast();
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -49,10 +51,11 @@ export default function AdminApplicationsPage() {
     setProcessingId(id);
     const result = await approveApplication(id);
     if (result.success) {
+      success('Application approved!');
       setCredentials(result.credentials);
       loadApplications();
     } else {
-      alert('Error: ' + result.error);
+      toastError('Error: ' + result.error);
     }
     setProcessingId(null);
   };
@@ -69,7 +72,7 @@ export default function AdminApplicationsPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    success('Copied to clipboard!');
   };
 
   if (loading) {

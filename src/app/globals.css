@@ -168,6 +168,13 @@
     transparent
   );
   animation: scan 3s infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pro-mode .hacker-border::before {
+    animation: none;
+  }
 }
 
 @keyframes scan {

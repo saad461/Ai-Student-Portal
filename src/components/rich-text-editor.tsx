@@ -96,6 +96,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { uploadImageAction } from '@/app/admin/actions';
 import { useRef, useState } from 'react';
+import { useToast } from '@/components/ui/toast-provider';
 
 interface RichTextEditorProps {
   content: string;
@@ -477,6 +478,7 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBa
 export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { success, error: toastError } = useToast();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -489,12 +491,13 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
     try {
       const res = await uploadImageAction(formData);
       if (res.success && res.url) {
+        success('Image uploaded successfully!');
         editor?.chain().focus().setImage({ src: res.url }).run();
       } else {
-        alert('Upload failed: ' + res.error);
+        toastError('Upload failed: ' + res.error);
       }
     } catch (err) {
-      alert('Upload error');
+      toastError('Upload error');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
