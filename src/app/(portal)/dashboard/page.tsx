@@ -24,7 +24,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
+  DialogDescription
 } from '@/components/ui/dialog';
 import {
   CheckCircle2,
@@ -73,6 +74,7 @@ interface ExtraTask {
 }
 
 export default function DashboardPage() {
+  const { setTheme } = useTheme();
   const { success, error: toastError } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -169,7 +171,7 @@ export default function DashboardPage() {
 
     if (profileData && !profileData.is_pro && subs && subs.length >= 5) {
       await supabase.from('profiles').update({ is_pro: true }).eq('id', user.id);
-      setTheme('pro');
+      if (setTheme) setTheme('pro');
       setProfile(prev => prev ? { ...prev, is_pro: true } : null);
     }
 

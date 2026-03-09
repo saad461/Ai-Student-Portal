@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, isItemUnlocked, Module, SubModule, Course } from '@/lib/curriculum';
@@ -32,7 +32,7 @@ interface Submission {
   status: string;
 }
 
-export default function CurriculumPage() {
+function CurriculumContent() {
   const searchParams = useSearchParams();
   const { success, error: toastError } = useToast();
   const courseIdParam = searchParams.get('course');
@@ -552,5 +552,20 @@ export default function CurriculumPage() {
       </main>
       <TermsModal isOpen={showTerms} onAgree={handleAgreeTC} />
     </div>
+  );
+}
+
+export default function CurriculumPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+        <PortalNavbar />
+        <main className="flex-1 p-4 md:p-8">
+          <CurriculumSkeleton />
+        </main>
+      </div>
+    }>
+      <CurriculumContent />
+    </Suspense>
   );
 }

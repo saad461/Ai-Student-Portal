@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toast, success, error, info, loading, dismiss }}>
       {children}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none w-full max-w-[400px]">
-        <AnimatePresence mode="multiple">
+        <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
               key={t.id}
