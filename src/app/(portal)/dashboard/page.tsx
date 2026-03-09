@@ -41,7 +41,8 @@ import {
   Trophy,
   Star,
   Target,
-  Flame
+  Flame,
+  FileUser
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AICodeReview } from '@/components/code-review';
@@ -50,6 +51,9 @@ import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/toast-provider';
 import { DashboardSkeleton } from '@/components/skeletons';
+import { KnowledgeRadar } from '@/components/knowledge-radar';
+import { generateCV } from '@/lib/cv-generator';
+import { OnboardingTour } from '@/components/onboarding-tour';
 
 interface Profile {
   id: string;
@@ -61,6 +65,10 @@ interface Profile {
   last_punch_in: string | null;
   agreed_tc: boolean;
   achievements?: string[];
+  email?: string;
+  phone_number?: string;
+  city?: string;
+  github_link?: string;
 }
 
 interface Submission {
@@ -270,6 +278,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <OnboardingTour />
       <Sidebar />
       <PortalNavbar />
       <main className="flex-1 p-4 lg:p-8">
@@ -359,6 +368,59 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
+                <Card className="p-8 flex flex-col md:flex-row items-center gap-12 overflow-hidden bg-primary/5 border-primary/10">
+                   <div className="flex-1 space-y-4">
+                      <h2 className="text-2xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
+                        <Trophy className="h-6 w-6" /> Mastery Radar
+                      </h2>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                         Visualize your proficiency across the technical stack. Your radar expands as you complete module-specific assignments and quizzes.
+                      </p>
+                      <div className="flex flex-wrap gap-4 items-end">
+                         <div className="text-center">
+                            <div className="text-xl font-black">{submissions.length}</div>
+                            <div className="text-[8px] uppercase font-bold opacity-50">Units Done</div>
+                         </div>
+                         <div className="h-8 w-px bg-primary/20 hidden md:block" />
+                         <div className="text-center">
+                            <div className="text-xl font-black">{Math.floor((profile?.total_points || 0) / 10)}</div>
+                            <div className="text-[8px] uppercase font-bold opacity-50">Rank Score</div>
+                         </div>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="bg-white dark:bg-slate-900 border-primary text-primary font-bold gap-2 ml-auto"
+                           onClick={() => generateCV({
+                             fullName: profile?.full_name || 'Student',
+                             email: profile?.email || '',
+                             phone: profile?.phone_number || '',
+                             city: profile?.city || '',
+                             github: profile?.github_link || '',
+                             skills: ['HTML5', 'CSS3', 'JavaScript', 'Tailwind CSS', 'React'],
+                             projects: curriculum.slice(0, 5).map(c => ({ title: c.title, status: submissions.find(s => s.curriculum_id === c.id)?.status || 'In Progress' })),
+                             totalPoints: profile?.total_points || 0,
+                             level: Math.floor((profile?.total_points || 0) / 100) + 1,
+                             streak: profile?.current_streak || 0
+                           })}
+                         >
+                            <FileUser className="h-4 w-4" /> Export CV
+                         </Button>
+                      </div>
+                   </div>
+                   <div className="shrink-0 p-4 bg-white/40 dark:bg-black/40 rounded-full backdrop-blur-xl">
+                      <KnowledgeRadar
+                        size={240}
+                        data={[
+                          { label: 'HTML', value: Math.min(100, (submissions.filter(s => s.curriculum_id.startsWith('m1')).length / 10) * 100) },
+                          { label: 'CSS', value: 45 },
+                          { label: 'JS', value: 30 },
+                          { label: 'AI', value: 10 },
+                          { label: 'LOGIC', value: 60 },
+                        ]}
+                      />
+                   </div>
+                </Card>
+
               <section className="space-y-4">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Zap className="h-5 w-5 text-primary" /> Today&apos;s Focus
