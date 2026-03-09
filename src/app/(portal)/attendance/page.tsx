@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
 import { PortalNavbar } from '@/components/portal-navbar';
+import { AttendanceHeatmap } from '@/components/attendance-heatmap';
 import {
   Card,
   CardHeader,
@@ -140,6 +141,16 @@ export default function StudentAttendancePage() {
               Attendance is marked automatically once you spend a total of 15 minutes on the portal each day (Monday-Friday). You don't need to click anything!
             </AlertDescription>
           </Alert>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+               <h2 className="text-xl font-bold flex items-center gap-2">
+                 <CalendarIcon className="h-5 w-5" /> Activity Heatmap
+               </h2>
+               <div className="text-xs text-muted-foreground font-medium">Last 365 Days</div>
+            </div>
+            <AttendanceHeatmap data={attendance} />
+          </Card>
 
           <Card>
             <CardHeader>

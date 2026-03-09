@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2, Check, X, Eye, Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/toast-provider';
+import { cn } from '@/lib/utils';
 
 export default function AdminApplicationsPage() {
   const { success, error: toastError } = useToast();
@@ -31,6 +32,8 @@ export default function AdminApplicationsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [credentials, setCredentials] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   useEffect(() => {
     loadApplications();
@@ -40,6 +43,7 @@ export default function AdminApplicationsPage() {
     try {
       const data = await getApplications();
       setApplications(data);
+      setSelectedIds([]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -70,6 +74,58 @@ export default function AdminApplicationsPage() {
     setProcessingId(null);
   };
 
+  const handleBulkApprove = async () => {
+    if (!confirm(`Are you sure you want to approve ${selectedIds.length} applications?`)) return;
+    setIsBulkProcessing(true);
+    let successCount = 0;
+    for (const id of selectedIds) {
+        const res = await approveApplication(id);
+        if (res.success) successCount++;
+    }
+    success(`Successfully approved ${successCount} applications.`);
+    setIsBulkProcessing(false);
+    loadApplications();
+  };
+
+  const handleBulkReject = async () => {
+    if (!confirm(`Are you sure you want to reject ${selectedIds.length} applications?`)) return;
+    setIsBulkProcessing(true);
+    let successCount = 0;
+    for (const id of selectedIds) {
+        const res = await rejectApplication(id);
+        if (res.success) successCount++;
+    }
+    success(`Successfully rejected ${successCount} applications.`);
+    setIsBulkProcessing(false);
+    loadApplications();
+  };
+
+  const handleBulkEmail = () => {
+    const emails = applications
+        .filter(app => selectedIds.includes(app.id))
+        .map(app => app.email)
+        .join(',');
+
+    if (emails) {
+        window.location.href = `mailto:${emails}?subject=Pro Dev Training Update`;
+        success('Opening your email client...');
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === applications.length) {
+        setSelectedIds([]);
+    } else {
+        setSelectedIds(applications.map(app => app.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+        prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     success('Copied to clipboard!');
@@ -84,12 +140,26 @@ export default function AdminApplicationsPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold uppercase tracking-tight">Student Applications</h1>
-        <Badge variant="outline" className="px-4 py-1 text-sm">
-          {applications.length} Total Applications
-        </Badge>
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+           <h1 className="text-3xl font-bold uppercase tracking-tight">Student Applications</h1>
+           <p className="text-muted-foreground">Manage incoming enrollments and student onboarding.</p>
+        </div>
+        <div className="flex gap-2">
+            <Badge variant="outline" className="px-4 py-2 text-sm">
+              {applications.length} Total
+            </Badge>
+            {selectedIds.length > 0 && (
+                <div className="flex gap-2 animate-in fade-in slide-in-from-right-2">
+                    <Button variant="outline" size="sm" onClick={handleBulkEmail}>Email ({selectedIds.length})</Button>
+                    <Button variant="destructive" size="sm" onClick={handleBulkReject} disabled={isBulkProcessing}>Reject All</Button>
+                    <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleBulkApprove} disabled={isBulkProcessing}>
+                        {isBulkProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : `Approve All (${selectedIds.length})`}
+                    </Button>
+                </div>
+            )}
+        </div>
       </div>
 
       <Card>
@@ -97,6 +167,14 @@ export default function AdminApplicationsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                   <input
+                     type="checkbox"
+                     className="h-4 w-4 rounded border-gray-300"
+                     checked={selectedIds.length === applications.length && applications.length > 0}
+                     onChange={toggleSelectAll}
+                   />
+                </TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Student Name</TableHead>
                 <TableHead>Email</TableHead>
@@ -108,13 +186,21 @@ export default function AdminApplicationsPage() {
             <TableBody>
               {applications.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                     No applications found.
                   </TableCell>
                 </TableRow>
               ) : (
                 applications.map((app) => (
-                  <TableRow key={app.id}>
+                  <TableRow key={app.id} className={cn(selectedIds.includes(app.id) && "bg-muted/50")}>
+                    <TableCell>
+                       <input
+                         type="checkbox"
+                         className="h-4 w-4 rounded border-gray-300"
+                         checked={selectedIds.includes(app.id)}
+                         onChange={() => toggleSelect(app.id)}
+                       />
+                    </TableCell>
                     <TableCell className="text-sm">
                       {new Date(app.created_at).toLocaleDateString()}
                     </TableCell>

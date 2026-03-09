@@ -68,6 +68,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
+import { ExternalLink, Code2 } from 'lucide-react';
 
 interface StudentProfile {
   id: string;
@@ -723,6 +724,79 @@ export default function AdminDashboard() {
                     }}
                   />
                   <p className="text-[10px] text-muted-foreground mt-1">Supports YouTube/Vimeo links or direct MP4/WebM uploads.</p>
+                </div>
+
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                     <Label className="flex items-center gap-2"><Code2 className="h-4 w-4" /> Code Compiler</Label>
+                     <input
+                       type="checkbox"
+                       checked={editingItem?.enable_compiler || false}
+                       onChange={(e) => setEditingItem(prev => ({ ...prev!, enable_compiler: e.target.checked }))}
+                     />
+                  </div>
+                  {editingItem?.enable_compiler && (
+                    <div className="space-y-2 animate-in slide-in-from-top-2">
+                       <Label className="text-[10px] font-bold uppercase text-muted-foreground">Initial HTML Code</Label>
+                       <Textarea
+                         className="font-mono text-xs h-24"
+                         value={editingItem?.compiler_initial_code?.html || ''}
+                         onChange={(e) => setEditingItem(prev => ({ ...prev!, compiler_initial_code: { ...prev!.compiler_initial_code!, html: e.target.value } }))}
+                       />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4 border-t pt-4">
+                   <Label className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> External Resources</Label>
+                   <div className="space-y-2">
+                      {editingItem?.external_resources?.map((res, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                           <Input
+                             placeholder="Title"
+                             className="flex-1 h-8 text-xs"
+                             value={res.title}
+                             onChange={(e) => {
+                               const newRes = [...(editingItem.external_resources || [])];
+                               newRes[i].title = e.target.value;
+                               setEditingItem(prev => ({ ...prev!, external_resources: newRes }));
+                             }}
+                           />
+                           <Input
+                             placeholder="URL"
+                             className="flex-1 h-8 text-xs"
+                             value={res.url}
+                             onChange={(e) => {
+                               const newRes = [...(editingItem.external_resources || [])];
+                               newRes[i].url = e.target.value;
+                               setEditingItem(prev => ({ ...prev!, external_resources: newRes }));
+                             }}
+                           />
+                           <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-8 w-8 text-destructive"
+                             onClick={() => {
+                                const newRes = editingItem.external_resources?.filter((_, idx) => idx !== i);
+                                setEditingItem(prev => ({ ...prev!, external_resources: newRes }));
+                             }}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-[10px] h-8"
+                        onClick={() => setEditingItem(prev => ({
+                           ...prev!,
+                           external_resources: [...(prev!.external_resources || []), { title: '', url: '', type: 'link' }]
+                        }))}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Add Resource
+                      </Button>
+                   </div>
                 </div>
               </div>
 

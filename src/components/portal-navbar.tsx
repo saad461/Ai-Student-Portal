@@ -21,6 +21,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { GlobalSearch } from './global-search';
 
 export function PortalNavbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,9 +53,13 @@ export function PortalNavbar() {
         <Link href="/dashboard" className="flex items-center gap-2">
           <Zap className="h-6 w-6 fill-primary" />
           <span className={cn("font-bold", theme === 'pro' && "hacker-text")}>
-            {theme === 'pro' ? 'PRO PORTAL' : 'STUDENT'}
+            {theme === 'pro' ? 'PRO' : 'STUDENT'}
           </span>
         </Link>
+
+        <div className="flex-1 max-w-[200px] mx-4">
+           <GlobalSearch />
+        </div>
 
         <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
           <Menu className="h-6 w-6" />

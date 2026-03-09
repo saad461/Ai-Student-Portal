@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { GlobalSearch } from './global-search';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -85,7 +86,11 @@ export function Sidebar() {
         </button>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2 mt-4">
+      <div className="px-4 mt-6">
+         <GlobalSearch />
+      </div>
+
+      <nav className="flex-1 px-4 space-y-2 mt-6">
         {navItems.map((item) => (
           <Link
             key={item.href}

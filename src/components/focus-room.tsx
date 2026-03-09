@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Maximize2, Minimize2, Volume2, VolumeX, X, Play, Pause, RotateCcw } from 'lucide-react';
+import { Maximize2, Minimize2, Volume2, VolumeX, X, Play, Pause, RotateCcw, CloudRain, Music, Wind, TreePine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FocusRoomProps {
@@ -15,12 +15,14 @@ export function FocusRoom({ isOpen, onClose, onSaveSession }: FocusRoomProps) {
   const [timeLeft, setTimeLeft] = useState(60 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  const [activeAmbient, setActiveAmbient] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.5);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorLRef = useRef<OscillatorNode | null>(null);
   const oscillatorRRef = useRef<OscillatorNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
+  const noiseNodeRef = useRef<AudioNode | null>(null);
   const sessionStartTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -80,6 +82,65 @@ export function FocusRoom({ isOpen, onClose, onSaveSession }: FocusRoomProps) {
     oscillatorRRef.current?.stop();
     oscillatorLRef.current = null;
     oscillatorRRef.current = null;
+  };
+
+  const createNoiseNode = (type: 'white' | 'pink' | 'brown') => {
+    if (!audioContextRef.current) return null;
+    const ctx = audioContextRef.current;
+    const bufferSize = 2 * ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = buffer.getChannelData(0);
+
+    let lastOut = 0.0;
+    for (let i = 0; i < bufferSize; i++) {
+        if (type === 'white') {
+            output[i] = Math.random() * 2 - 1;
+        } else if (type === 'pink') {
+            // Approximation
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = output[i];
+        } else {
+            // Brown noise
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = output[i];
+        }
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    return noise;
+  };
+
+  const toggleAmbient = (type: string) => {
+    if (activeAmbient === type) {
+        noiseNodeRef.current?.disconnect();
+        noiseNodeRef.current = null;
+        setActiveAmbient(null);
+        return;
+    }
+
+    if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    noiseNodeRef.current?.disconnect();
+
+    let node: AudioBufferSourceNode | null = null;
+    if (type === 'rain') node = createNoiseNode('pink') as any;
+    if (type === 'wind') node = createNoiseNode('brown') as any;
+    if (type === 'white') node = createNoiseNode('white') as any;
+
+    if (node) {
+        const ambientGain = audioContextRef.current.createGain();
+        ambientGain.gain.value = volume * 0.5;
+        node.connect(ambientGain).connect(audioContextRef.current.destination);
+        node.start();
+        noiseNodeRef.current = node;
+        setActiveAmbient(type);
+    }
   };
 
   const toggleAudio = () => {
@@ -186,6 +247,41 @@ export function FocusRoom({ isOpen, onClose, onSaveSession }: FocusRoomProps) {
                  className="w-24 h-1 bg-green-900 rounded-lg appearance-none cursor-pointer accent-green-500"
                />
              </div>
+           </div>
+
+           <div className="h-8 w-px bg-green-900/50" />
+
+           <div className="flex gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("h-10 w-10 p-0 flex flex-col items-center justify-center gap-1", activeAmbient === 'rain' ? "text-green-400 bg-green-500/10" : "text-green-900")}
+                onClick={() => toggleAmbient('rain')}
+                title="Rain"
+              >
+                <CloudRain className="h-4 w-4" />
+                <span className="text-[6px] uppercase">Rain</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("h-10 w-10 p-0 flex flex-col items-center justify-center gap-1", activeAmbient === 'wind' ? "text-green-400 bg-green-500/10" : "text-green-900")}
+                onClick={() => toggleAmbient('wind')}
+                title="Storm"
+              >
+                <Wind className="h-4 w-4" />
+                <span className="text-[6px] uppercase">Wind</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("h-10 w-10 p-0 flex flex-col items-center justify-center gap-1", activeAmbient === 'white' ? "text-green-400 bg-green-500/10" : "text-green-900")}
+                onClick={() => toggleAmbient('white')}
+                title="White Noise"
+              >
+                <TreePine className="h-4 w-4" />
+                <span className="text-[6px] uppercase">Static</span>
+              </Button>
            </div>
 
            <div className="h-8 w-px bg-green-900/50" />

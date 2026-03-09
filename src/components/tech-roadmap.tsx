@@ -1,7 +1,8 @@
 'use client';
 
-import { motion, useScroll, useSpring } from 'framer-motion';
-import { useRef } from 'react';
+import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
+import { useRef, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
   Code,
   Database,
@@ -115,6 +116,7 @@ const PHASES: RoadmapPhase[] = [
 
 export function TechRoadmap() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [currentModuleIndex, setCurrentModuleIndex] = useState<number>(1);
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start center", "end center"]
@@ -125,6 +127,27 @@ export function TechRoadmap() {
     damping: 30,
     restDelta: 0.001
   });
+
+  useEffect(() => {
+    async function fetchProgress() {
+       const { data: { user } } = await supabase.auth.getUser();
+       if (!user) return;
+
+       const { data: profile } = await supabase.from('profiles').select('current_course_id').eq('id', user.id).single();
+       const { data: submissions } = await supabase.from('submissions').select('curriculum_id').eq('student_id', user.id);
+       const { data: modules } = await supabase.from('modules').select('index').eq('course_id', profile?.current_course_id).order('index', { ascending: true });
+
+       if (modules && modules.length > 0) {
+          // Simplified: match roadmap phase (1-5) to module groups (approx 5 modules per phase)
+          // Total modules usually around 24.
+          const completedCount = submissions?.length || 0;
+          // Roadmap has 5 phases. Let's say phase 1 is modules 1-4, phase 2 is 5-9, etc.
+          const phase = Math.min(5, Math.floor(completedCount / 5) + 1);
+          setCurrentModuleIndex(phase);
+       }
+    }
+    fetchProgress();
+  }, []);
 
   return (
     <div ref={containerRef} className="relative max-w-6xl mx-auto py-20 px-6">
@@ -143,6 +166,8 @@ export function TechRoadmap() {
             key={phase.id}
             phase={phase}
             isLeft={index % 2 === 0}
+            isCurrent={phase.id === currentModuleIndex}
+            isCompleted={phase.id < currentModuleIndex}
           />
         ))}
       </div>
@@ -150,7 +175,7 @@ export function TechRoadmap() {
   );
 }
 
-function PhaseCard({ phase, isLeft }: { phase: RoadmapPhase, isLeft: boolean }) {
+function PhaseCard({ phase, isLeft, isCurrent, isCompleted }: { phase: RoadmapPhase, isLeft: boolean, isCurrent?: boolean, isCompleted?: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
@@ -164,7 +189,20 @@ function PhaseCard({ phase, isLeft }: { phase: RoadmapPhase, isLeft: boolean }) 
     >
       {/* Central Connector Dot */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 hidden md:block">
-        <div className={cn("h-4 w-4 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.5)] bg-white", phase.glowColor)} />
+        <div className={cn(
+          "h-4 w-4 rounded-full transition-all duration-1000",
+          isCurrent ? "bg-white scale-150 shadow-[0_0_25px_rgba(255,255,255,1)]" :
+          isCompleted ? "bg-green-500 scale-110" : "bg-slate-700",
+          phase.glowColor
+        )} />
+        {isCurrent && (
+          <motion.div
+            layoutId="glow"
+            className="absolute inset-0 rounded-full bg-white opacity-50 blur-md"
+            animate={{ scale: [1, 2, 1], opacity: [0.5, 0.2, 0.5] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+          />
+        )}
       </div>
 
       {/* Content Card */}
@@ -172,7 +210,25 @@ function PhaseCard({ phase, isLeft }: { phase: RoadmapPhase, isLeft: boolean }) 
         "w-full md:w-1/2 group",
         isLeft ? "md:text-right" : "md:text-left"
       )}>
-        <div className="relative p-8 rounded-3xl border border-white/10 bg-slate-900/50 backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:bg-slate-900/80 hover:shadow-2xl hover:shadow-black/50 overflow-hidden">
+        <div className={cn(
+          "relative p-8 rounded-3xl border transition-all duration-500 overflow-hidden",
+          isCurrent ? "border-primary/50 bg-slate-900/80 shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)] ring-1 ring-primary/20 scale-[1.02]" :
+          "border-white/10 bg-slate-900/50 backdrop-blur-xl hover:border-white/20 hover:bg-slate-900/80 hover:shadow-2xl hover:shadow-black/50"
+        )}>
+          {/* Status Badge */}
+          <div className="absolute top-4 left-4 flex gap-2">
+            {isCurrent && (
+               <Badge className="bg-primary text-primary-foreground border-none animate-pulse text-[10px] font-black tracking-tighter">
+                  ACTIVE PHASE
+               </Badge>
+            )}
+            {isCompleted && (
+               <Badge className="bg-green-500 text-white border-none text-[10px] font-black tracking-tighter">
+                  PHASE COMPLETED
+               </Badge>
+            )}
+          </div>
+
           {/* Subtle Mesh Gradient Overlay */}
           <div className={cn(
             "absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[100px] opacity-20 transition-opacity group-hover:opacity-40",
