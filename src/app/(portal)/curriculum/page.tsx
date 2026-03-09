@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { CurriculumItem, isItemUnlocked, Module, SubModule, Course } from '@/lib/curriculum';
@@ -30,7 +30,7 @@ interface Submission {
   status: string;
 }
 
-export default function CurriculumPage() {
+function CurriculumContent() {
   const searchParams = useSearchParams();
   const courseIdParam = searchParams.get('course');
 
@@ -546,5 +546,17 @@ export default function CurriculumPage() {
       </main>
       <TermsModal isOpen={showTerms} onAgree={handleAgreeTC} />
     </div>
+  );
+}
+
+export default function CurriculumPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <CurriculumContent />
+    </Suspense>
   );
 }
