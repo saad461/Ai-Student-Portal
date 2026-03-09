@@ -34,6 +34,7 @@ import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CodeCompiler } from '@/components/code-compiler';
+import { AIAssistant } from '@/components/ai-assistant';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -749,6 +750,11 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
           )}
         </div>
       </main>
+
+      <AIAssistant
+        lectureTitle={lecture.title}
+        lectureContent={lecture.theory_content || ''}
+      />
     </div>
   );
 }

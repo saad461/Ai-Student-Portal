@@ -37,7 +37,11 @@ import {
   Send,
   BookOpen,
   Zap,
-  Video
+  Video,
+  Trophy,
+  Star,
+  Target,
+  Flame
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AICodeReview } from '@/components/code-review';
@@ -56,6 +60,7 @@ interface Profile {
   total_points: number;
   last_punch_in: string | null;
   agreed_tc: boolean;
+  achievements?: string[];
 }
 
 interface Submission {
@@ -321,6 +326,36 @@ export default function DashboardPage() {
               </CardHeader>
             </Card>
           </div>
+
+          {/* Achievements Grid */}
+          <section className="space-y-4">
+             <h2 className="text-xl font-bold flex items-center gap-2">
+               <Trophy className="h-5 w-5 text-amber-500" /> Achievements
+             </h2>
+             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {[
+                  { id: 'streak-7', title: '7 Day Streak', icon: Flame, color: 'text-orange-500', desc: 'Consistent learner' },
+                  { id: 'first-submission', title: 'First Steps', icon: Target, color: 'text-blue-500', desc: 'First assignment done' },
+                  { id: 'pro-unlocked', title: 'Elite Status', icon: Zap, color: 'text-purple-500', desc: 'Unlocked Pro Mode' },
+                  { id: 'deep-worker', title: 'Deep Worker', icon: Clock, color: 'text-emerald-500', desc: '10+ focus sessions' },
+                  { id: 'quiz-master', title: 'Quiz Master', icon: Star, color: 'text-yellow-500', desc: 'Perfect quiz score' },
+                  { id: 'git-expert', title: 'Git Expert', icon: Github, color: 'text-slate-400', desc: 'Completed Git Mastery' },
+                ].map(badge => {
+                  const isUnlocked = profile?.achievements?.includes(badge.id) || (badge.id === 'pro-unlocked' && profile?.is_pro) || (badge.id === 'streak-7' && (profile?.current_streak || 0) >= 7);
+                  return (
+                    <Card key={badge.id} className={cn("relative group transition-all duration-500", !isUnlocked && "opacity-40 grayscale")}>
+                       <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                          <div className={cn("p-2 rounded-full bg-muted transition-transform group-hover:scale-110", badge.color)}>
+                             <badge.icon className="h-6 w-6" />
+                          </div>
+                          <div className="text-[10px] font-black uppercase tracking-tighter">{badge.title}</div>
+                          {isUnlocked && <div className="absolute top-1 right-1"><CheckCircle2 className="h-3 w-3 text-green-500 fill-white" /></div>}
+                       </CardContent>
+                    </Card>
+                  )
+                })}
+             </div>
+          </section>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
