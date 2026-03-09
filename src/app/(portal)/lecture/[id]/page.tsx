@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, use, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, QuizQuestion, getEstimatedReadTime, extractHeadings } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
   const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz'>('theory');
   const [readTimeSeconds, setReadTimeSeconds] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const isTheoryDone = submission?.completion_data?.theory_read;
 
@@ -120,6 +122,24 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (activeTab !== 'theory') return;
+
+    const handleScroll = () => {
+      const element = document.documentElement;
+      const scrollHeight = element.scrollHeight - element.clientHeight;
+      if (scrollHeight <= 0) {
+        setScrollProgress(100);
+        return;
+      }
+      const scrolled = (element.scrollTop / scrollHeight) * 100;
+      setScrollProgress(scrolled);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [activeTab]);
 
   const updateCompletion = async (newData: any) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -295,16 +315,24 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <main className="p-4 md:p-12 lg:p-16 overflow-y-auto">
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="fixed top-0 left-0 right-0 h-1 bg-primary/20 z-[60] lg:hidden">
+        <motion.div
+          className="h-full bg-primary"
+          initial={{ width: 0 }}
+          animate={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+      <PortalNavbar />
+      <main className="flex-1 p-4 md:p-12 lg:p-16">
         <div className="max-w-6xl mx-auto space-y-8 pb-20">
 
           <div className="flex justify-between items-center">
-            <Link href="/curriculum" className="text-sm flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+            <Link href="/curriculum" className="hidden md:flex text-sm items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                <ArrowRight className="h-4 w-4 rotate-180" /> Back to Curriculum
             </Link>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full md:w-auto justify-between md:justify-end">
                {prevItem && (
                  <Button variant="outline" size="sm" asChild>
                    <Link href={`/lecture/${prevItem.id}`}>

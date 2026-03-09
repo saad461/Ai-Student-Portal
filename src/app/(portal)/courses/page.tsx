@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Course } from '@/lib/curriculum';
 import { Lock, Play, CheckCircle2, Star, Sparkles, Shield, Cpu, Code } from 'lucide-react';
 import Link from 'next/link';
+import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 import { cn } from '@/lib/utils';
 
 export default function CoursesPage() {
@@ -68,7 +70,10 @@ export default function CoursesPage() {
   if (loading) return <div className="p-12 text-center">Loading your learning path...</div>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <Sidebar />
+      <PortalNavbar />
+      <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-12">
       <div className="space-y-4">
         <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">Explore Courses</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
@@ -141,6 +146,7 @@ export default function CoursesPage() {
           );
         })}
       </div>
+      </main>
     </div>
   );
 }

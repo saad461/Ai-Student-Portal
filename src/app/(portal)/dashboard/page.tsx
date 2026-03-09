@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, QuizQuestion, isItemUnlocked } from '@/lib/curriculum';
 import { useTheme } from '@/components/theme-provider';
 import {
@@ -43,6 +44,8 @@ import { AICodeReview } from '@/components/code-review';
 import { QuizModule } from '@/components/quiz';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast-provider';
+import { DashboardSkeleton } from '@/components/skeletons';
 
 interface Profile {
   id: string;
@@ -70,6 +73,7 @@ interface ExtraTask {
 
 export default function DashboardPage() {
   const { setTheme } = useTheme();
+  const { success, error: toastError } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [extraTasks, setExtraTasks] = useState<ExtraTask[]>([]);
@@ -188,8 +192,9 @@ export default function DashboardPage() {
       }, { onConflict: 'student_id,curriculum_id' });
 
       if (error) {
-        alert('Failed to submit: ' + error.message);
+        toastError('Failed to submit: ' + error.message);
       } else {
+        success('Assignment submitted successfully!');
         setLastSubmittedUrl(githubUrl);
         setGithubUrl('');
         setShowReviewFor(curriculumId);
@@ -202,7 +207,7 @@ export default function DashboardPage() {
 
   const handleSkip = async (itemId: string) => {
     if (skipPin !== '7323') {
-      alert('Invalid PIN');
+      toastError('Invalid PIN');
       return;
     }
 
@@ -249,101 +254,79 @@ export default function DashboardPage() {
   };
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <Sidebar />
+      <PortalNavbar />
+      <main className="flex-1 p-4 lg:p-8">
+        <DashboardSkeleton />
+      </main>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
       <Sidebar />
-      <main className="flex-1 p-8">
+      <PortalNavbar />
+      <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
-          <header className="flex justify-between items-end">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold">Welcome, {profile?.full_name}!</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">Welcome, {profile?.full_name}!</h1>
                 {profile?.is_pro && (
                   <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none animate-pulse">
                     <Zap className="h-3 w-3 mr-1 fill-white" /> PRO
                   </Badge>
                 )}
               </div>
-              <p className="text-muted-foreground">Module {currentModule} &bull; {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</p>
+              <p className="text-sm text-muted-foreground">Module {currentModule} &bull; {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 w-full md:w-auto">
               {hasPunchedInToday ? (
-                <Badge variant="outline" className="text-green-600 border-green-600 px-4 py-2">
+                <Badge variant="outline" className="text-green-600 border-green-600 px-4 py-2 w-full justify-center">
                   <CheckCircle2 className="mr-2 h-4 w-4" /> Attendance Marked
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-orange-600 border-orange-600 px-4 py-2">
+                <Badge variant="outline" className="text-orange-600 border-orange-600 px-4 py-2 w-full justify-center">
                   <Clock className="mr-2 h-4 w-4" /> Attendance Pending
                 </Badge>
               )}
             </div>
           </header>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Overall Progress</CardTitle>
-                <div className="text-2xl font-bold">{Math.round((submissions.length / (curriculum.length || 1)) * 100)}%</div>
+          {/* Core Metrics - Mobile First */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-primary/5 border-primary/10">
+              <CardHeader className="pb-1 p-4">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">XP Points</CardTitle>
+                <div className="text-xl font-black text-primary">{profile?.total_points || 0}</div>
               </CardHeader>
-              <CardContent>
-                <Progress value={(submissions.length / (curriculum.length || 1)) * 100} className="h-2" />
-              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lectures Done</CardTitle>
-                <div className="text-2xl font-bold">{submissions.length} / {curriculum.length}</div>
+              <CardHeader className="pb-1 p-4">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Streak</CardTitle>
+                <div className="text-xl font-black">{profile?.current_streak || 0} 🔥</div>
               </CardHeader>
-              <CardContent>
-                <div className="flex -space-x-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className={`h-6 w-6 rounded-full border-2 border-background ${i < submissions.length ? 'bg-primary' : 'bg-muted'}`} />
-                  ))}
-                </div>
-              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Current Streak</CardTitle>
-                <div className="text-2xl font-bold flex items-center gap-2">
-                  {profile?.current_streak || 0} Days 🔥
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xs text-muted-foreground">Consistency is key.</div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-primary uppercase tracking-wider flex items-center gap-2">
-                  <Zap className="h-4 w-4" /> Total Points
-                </CardTitle>
-                <div className="text-2xl font-bold">{profile?.total_points || 0} XP</div>
+              <CardHeader className="pb-1 p-4">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Progress</CardTitle>
+                <div className="text-xl font-black">{Math.round((submissions.length / (curriculum.length || 1)) * 100)}%</div>
               </CardHeader>
             </Card>
-
-            {profile?.is_pro && (
-              <Card className="border-purple-500/50 bg-purple-500/5">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-2">
-                    <Clock className="h-4 w-4" /> Deep Work
-                  </CardTitle>
-                  <div className="text-2xl font-bold">{totalFocusMinutes} mins</div>
-                </CardHeader>
-              </Card>
-            )}
+            <Card className={cn(profile?.is_pro ? "bg-purple-500/5 border-purple-500/10" : "opacity-50")}>
+              <CardHeader className="pb-1 p-4">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Level</CardTitle>
+                <div className="text-xl font-black">{Math.floor((profile?.total_points || 0) / 100) + 1}</div>
+              </CardHeader>
+            </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" /> Today&apos;s Focus
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" /> Today&apos;s Focus
                 </h2>
 
                 {focusContent.length === 0 ? (
@@ -385,108 +368,120 @@ export default function DashboardPage() {
 
                         {!isSubmitted && !isSkipped && isUnlocked && isFocusUnlocked && (
                           <CardFooter className="flex flex-col gap-4 border-t bg-muted/20 p-6">
-                              <div className="w-full space-y-4">
-                                {item.type === 'quiz' ? (
-                                  <Button className="w-full" onClick={() => setActiveQuiz(item)}>
-                                    Start Weekly Quiz <ArrowRight className="ml-2 h-4 w-4" />
-                                  </Button>
-                                ) : item.type === 'lecture' ? (
-                                  <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
-                                    <Link href={`/lecture/${item.id}`}>
-                                      Open Lecture Room <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Link>
-                                  </Button>
-                                ) : (
-                                  <div className="w-full space-y-4">
-                                    <div className="space-y-2">
-                                      <Label htmlFor="github">Submit GitHub URL</Label>
-                                      <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                          <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                          <Input
-                                            id="github" className="pl-9" placeholder="https://github.com/..."
-                                            value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)}
-                                          />
-                                        </div>
-                                        <Button
-                                          onClick={() => handleSubmitAssignment(item.id)}
-                                          disabled={!githubUrl.includes('github.com') || !!submittingId}
-                                        >
-                                          {submittingId ? '...' : <Send className="h-4 w-4" />}
-                                        </Button>
+                            <div className="w-full space-y-4">
+                              {item.type === 'quiz' ? (
+                                <Button className="w-full" onClick={() => setActiveQuiz(item)}>
+                                  Start Weekly Quiz <ArrowRight className="ml-2 h-4 w-4" />
+                                </Button>
+                              ) : item.type === 'lecture' ? (
+                                <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                                  <Link href={`/lecture/${item.id}`}>
+                                    Open Lecture Room <ArrowRight className="ml-2 h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <div className="w-full space-y-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="github">Submit GitHub URL</Label>
+                                    <div className="flex gap-2">
+                                      <div className="relative flex-1">
+                                        <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                          id="github" className="pl-9" placeholder="https://github.com/..."
+                                          value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)}
+                                        />
                                       </div>
-                                    </div>
-
-                                    <div className="pt-2 border-t mt-4">
-                                      <Dialog open={skippingId === item.id} onOpenChange={(open) => !open && setSkippingId(null)}>
-                                        <DialogTrigger asChild>
-                                          <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setSkippingId(item.id)}>
-                                            Skip this Lecture
-                                          </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                          <DialogHeader><DialogTitle>Skip Lecture</DialogTitle></DialogHeader>
-                                          <div className="py-4">
-                                            <Label htmlFor="skip-pin-dash">Enter Skip PIN</Label>
-                                            <Input id="skip-pin-dash" type="password" placeholder="Enter PIN to skip" value={skipPin} onChange={(e) => setSkipPin(e.target.value)} />
-                                          </div>
-                                          <DialogFooter>
-                                            <Button onClick={() => handleSkip(item.id)} disabled={!skipPin}>Confirm Skip</Button>
-                                          </DialogFooter>
-                                        </DialogContent>
-                                      </Dialog>
+                                      <Button
+                                        onClick={() => handleSubmitAssignment(item.id)}
+                                        disabled={!githubUrl.includes('github.com') || !!submittingId}
+                                      >
+                                        {submittingId ? '...' : <Send className="h-4 w-4" />}
+                                      </Button>
                                     </div>
                                   </div>
-                                )}
-                              </div>
+
+                                  <div className="pt-2 border-t mt-4">
+                                    <Dialog open={skippingId === item.id} onOpenChange={(open) => !open && setSkippingId(null)}>
+                                      <DialogTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setSkippingId(item.id)}>
+                                          Skip this Lecture
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent>
+                                        <DialogHeader><DialogTitle>Skip Lecture</DialogTitle></DialogHeader>
+                                        <div className="py-4">
+                                          <Label htmlFor="skip-pin-dash">Enter Skip PIN</Label>
+                                          <Input id="skip-pin-dash" type="password" placeholder="Enter PIN to skip" value={skipPin} onChange={(e) => setSkipPin(e.target.value)} />
+                                        </div>
+                                        <DialogFooter>
+                                          <Button onClick={() => handleSkip(item.id)} disabled={!skipPin}>Confirm Skip</Button>
+                                        </DialogFooter>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </CardFooter>
                         )}
                       </Card>
                     );
                   })
                 )}
-              </div>
+              </section>
 
-              <div className="space-y-6">
-                 {extraTasks.length > 0 && (
-                   <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-900">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-semibold text-orange-800 dark:text-orange-400 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" /> Active Penalties ({extraTasks.filter(t => !t.is_completed).length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {extraTasks.map(task => (
-                        <div key={task.id} className={cn("p-3 rounded-md text-xs border", task.is_completed ? "bg-green-100/50" : "bg-white/50")}>
-                          <p className="mb-3">{task.description}</p>
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" /> Active Tasks
+                </h2>
+                <Card className="bg-muted/10 border-dashed">
+                  <CardContent className="p-8 text-center">
+                    <p className="text-muted-foreground text-sm italic">
+                      "The secret of getting ahead is getting started."
+                    </p>
+                  </CardContent>
+                </Card>
+              </section>
+            </div>
+
+            <div className="space-y-8">
+              {extraTasks.length > 0 && (
+                <section className="space-y-4">
+                  <h2 className="text-lg font-bold text-orange-600">Active Tasks</h2>
+                  <div className="space-y-3">
+                    {extraTasks.map(task => (
+                      <Card key={task.id} className={cn("border-orange-200 bg-orange-50/50", task.is_completed && "opacity-50 grayscale")}>
+                        <CardContent className="p-4 flex items-center justify-between gap-4">
+                          <p className="text-xs font-medium leading-relaxed">{task.description}</p>
                           {!task.is_completed && (
-                            <Button size="sm" variant="outline" className="h-7 text-[10px] w-full" onClick={() => handleCompleteExtraTask(task.id)} disabled={!!completingTaskId}>
-                              {completingTaskId === task.id ? 'Processing...' : 'Mark as Completed'}
+                            <Button size="sm" variant="outline" className="h-8 border-orange-300" onClick={() => handleCompleteExtraTask(task.id)} disabled={!!completingTaskId}>
+                              {completingTaskId === task.id ? '...' : 'Done'}
                             </Button>
                           )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4" /> Activity Log</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                  {recentAttendance.length === 0 ? <p className="text-xs text-muted-foreground italic p-4">No records yet.</p> : (
+                    <div className="divide-y">
+                      {recentAttendance.map((record) => (
+                        <div key={record.id} className="flex justify-between items-center text-[10px] p-3">
+                          <span className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-700">PRESENT (+10 XP)</Badge>
                         </div>
                       ))}
-                    </CardContent>
-                   </Card>
-                 )}
-
-                 <Card>
-                   <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Recent Attendance</CardTitle></CardHeader>
-                   <CardContent>
-                     {recentAttendance.length === 0 ? <p className="text-xs text-muted-foreground italic">No attendance records.</p> : (
-                       <div className="space-y-2">
-                         {recentAttendance.map((record) => (
-                           <div key={record.id} className="flex justify-between items-center text-xs p-2 rounded bg-muted/50">
-                             <span>{new Date(record.date).toLocaleDateString()}</span>
-                             <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-700">PRESENT</Badge>
-                           </div>
-                         ))}
-                       </div>
-                     )}
-                   </CardContent>
-                 </Card>
-              </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
+          </div>
         </div>
       </main>
 
