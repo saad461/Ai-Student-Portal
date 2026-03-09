@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
