@@ -41,14 +41,14 @@ export default function GitHubMasteryPage() {
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
       <PortalNavbar />
-      <main className="flex-1 p-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <header>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Github className="h-8 w-8" />
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
+          <header className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 tracking-tight">
+              <Github className="h-7 w-7 md:h-8 md:w-8" />
               GitHub Mastery
             </h1>
-            <p className="text-muted-foreground mt-2">Essential skills for professional developers.</p>
+            <p className="text-muted-foreground text-sm">Essential skills for professional developers.</p>
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

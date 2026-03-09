@@ -75,19 +75,33 @@ export default function StudentAttendancePage() {
   }, [fetchData]);
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+      <PortalNavbar />
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-5xl mx-auto space-y-8 animate-pulse">
+           <div className="space-y-2">
+             <div className="h-10 w-64 bg-muted rounded-md" />
+             <div className="h-4 w-96 bg-muted rounded-md" />
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-32 bg-muted rounded-xl" />
+              ))}
+           </div>
+           <div className="h-64 bg-muted rounded-xl" />
+        </div>
+      </main>
     </div>
   );
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
       <PortalNavbar />
-      <main className="flex-1 p-8">
-        <div className="max-w-5xl mx-auto space-y-8">
-          <header>
-            <h1 className="text-3xl font-bold">My Attendance</h1>
-            <p className="text-muted-foreground">Track your daily portal activity and streaks.</p>
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
+          <header className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Attendance</h1>
+            <p className="text-muted-foreground text-sm">Track your daily portal activity and streaks.</p>
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -140,14 +154,15 @@ export default function StudentAttendancePage() {
           </Alert>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
+            <CardHeader className="pb-3 md:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <CalendarIcon className="h-5 w-5 text-primary" />
                 Attendance History
               </CardTitle>
-              <CardDescription>A detailed log of your recorded attendance sessions.</CardDescription>
+              <CardDescription className="text-xs md:text-sm">A detailed log of your recorded attendance sessions.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 md:px-6">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -193,6 +208,7 @@ export default function StudentAttendancePage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </div>

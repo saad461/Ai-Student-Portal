@@ -13,11 +13,11 @@ export default function TimerPage() {
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
       <PortalNavbar />
-      <main className="flex-1 p-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <header>
-            <h1 className="text-3xl font-bold">Deep Work Chamber</h1>
-            <p className="text-muted-foreground mt-2">Zero distractions. Just you and the code.</p>
+      <main className="flex-1 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
+          <header className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Deep Work Chamber</h1>
+            <p className="text-muted-foreground text-sm">Zero distractions. Just you and the code.</p>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 export default function RoadmapPage() {
   return (
-    <div className="flex min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
       <PortalNavbar />
       <main className="flex-1 overflow-x-hidden relative">
         {/* Animated Background Mesh */}
