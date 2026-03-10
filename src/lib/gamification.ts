@@ -40,6 +40,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'lecture_hint', name: 'Lecture Hint', description: 'Unlock a hidden hint for a difficult assignment.', price: 25, icon: '💡' },
   { id: 'quiz_retake', name: 'Quiz Retake', description: 'Redo a quiz you failed without waiting.', price: 40, icon: '🔄' },
   { id: 'xp_booster', name: '2x XP Booster', description: 'Double XP for the next 24 hours.', price: 100, icon: '🚀' },
+  { id: 'resume_template', name: 'Premium CV Template', description: 'Unlock a professional, ATS-friendly resume template.', price: 150, icon: '📄' },
+  { id: 'priority_review', name: 'Priority Code Review', description: 'Get your next assignment reviewed by AI with priority.', price: 80, icon: '⭐' },
 ];
 
 export function getSkillPoints(xp: number): number {

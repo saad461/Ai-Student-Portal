@@ -21,15 +21,28 @@ export function AttendanceTracker() {
         setUserId(user.id);
 
         const today = new Date().toLocaleDateString('en-CA');
-        const { data } = await supabase
+        const { data: markedData } = await supabase
           .from('attendance')
           .select('id')
           .eq('student_id', user.id)
           .eq('date', today)
           .single();
 
-        if (data) {
+        if (markedData) {
           setIsMarked(true);
+        } else {
+          // Check for saved progress in DB
+          const { data: progressData } = await supabase
+            .from('attendance_progress')
+            .select('seconds')
+            .eq('student_id', user.id)
+            .eq('date', today)
+            .single();
+
+          if (progressData) {
+            setSecondsSpent(progressData.seconds);
+            localStorage.setItem(`attendance_time_${user.id}_${today}`, progressData.seconds.toString());
+          }
         }
       }
     }
@@ -70,6 +83,16 @@ export function AttendanceTracker() {
         localStorage.setItem(storageKey, currentSeconds.toString());
         localStorage.setItem(tickKey, now.toString());
         setSecondsSpent(currentSeconds);
+
+        // Periodically sync with DB (every 2 ticks/60s)
+        if (currentSeconds % 60 === 0 || currentSeconds >= ATTENDANCE_THRESHOLD) {
+          await supabase.from('attendance_progress').upsert({
+            student_id: userId,
+            date: today,
+            seconds: currentSeconds,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'student_id,date' });
+        }
 
         if (currentSeconds >= ATTENDANCE_THRESHOLD) {
           const result = await markAttendance(userId);

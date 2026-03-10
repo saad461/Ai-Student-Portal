@@ -88,15 +88,24 @@ export default function InterviewPrepPage() {
     setIsTyping(true);
 
     try {
-      // TODO: Integration with real LLM API (Groq/Gemini) for dynamic interview questions.
-      // Currently using simulated AI thinking for structural demonstration.
-      setTimeout(() => {
-        const aiResponse = `That's an interesting answer! To follow up, can you explain how you would handle performance bottlenecks in that scenario? (Simulated AI response for ${currentModule})`;
-        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
-        setIsTyping(false);
-      }, 1500);
+      const res = await fetch('/api/interview-prep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: newMessages,
+          currentModule
+        })
+      });
+
+      if (!res.ok) throw new Error("AI Request Failed");
+
+      const data = await res.json();
+      if (data.answer) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+      }
     } catch (err) {
       toastError('Failed to get AI response.');
+    } finally {
       setIsTyping(false);
     }
   };
