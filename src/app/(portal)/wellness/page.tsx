@@ -6,7 +6,6 @@ import {
   Heart,
   Wind,
   Coffee,
-  Brain,
   Zap,
   Gamepad2,
   Sparkles,
@@ -15,17 +14,37 @@ import {
   Smile,
   Moon,
   Sun,
-  Play
+  Play,
+  Shuffle,
+  Fingerprint,
+  Palette,
+  Dice5,
+  Hash,
+  Box,
+  Brain,
+  Target,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ReflexMaster } from '@/components/mini-games/reflex-master';
+import { MemorySequence } from '@/components/mini-games/memory-sequence';
+import { SpeedTyper } from '@/components/mini-games/speed-typer';
+import { GridLogic } from '@/components/mini-games/grid-logic';
+import { AimTrainer } from '@/components/mini-games/aim-trainer';
+import { MentalMath } from '@/components/mini-games/mental-math';
+import { ColorStroop } from '@/components/mini-games/color-stroop';
+import { ReactionTime } from '@/components/mini-games/reaction-time';
+import { QuickMatch } from '@/components/mini-games/quick-match';
+import { TouchPath } from '@/components/mini-games/touch-path';
 
 export default function WellnessPage() {
   const [breathingStatus, setBreathingStatus] = useState<'inhale' | 'hold' | 'exhale' | 'idle'>('idle');
   const [timer, setTimer] = useState(0);
   const [activeMode, setActiveMode] = useState<'relax' | 'game' | 'stories'>('relax');
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
 
   useEffect(() => {
     if (breathingStatus === 'idle') return;
@@ -138,21 +157,54 @@ export default function WellnessPage() {
         )}
 
         {activeMode === 'game' && (
-          <div className="flex flex-col items-center justify-center space-y-8 py-10">
-             <Card className="w-full max-w-2xl bg-slate-900 border-none shadow-[0_0_50px_rgba(var(--primary),0.2)] rounded-[2.5rem] overflow-hidden">
-                <div className="p-12 text-center space-y-8">
-                   <div className="h-32 w-32 rounded-3xl bg-primary/20 flex items-center justify-center text-primary mx-auto animate-bounce">
-                      <Zap className="h-16 w-16 fill-current" />
-                   </div>
-                   <div className="space-y-4">
-                      <h2 className="text-4xl font-black tracking-tighter uppercase text-white">Reflex Master</h2>
-                      <p className="text-slate-400 font-medium">Click the sparks as fast as you can to earn mental clarity points.</p>
-                   </div>
-                   <Button size="lg" className="h-16 px-12 rounded-2xl font-black text-xl uppercase tracking-widest shadow-xl shadow-primary/20">
-                      PLAY NOW
-                   </Button>
-                </div>
-             </Card>
+          <div className="space-y-8 py-10">
+             {!selectedGame ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {[
+                    { id: 'reflex', name: 'Reflex Master', icon: <Zap className="h-6 w-6" />, desc: 'Speed check' },
+                    { id: 'memory', name: 'Memory Sequence', icon: <Brain className="h-6 w-6" />, desc: 'Pattern recall' },
+                    { id: 'typer', name: 'Speed Typer', icon: <Quote className="h-6 w-6" />, desc: 'Code typing' },
+                    { id: 'grid', name: 'Pattern Matcher', icon: <Hash className="h-6 w-6" />, desc: 'Logic grid' },
+                    { id: 'aim', name: 'Precision Aim', icon: <Target className="h-6 w-6" />, desc: 'Target practice' },
+                    { id: 'math', name: 'Mental Math', icon: <Dice5 className="h-6 w-6" />, desc: 'Quick calc' },
+                    { id: 'stroop', name: 'Stroop Test', icon: <Palette className="h-6 w-6" />, desc: 'Focus check' },
+                    { id: 'reaction', name: 'Nerve Test', icon: <Box className="h-6 w-6" />, desc: 'React time' },
+                    { id: 'match', name: 'Logic Match', icon: <Shuffle className="h-6 w-6" />, desc: 'Same/Diff' },
+                    { id: 'path', name: 'Path Finder', icon: <Fingerprint className="h-6 w-6" />, desc: 'Node tracing' },
+                  ].map(game => (
+                    <Card key={game.id} className="cursor-pointer hover:border-primary transition-all group p-4 flex flex-col items-center text-center gap-3" onClick={() => setSelectedGame(game.id)}>
+                       <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                          {game.icon}
+                       </div>
+                       <div>
+                          <div className="font-black text-xs uppercase tracking-tighter">{game.name}</div>
+                          <div className="text-[10px] text-muted-foreground">{game.desc}</div>
+                       </div>
+                    </Card>
+                  ))}
+               </div>
+             ) : (
+               <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                     <Button variant="ghost" size="sm" onClick={() => setSelectedGame(null)} className="font-bold">
+                        <ChevronRight className="h-4 w-4 rotate-180 mr-2" /> Back to Arcade
+                     </Button>
+                     <Badge variant="outline" className="font-black uppercase tracking-widest">{selectedGame.replace('-', ' ')}</Badge>
+                  </div>
+                  <div className="max-w-4xl mx-auto">
+                     {selectedGame === 'reflex' && <ReflexMaster />}
+                     {selectedGame === 'memory' && <MemorySequence />}
+                     {selectedGame === 'typer' && <SpeedTyper />}
+                     {selectedGame === 'grid' && <GridLogic />}
+                     {selectedGame === 'aim' && <AimTrainer />}
+                     {selectedGame === 'math' && <MentalMath />}
+                     {selectedGame === 'stroop' && <ColorStroop />}
+                     {selectedGame === 'reaction' && <ReactionTime />}
+                     {selectedGame === 'match' && <QuickMatch />}
+                     {selectedGame === 'path' && <TouchPath />}
+                  </div>
+               </div>
+             )}
           </div>
         )}
 
