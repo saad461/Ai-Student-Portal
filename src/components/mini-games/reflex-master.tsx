@@ -16,11 +16,20 @@ export function ReflexMaster() {
     if (isPlaying && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
       return () => clearInterval(timer);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft === 0 && isPlaying) {
       setIsPlaying(false);
-      if (score > highScore) setHighScore(score);
+      handleGameOver();
     }
   }, [isPlaying, timeLeft]);
+
+  const handleGameOver = async () => {
+    if (score > highScore) setHighScore(score);
+    if (score >= 15) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Reflex Master: Score ${score}`, 'game', `reflex-${today}`);
+    }
+  };
 
   const spawnTarget = () => {
     setTarget({

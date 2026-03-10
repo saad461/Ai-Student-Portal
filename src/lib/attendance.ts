@@ -54,9 +54,12 @@ export async function markAttendance(userId: string) {
     // 5. Update profile with points and streak
     const { error: profileUpdateError } = await supabase.from('profiles').update({
       current_streak: newStreak,
-      total_points: (profile.total_points || 0) + 10,
       last_punch_in: new Date().toISOString()
     }).eq('id', userId);
+
+    // 6. Use Reward Log system for points
+    const { rewardStudentAction } = await import('@/app/admin/actions');
+    await rewardStudentAction(10, `Daily Attendance: ${today}`, 'attendance', today);
 
     if (profileUpdateError) throw profileUpdateError;
 

@@ -99,6 +99,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
   const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
+  const [rewardHistory, setRewardHistory] = useState<any[]>([]);
 
   const [githubUrl, setGithubUrl] = useState('');
   const [lastSubmittedUrl, setLastSubmittedUrl] = useState('');
@@ -142,6 +143,14 @@ export default function DashboardPage() {
       .limit(7);
 
     setRecentAttendance(allAttendance || []);
+
+    const { data: rewards } = await supabase
+      .from('reward_log')
+      .select('*')
+      .eq('student_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    setRewardHistory(rewards || []);
 
     const { data: subs } = await supabase
       .from('submissions')
@@ -619,23 +628,41 @@ export default function DashboardPage() {
                 </section>
               )}
 
-              <DailyBounty onComplete={(reward) => {
-                supabase.auth.getUser().then(({ data: { user } }) => {
-                  if (user && profile) {
-                    supabase.from('profiles').update({ total_points: profile.total_points + reward }).eq('id', user.id).then(() => fetchData());
-                  }
-                });
+              <DailyBounty onComplete={async (reward) => {
+                const { rewardStudentAction } = await import('@/app/admin/actions');
+                const today = new Date().toLocaleDateString('en-CA');
+                await rewardStudentAction(reward, 'Daily Bounty Completed', 'daily_bounty', today);
+                fetchData();
               }} />
 
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4" /> Activity Log</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Reward History</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                  {rewardHistory.length === 0 ? <p className="text-xs text-muted-foreground italic p-4">No points earned yet.</p> : (
+                    <div className="divide-y">
+                      {rewardHistory.map((reward) => (
+                        <div key={reward.id} className="flex justify-between items-center text-[10px] p-3">
+                          <div className="flex flex-col">
+                            <span className="font-bold">{reward.reason}</span>
+                            <span className="text-[8px] text-muted-foreground opacity-70">{new Date(reward.created_at).toLocaleString()}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-[9px] bg-primary/10 text-primary font-black">+{reward.amount} XP</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4" /> Attendance Log</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   {recentAttendance.length === 0 ? <p className="text-xs text-muted-foreground italic p-4">No records yet.</p> : (
                     <div className="divide-y">
                       {recentAttendance.map((record) => (
                         <div key={record.id} className="flex justify-between items-center text-[10px] p-3">
                           <span className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                          <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-700">PRESENT (+10 XP)</Badge>
+                          <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-700">PRESENT</Badge>
                         </div>
                       ))}
                     </div>

@@ -54,43 +54,13 @@ export default function CareerPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // TODO: Pull real live jobs from an external API (e.g., LinkedIn, Indeed, or a specialized dev job board).
-    // Currently using mock job data for structural demonstration.
-    const mockJobs: Job[] = [
-      {
-        id: '1',
-        title: 'Junior Frontend Developer',
-        company: 'Vercel Inc.',
-        location: 'Remote',
-        type: 'Full-time',
-        description: 'Building the future of web development with Next.js and React.',
-        url: '#',
-        required_skills: ['React', 'Next.js', 'Tailwind', 'TypeScript'],
-        min_level: 5
-      },
-      {
-        id: '2',
-        title: 'UI Engineer (Design Systems)',
-        company: 'Supabase',
-        location: 'Global Remote',
-        type: 'Full-time',
-        description: 'Focus on open-source design systems and frontend infrastructure.',
-        url: '#',
-        required_skills: ['React', 'CSS-in-JS', 'Radix UI', 'Storybook'],
-        min_level: 8
-      },
-      {
-        id: '3',
-        title: 'React Native Developer',
-        company: 'Expensify',
-        location: 'San Francisco, CA',
-        type: 'Hybrid',
-        description: 'Contributing to a world-class financial platform.',
-        url: '#',
-        required_skills: ['React Native', 'TypeScript', 'Jest'],
-        min_level: 10
-      }
-    ];
+    try {
+      const res = await fetch('/api/jobs');
+      const jobsData = await res.json();
+      setJobs(jobsData);
+    } catch (err) {
+      console.error("Failed to fetch jobs");
+    }
 
     const { data: profileData } = await supabase
       .from('profiles')
@@ -98,7 +68,6 @@ export default function CareerPage() {
       .eq('id', user.id)
       .single();
 
-    setJobs(mockJobs);
     setProfile(profileData);
     setLoading(false);
   };
@@ -195,6 +164,15 @@ export default function CareerPage() {
                    className="pl-12 h-14 rounded-2xl text-lg border-2 focus:border-primary"
                    value={searchQuery}
                    onChange={(e) => setSearchQuery(e.target.value)}
+                   onKeyDown={async (e) => {
+                     if (e.key === 'Enter' && searchQuery) {
+                        setLoading(true);
+                        const res = await fetch(`/api/jobs?query=${encodeURIComponent(searchQuery)}`);
+                        const data = await res.json();
+                        setJobs(data);
+                        setLoading(false);
+                     }
+                   }}
                  />
               </div>
               <Button size="icon" className="h-14 w-14 rounded-2xl shrink-0" variant="outline">

@@ -40,14 +40,23 @@ export function MemorySequence() {
     setMessage('Your turn!');
   };
 
+  const handleMemoryGameOver = async (level: number) => {
+    if (level >= 5) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(10, `Memory Sequence: Lvl ${level}`, 'game', `memory-${today}`);
+    }
+  };
+
   const handleInput = (idx: number) => {
     if (isShowing || !isPlaying) return;
     const nextUser = [...userSequence, idx];
     setUserSequence(nextUser);
 
     if (idx !== sequence[userSequence.length]) {
-      setMessage('Game Over! Sequence failed.');
+      setMessage(`Game Over! Level: ${sequence.length}`);
       setIsPlaying(false);
+      handleMemoryGameOver(sequence.length);
       return;
     }
 

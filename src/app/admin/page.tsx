@@ -58,7 +58,8 @@ import {
   saveResourceAction,
   deleteResourceAction,
   saveDailyChallengeAction,
-  reviewSubmissionAction
+  reviewSubmissionAction,
+  uploadResourceFileAction
 } from './actions';
 import { CurriculumItem, QuizQuestion, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
@@ -151,7 +152,9 @@ export default function AdminDashboard() {
   const [editingResource, setEditingResource] = useState<Partial<Resource> | null>(null);
   const [editingChallenge, setEditingChallenge] = useState<Partial<DailyChallenge> | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const resourceFileRef = useRef<HTMLInputElement>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [isResourceUploading, setIsResourceUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchAdminData = useCallback(async () => {
@@ -1281,7 +1284,51 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2"><Label>Title</Label><Input value={editingResource?.title} onChange={(e) => setEditingResource(prev => ({ ...prev!, title: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingResource?.description} onChange={(e) => setEditingResource(prev => ({ ...prev!, description: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>External URL (PDF/Link)</Label><Input value={editingResource?.external_url} onChange={(e) => setEditingResource(prev => ({ ...prev!, external_url: e.target.value }))} /></div>
+              <div className="space-y-2">
+                <Label>Resource URL or Upload</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://..."
+                    className="flex-1"
+                    value={editingResource?.external_url || ''}
+                    onChange={(e) => setEditingResource(prev => ({ ...prev!, external_url: e.target.value }))}
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={isResourceUploading}
+                    onClick={() => resourceFileRef.current?.click()}
+                    title="Upload File"
+                  >
+                    <FilePlus className={cn("h-4 w-4", isResourceUploading && "animate-pulse")} />
+                  </Button>
+                </div>
+                <input
+                  type="file"
+                  ref={resourceFileRef}
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setIsResourceUploading(true);
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    try {
+                      const res = await uploadResourceFileAction(fd);
+                      if (res.success) {
+                        success('Resource uploaded successfully!');
+                        setEditingResource(prev => ({ ...prev!, external_url: res.url }));
+                      }
+                      else toastError('Upload failed: ' + res.error);
+                    } catch (err) { toastError('Upload error'); }
+                    finally {
+                      setIsResourceUploading(false);
+                      if (resourceFileRef.current) resourceFileRef.current.value = '';
+                    }
+                  }}
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">Upload PDF, Image, Word, etc.</p>
+              </div>
               <div className="space-y-2">
                 <Label>Content (Markdown/HTML)</Label>
                 <RichTextEditor content={editingResource?.content || ''} onChange={(c) => setEditingResource(prev => ({ ...prev!, content: c }))} />
