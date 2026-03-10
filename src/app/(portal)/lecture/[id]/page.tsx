@@ -756,6 +756,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       </main>
 
       <AIAssistant
+        lectureId={lecture.id}
         lectureTitle={lecture.title}
         lectureContent={lecture.theory_content || ''}
       />

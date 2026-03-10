@@ -152,6 +152,9 @@ export default function AdminApplicationsPage() {
             </Badge>
             {selectedIds.length > 0 && (
                 <div className="flex gap-2 animate-in fade-in slide-in-from-right-2">
+                    <Button variant="outline" size="sm" onClick={() => copyToClipboard(applications.filter(app => selectedIds.includes(app.id)).map(app => app.email).join(', '))}>
+                      Copy Emails
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleBulkEmail}>Email ({selectedIds.length})</Button>
                     <Button variant="destructive" size="sm" onClick={handleBulkReject} disabled={isBulkProcessing}>Reject All</Button>
                     <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleBulkApprove} disabled={isBulkProcessing}>
