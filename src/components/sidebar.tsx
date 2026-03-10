@@ -13,7 +13,12 @@ import {
   Zap,
   Milestone,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  Library,
+  Trophy,
+  Briefcase,
+  Mic,
+  Heart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
@@ -51,6 +56,11 @@ export function Sidebar() {
     { name: 'Roadmap', href: '/roadmap', icon: Milestone },
     { name: 'Courses', href: '/courses', icon: Layers },
     { name: 'Curriculum', href: '/curriculum', icon: BookOpen },
+    { name: 'Library', href: '/library', icon: Library },
+    { name: 'Challenges', href: '/challenges', icon: Trophy },
+    { name: 'Career Center', href: '/career', icon: Briefcase },
+    { name: 'Interview Prep', href: '/interview-prep', icon: Mic },
+    { name: 'Feeling Tired?', href: '/wellness', icon: Heart },
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'GitHub Mastery', href: '/github-mastery', icon: Github },
     { name: 'Deep Work', href: '/timer', icon: Zap },

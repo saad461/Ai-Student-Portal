@@ -1,0 +1,258 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Briefcase,
+  Target,
+  FileBadge,
+  TrendingUp,
+  MapPin,
+  Building2,
+  ExternalLink,
+  ChevronRight,
+  Zap,
+  CheckCircle2,
+  ShieldCheck,
+  Search,
+  Filter
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useToast } from '@/components/ui/toast-provider';
+import { cn } from '@/lib/utils';
+
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  description: string;
+  url: string;
+  required_skills: string[];
+  min_level: number;
+}
+
+export default function CareerPage() {
+  const { success, error: toastError } = useToast();
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // TODO: Pull real live jobs from an external API (e.g., LinkedIn, Indeed, or a specialized dev job board).
+    // Currently using mock job data for structural demonstration.
+    const mockJobs: Job[] = [
+      {
+        id: '1',
+        title: 'Junior Frontend Developer',
+        company: 'Vercel Inc.',
+        location: 'Remote',
+        type: 'Full-time',
+        description: 'Building the future of web development with Next.js and React.',
+        url: '#',
+        required_skills: ['React', 'Next.js', 'Tailwind', 'TypeScript'],
+        min_level: 5
+      },
+      {
+        id: '2',
+        title: 'UI Engineer (Design Systems)',
+        company: 'Supabase',
+        location: 'Global Remote',
+        type: 'Full-time',
+        description: 'Focus on open-source design systems and frontend infrastructure.',
+        url: '#',
+        required_skills: ['React', 'CSS-in-JS', 'Radix UI', 'Storybook'],
+        min_level: 8
+      },
+      {
+        id: '3',
+        title: 'React Native Developer',
+        company: 'Expensify',
+        location: 'San Francisco, CA',
+        type: 'Hybrid',
+        description: 'Contributing to a world-class financial platform.',
+        url: '#',
+        required_skills: ['React Native', 'TypeScript', 'Jest'],
+        min_level: 10
+      }
+    ];
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    setJobs(mockJobs);
+    setProfile(profileData);
+    setLoading(false);
+  };
+
+  const currentLevel = Math.floor((profile?.total_points || 0) / 100) + 1;
+
+  const filteredJobs = jobs.filter(j =>
+    j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    j.company.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) return <div className="p-8 text-center">Opening the Career Portal...</div>;
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-1000">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
+             <Briefcase className="h-10 w-10 text-primary" />
+             CAREER LAUNCHPAD
+          </h1>
+          <p className="text-muted-foreground font-bold flex items-center gap-2">
+             Transition from a student to a job-ready <span className="text-primary font-black uppercase tracking-widest">PRO</span>.
+          </p>
+        </div>
+
+        <div className="flex gap-4">
+           <Card className="bg-primary/5 border-primary/20 px-6 py-4 rounded-3xl flex items-center gap-4">
+              <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
+                 <Target className="h-6 w-6" />
+              </div>
+              <div>
+                 <div className="text-[10px] font-black uppercase tracking-widest text-primary/70">Readiness Level</div>
+                 <div className="text-2xl font-black">LVL {currentLevel}</div>
+              </div>
+           </Card>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-1 space-y-6">
+           <Card className="rounded-[2.5rem] border-2 overflow-hidden bg-primary/5 border-primary/10">
+              <CardHeader className="bg-primary/10 border-b border-primary/10 p-6">
+                 <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                    <FileBadge className="h-4 w-4" /> Career Progress
+                 </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                 <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                       <span className="text-sm font-bold">Portfolio Status</span>
+                       <Badge className="bg-green-600 font-black">READY</Badge>
+                    </div>
+                    <div className="flex justify-between items-center opacity-50">
+                       <span className="text-sm font-bold">Interview Prep</span>
+                       <Badge variant="secondary" className="font-black">20%</Badge>
+                    </div>
+                    <div className="flex justify-between items-center opacity-50">
+                       <span className="text-sm font-bold">Github Mastery</span>
+                       <Badge variant="secondary" className="font-black">OFFLINE</Badge>
+                    </div>
+                 </div>
+                 <Button className="w-full h-12 rounded-xl font-black uppercase tracking-tighter" variant="outline">Update Resume</Button>
+              </CardContent>
+           </Card>
+
+           <Card className="rounded-[2.5rem] border-2 bg-slate-900 text-white border-none shadow-2xl overflow-hidden">
+              <CardHeader className="p-6 border-b border-white/10">
+                 <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" /> Market Insights
+                 </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                 <p className="text-xs text-slate-400 font-medium">Demand for Frontend Developers with <span className="text-white font-bold">Next.js</span> skills is up <span className="text-green-400 font-black">+24%</span> this month.</p>
+                 <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
+                       <span>Market Demand</span>
+                       <span>84%</span>
+                    </div>
+                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                       <div className="h-full bg-primary" style={{ width: '84%' }} />
+                    </div>
+                 </div>
+              </CardContent>
+           </Card>
+        </div>
+
+        <div className="lg:col-span-3 space-y-8">
+           <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="relative flex-1 w-full">
+                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                 <Input
+                   placeholder="Search job titles or companies..."
+                   className="pl-12 h-14 rounded-2xl text-lg border-2 focus:border-primary"
+                   value={searchQuery}
+                   onChange={(e) => setSearchQuery(e.target.value)}
+                 />
+              </div>
+              <Button size="icon" className="h-14 w-14 rounded-2xl shrink-0" variant="outline">
+                 <Filter className="h-5 w-5" />
+              </Button>
+           </div>
+
+           <div className="grid grid-cols-1 gap-6">
+              {filteredJobs.map((job) => {
+                const isEligible = currentLevel >= job.min_level;
+                return (
+                  <Card key={job.id} className={cn(
+                    "group rounded-[2rem] border-2 transition-all hover:scale-[1.01] hover:shadow-2xl overflow-hidden",
+                    !isEligible && "opacity-80 border-slate-200 bg-slate-50/50"
+                  )}>
+                    <CardContent className="p-0">
+                       <div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                          <div className="flex gap-6 items-start">
+                             <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                                <Building2 className="h-8 w-8" />
+                             </div>
+                             <div className="space-y-1">
+                                <h3 className="text-2xl font-black tracking-tighter uppercase leading-none group-hover:text-primary transition-colors">{job.title}</h3>
+                                <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground">
+                                   <span className="flex items-center gap-1"><Building2 className="h-4 w-4" /> {job.company}</span>
+                                   <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {job.location}</span>
+                                </div>
+                             </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2 shrink-0 w-full md:w-auto">
+                             {isEligible ? (
+                               <Badge className="bg-green-600 font-black uppercase tracking-widest flex items-center gap-1">
+                                  <ShieldCheck className="h-3 w-3" /> Eligible
+                               </Badge>
+                             ) : (
+                               <Badge variant="outline" className="border-amber-500 text-amber-600 font-black uppercase tracking-widest flex items-center gap-1">
+                                  <Zap className="h-3 w-3 fill-amber-500" /> LVL {job.min_level} Required
+                               </Badge>
+                             )}
+                             <Button className="font-black uppercase tracking-widest h-12 rounded-xl group-hover:scale-105 transition-all shadow-xl shadow-primary/20" disabled={!isEligible}>
+                                Apply Now <ChevronRight className="h-5 w-5 ml-1" />
+                             </Button>
+                          </div>
+                       </div>
+                       <div className="px-8 pb-8 pt-0 flex flex-wrap gap-2">
+                          {job.required_skills.map(skill => (
+                            <Badge key={skill} variant="secondary" className="bg-primary/5 text-primary-foreground/70 font-bold px-3 py-1">
+                               {skill}
+                            </Badge>
+                          ))}
+                       </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
