@@ -210,12 +210,6 @@ export async function uploadResourceFileAction(formData: FormData) {
  * but for this training portal, we'll keep it here and validate the source.
  */
 export async function rewardStudentAction(amount: number, reason: string, sourceType: string, sourceId: string) {
-  // Validate allowed reward amounts per source type to prevent console hacking
-  let validatedAmount = amount;
-
-  if (sourceType === 'attendance') validatedAmount = 10;
-  if (sourceType === 'daily_bounty') validatedAmount = Math.min(amount, 50); // Sanity check
-  if (sourceType === 'game') validatedAmount = Math.min(amount, 10); // Games only give small rewards
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -237,6 +231,20 @@ export async function rewardStudentAction(amount: number, reason: string, source
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
+  // Validate allowed reward amounts per source type to prevent console hacking
+  let validatedAmount = amount;
+
+  if (sourceType === 'attendance') validatedAmount = 10;
+  if (sourceType === 'daily_bounty') validatedAmount = Math.min(amount, 50); // Sanity check
+  if (sourceType === 'game') validatedAmount = Math.min(amount, 10); // Games only give small rewards
+
+  // XP Booster check
+  const { data: profileData } = await supabaseAdmin.from('profiles').select('total_points, xp_booster_until').eq('id', user.id).single();
+  if (profileData?.xp_booster_until && new Date(profileData.xp_booster_until) > new Date()) {
+    validatedAmount *= 2;
+    reason += " (2x Booster Active)";
+  }
+
   // 1. Check if already rewarded
   const { data: existing } = await supabaseAdmin
     .from('reward_log')
@@ -251,7 +259,7 @@ export async function rewardStudentAction(amount: number, reason: string, source
   // 2. Log reward
   const { error: logError } = await supabaseAdmin.from('reward_log').insert({
     student_id: user.id,
-    amount,
+    amount: validatedAmount,
     reason,
     source_type: sourceType,
     source_id: sourceId
@@ -260,15 +268,85 @@ export async function rewardStudentAction(amount: number, reason: string, source
   if (logError) return { success: false, error: logError.message };
 
   // 3. Update profile
-  const { data: profile } = await supabaseAdmin.from('profiles').select('total_points').eq('id', user.id).single();
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ total_points: (profile?.total_points || 0) + amount })
+    .update({ total_points: (profileData?.total_points || 0) + validatedAmount })
     .eq('id', user.id);
 
   if (profileError) return { success: false, error: profileError.message };
 
   return { success: true, alreadyRewarded: false };
+}
+
+export async function purchaseShopItemAction(itemId: string, priceInSkillPoints: number) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {}
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Unauthorized' };
+
+  // 1. Get profile and validate points
+  const { data: profile } = await supabaseAdmin.from('profiles').select('total_points').eq('id', user.id).single();
+  const costInXp = priceInSkillPoints * 10;
+
+  if (!profile || (profile.total_points || 0) < costInXp) {
+    return { success: false, error: 'Insufficient points' };
+  }
+
+  // 2. Deduct points
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .update({ total_points: profile.total_points - costInXp })
+    .eq('id', user.id);
+
+  if (profileError) return { success: false, error: profileError.message };
+
+  // 3. Add to user_perks
+  const { data: existingPerk } = await supabaseAdmin
+    .from('user_perks')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('perk_id', itemId)
+    .single();
+
+  if (existingPerk) {
+    await supabaseAdmin.from('user_perks').update({
+      quantity: (existingPerk.quantity || 1) + 1
+    }).eq('id', existingPerk.id);
+  } else {
+    await supabaseAdmin.from('user_perks').insert({
+      user_id: user.id,
+      perk_id: itemId,
+      quantity: 1
+    });
+  }
+
+  // 4. Special immediate effects
+  if (itemId === 'xp_booster') {
+     const boosterEnd = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+     await supabaseAdmin.from('profiles').update({ xp_booster_until: boosterEnd }).eq('id', user.id);
+  }
+
+  if (itemId === 'streak_freeze') {
+     await supabaseAdmin.from('profiles').update({ has_streak_freeze: true }).eq('id', user.id);
+  }
+
+  return { success: true };
 }
 
 export async function saveResourceAction(resource: any) {
