@@ -18,7 +18,8 @@ import {
   Trophy,
   Briefcase,
   Mic,
-  Heart
+  Heart,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
@@ -45,7 +46,8 @@ export function PortalNavbar() {
     { name: 'Roadmap', href: '/roadmap', icon: Milestone },
     { name: 'Courses', href: '/courses', icon: Layers },
     { name: 'Curriculum', href: '/curriculum', icon: BookOpen },
-    { name: 'Library', href: '/library', icon: Library },
+    { name: 'Skill Store', href: '/shop', icon: ShoppingCart },
+    { name: 'My Library', href: '/library', icon: Library },
     { name: 'Challenges', href: '/challenges', icon: Trophy },
     { name: 'Career Center', href: '/career', icon: Briefcase },
     { name: 'Interview Prep', href: '/interview-prep', icon: Mic },
