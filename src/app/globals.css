@@ -167,13 +167,29 @@
     oklch(0.7 0.2 142 / 0.1),
     transparent
   );
-  animation: scan 3s infinite;
+  animation: scan 4s infinite linear;
   pointer-events: none;
+}
+
+/* Optimization: Slower and simpler animations for mobile to save battery and reduce jank */
+@media (max-width: 768px) {
+  .pro-mode {
+    background-size: 40px 40px; /* Larger grid = fewer elements to render */
+  }
+  .pro-mode .hacker-border::before {
+    animation-duration: 6s;
+    width: 30%;
+    opacity: 0.5;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pro-mode .hacker-border::before {
     animation: none;
+    display: none;
+  }
+  .pro-mode {
+    background-image: none !important;
   }
 }
 

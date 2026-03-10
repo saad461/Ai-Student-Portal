@@ -58,7 +58,7 @@ export function PortalNavbar() {
           </span>
         </Link>
 
-        <div className="flex-1 max-w-[200px] mx-4">
+        <div id="global-search" className="flex-1 max-w-[200px] mx-4">
            <GlobalSearch />
         </div>
 

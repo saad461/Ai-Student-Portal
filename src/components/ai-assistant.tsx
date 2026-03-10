@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2 } from 'lucide-react';
+import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,19 +15,40 @@ interface Message {
 }
 
 interface AIAssistantProps {
+  lectureId: string;
   lectureTitle: string;
   lectureContent: string;
 }
 
-export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) {
+export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<'cloud' | 'native'>('cloud');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize messages from sessionStorage
+  useEffect(() => {
+    const saved = sessionStorage.getItem(`ai_chat_${lectureId}`);
+    if (saved) {
+      try {
+        setMessages(JSON.parse(saved));
+      } catch (e) {
+        setMessages([{ role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` }]);
+      }
+    } else {
+      setMessages([{ role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` }]);
+    }
+  }, [lectureId, lectureTitle]);
+
+  // Persist messages to sessionStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      sessionStorage.setItem(`ai_chat_${lectureId}`, JSON.stringify(messages));
+    }
+  }, [messages, lectureId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -56,41 +77,61 @@ export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) 
 
     const userMessage = input.trim();
     setInput('');
+    setError(null);
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
 
     try {
       if (aiProvider === 'native') {
-        const session = await (window as any).ai.assistant.create({
-          systemPrompt: `You are an expert software engineering tutor. Context: ${lectureTitle}. Content: ${lectureContent}`
-        });
-        const response = await session.prompt(userMessage);
-        setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-        session.destroy();
-      } else {
-        const res = await fetch('/api/ai-assistant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            question: userMessage,
-            lectureTitle,
-            lectureContent,
-            history: messages.slice(-5) // Send last 5 messages for context
-          })
-        });
-
-        const data = await res.json();
-        if (data.answer) {
-          setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
-        } else {
-          setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
+        try {
+          const session = await (window as any).ai.assistant.create({
+            systemPrompt: `You are an expert software engineering tutor. Context: ${lectureTitle}. Content: ${lectureContent}`
+          });
+          const response = await session.prompt(userMessage);
+          setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+          session.destroy();
+        } catch (nativeErr) {
+          console.error("Native AI Error, falling back:", nativeErr);
+          setAiProvider('cloud');
+          await callCloudAI(userMessage);
         }
+      } else {
+        await callCloudAI(userMessage);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "AI service error. Switching to cloud backup..." }]);
-      setAiProvider('cloud'); // Fallback if native fails
+      setError("AI is currently unavailable. Please try again in a moment.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const callCloudAI = async (question: string) => {
+    const res = await fetch('/api/ai-assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        lectureTitle,
+        lectureContent,
+        history: messages.slice(-5)
+      })
+    });
+
+    if (!res.ok) throw new Error("Cloud AI failed");
+
+    const data = await res.json();
+    if (data.answer) {
+      setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+    } else {
+      throw new Error("No answer from cloud AI");
+    }
+  };
+
+  const clearChat = () => {
+    if (confirm("Clear conversation history?")) {
+      const initial = { role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` };
+      setMessages([initial as Message]);
+      sessionStorage.removeItem(`ai_chat_${lectureId}`);
     }
   };
 
@@ -128,9 +169,14 @@ export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) 
                     </div>
                  </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="hover:bg-white/10 text-white">
-                <X className="h-5 w-5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={clearChat} className="hover:bg-white/10 text-white h-8 w-8" title="Clear Chat">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="hover:bg-white/10 text-white">
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -156,13 +202,21 @@ export function AIAssistant({ lectureTitle, lectureContent }: AIAssistantProps) 
                 </div>
               ))}
               {loading && (
-                <div className="flex gap-3">
+                <div className="flex gap-3 animate-in fade-in duration-300">
                    <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center shrink-0">
                       <Bot className="h-4 w-4 text-white" />
                    </div>
-                   <div className="bg-background border p-3 rounded-2xl rounded-tl-none">
+                   <div className="bg-background border p-3 rounded-2xl rounded-tl-none shadow-sm">
                       <Loader2 className="h-4 w-4 animate-spin text-green-600" />
                    </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive flex items-center gap-2">
+                   <AlertTriangle className="h-3 w-3" />
+                   {error}
+                   <Button variant="link" size="sm" className="h-auto p-0 text-xs font-bold" onClick={() => handleSend()}>Retry</Button>
                 </div>
               )}
             </div>

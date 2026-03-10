@@ -283,7 +283,7 @@ export default function DashboardPage() {
       <PortalNavbar />
       <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <header id="dashboard-header" className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl md:text-3xl font-bold">Welcome, {profile?.full_name}!</h1>
@@ -368,7 +368,7 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-                <Card className="p-8 flex flex-col md:flex-row items-center gap-12 overflow-hidden bg-primary/5 border-primary/10">
+                <Card id="mastery-radar" className="p-8 flex flex-col md:flex-row items-center gap-12 overflow-hidden bg-primary/5 border-primary/10">
                    <div className="flex-1 space-y-4">
                       <h2 className="text-2xl font-black uppercase tracking-tighter text-primary flex items-center gap-2">
                         <Trophy className="h-6 w-6" /> Mastery Radar
