@@ -54,6 +54,10 @@ import { DashboardSkeleton } from '@/components/skeletons';
 import { KnowledgeRadar } from '@/components/knowledge-radar';
 import { generateCV } from '@/lib/cv-generator';
 import { OnboardingTour } from '@/components/onboarding-tour';
+import { getRank, getLevel, getXpProgress, getSkillPoints, ShopItem } from '@/lib/gamification';
+import { SkillShop } from '@/components/skill-shop';
+import { DailyBounty } from '@/components/daily-bounty';
+import { Skull } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -276,24 +280,61 @@ export default function DashboardPage() {
     </div>
   );
 
+  const handlePurchase = async (item: ShopItem) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !profile) return;
+
+    // Deduct points (Simplified: Deducting XP for now as Skill Points are 1:10 ratio of XP)
+    const newTotalPoints = profile.total_points - (item.price * 10);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ total_points: newTotalPoints })
+      .eq('id', user.id);
+
+    if (!error) fetchData();
+  };
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
       <OnboardingTour />
+      <SkillShop
+        skillPoints={getSkillPoints(profile?.total_points || 0)}
+        onPurchase={handlePurchase}
+      />
       <Sidebar />
       <PortalNavbar />
       <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
           <header id="dashboard-header" className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-            <div>
+            <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl md:text-3xl font-bold">Welcome, {profile?.full_name}!</h1>
-                {profile?.is_pro && (
-                  <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none animate-pulse">
-                    <Zap className="h-3 w-3 mr-1 fill-white" /> PRO
-                  </Badge>
-                )}
+                <div className="relative">
+                   <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-3xl shadow-inner">
+                      {getRank(getLevel(profile?.total_points || 0)).icon}
+                   </div>
+                   <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-black border-2 border-background">
+                      {getLevel(profile?.total_points || 0)}
+                   </div>
+                </div>
+                <div>
+                   <div className="flex items-center gap-2">
+                      <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter">Welcome, {profile?.full_name}!</h1>
+                      {profile?.is_pro && (
+                        <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none animate-pulse h-5 text-[10px] px-1.5">
+                          <Zap className="h-3 w-3 mr-1 fill-white" /> PRO
+                        </Badge>
+                      )}
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <p className={cn("text-xs font-black uppercase tracking-widest", getRank(getLevel(profile?.total_points || 0)).color)}>
+                        {getRank(getLevel(profile?.total_points || 0)).title}
+                      </p>
+                      <span className="text-muted-foreground">•</span>
+                      <p className="text-xs text-muted-foreground font-medium">Module {currentModule} &bull; {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</p>
+                   </div>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">Module {currentModule} &bull; {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
             </div>
             <div className="flex gap-4 w-full md:w-auto">
               {hasPunchedInToday ? (
@@ -316,10 +357,13 @@ export default function DashboardPage() {
                 <div className="text-xl font-black text-primary">{profile?.total_points || 0}</div>
               </CardHeader>
             </Card>
-            <Card>
+            <Card className="bg-amber-500/5 border-amber-500/10">
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Streak</CardTitle>
-                <div className="text-xl font-black">{profile?.current_streak || 0} 🔥</div>
+                <CardTitle className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Skill Points</CardTitle>
+                <div className="text-xl font-black text-amber-600 flex items-center gap-1">
+                   <Zap className="h-4 w-4 fill-amber-500" />
+                   {getSkillPoints(profile?.total_points || 0)}
+                </div>
               </CardHeader>
             </Card>
             <Card>
@@ -330,8 +374,16 @@ export default function DashboardPage() {
             </Card>
             <Card className={cn(profile?.is_pro ? "bg-purple-500/5 border-purple-500/10" : "opacity-50")}>
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Level</CardTitle>
-                <div className="text-xl font-black">{Math.floor((profile?.total_points || 0) / 100) + 1}</div>
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Level {getLevel(profile?.total_points || 0)}</CardTitle>
+                <div className="mt-2 space-y-1">
+                   <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-1000"
+                        style={{ width: `${getXpProgress(profile?.total_points || 0)}%` }}
+                      />
+                   </div>
+                   <div className="text-[8px] font-bold text-right text-muted-foreground">{getXpProgress(profile?.total_points || 0)}/100 XP</div>
+                </div>
               </CardHeader>
             </Card>
           </div>
@@ -399,7 +451,7 @@ export default function DashboardPage() {
                              skills: ['HTML5', 'CSS3', 'JavaScript', 'Tailwind CSS', 'React'],
                              projects: curriculum.slice(0, 5).map(c => ({ title: c.title, status: submissions.find(s => s.curriculum_id === c.id)?.status || 'In Progress' })),
                              totalPoints: profile?.total_points || 0,
-                             level: Math.floor((profile?.total_points || 0) / 100) + 1,
+                             level: getLevel(profile?.total_points || 0),
                              streak: profile?.current_streak || 0
                            })}
                          >
@@ -444,20 +496,25 @@ export default function DashboardPage() {
                       <Card key={item.id} className={cn(
                         "overflow-hidden transition-all",
                         isUnlocked && "ring-2 ring-primary ring-offset-2",
-                        (!isUnlocked || !isFocusUnlocked) && "opacity-50 grayscale"
+                        (!isUnlocked || !isFocusUnlocked) && "opacity-50 grayscale",
+                        item.is_boss_project && "border-red-500 bg-red-500/5 shadow-2xl shadow-red-500/20"
                       )}>
-                        <div className={cn("h-2", item.type === 'lecture' ? "bg-purple-500" : "bg-blue-500")} />
+                        <div className={cn(
+                          "h-2",
+                          item.is_boss_project ? "bg-red-600 animate-pulse" :
+                          item.type === 'lecture' ? "bg-purple-500" : "bg-blue-500"
+                        )} />
                         <CardHeader>
                           <div className="flex justify-between items-start">
-                            <Badge variant="outline" className="mb-2 flex items-center gap-1">
-                              {item.type === 'lecture' && <Video className="h-3 w-3" />}
-                              {item.type.replace('_', ' ')}
+                            <Badge variant={item.is_boss_project ? "destructive" : "outline"} className="mb-2 flex items-center gap-1">
+                              {item.is_boss_project ? <Skull className="h-3 w-3" /> : item.type === 'lecture' ? <Video className="h-3 w-3" /> : null}
+                              {item.is_boss_project ? 'BOSS PROJECT' : item.type.replace('_', ' ')}
                             </Badge>
                             {isSubmitted && <Badge className="bg-green-600">Completed</Badge>}
                             {isSkipped && <Badge className="bg-orange-500">Skipped</Badge>}
                           </div>
                           <div className="flex items-center gap-2">
-                            <CardTitle>{item.title}</CardTitle>
+                            <CardTitle className={cn(item.is_boss_project && "text-red-600 font-black")}>{item.title}</CardTitle>
                             {(!isUnlocked || !isFocusUnlocked) && <Lock className="h-4 w-4 text-destructive" />}
                           </div>
                           <CardDescription>{item.description}</CardDescription>
@@ -471,9 +528,9 @@ export default function DashboardPage() {
                                   Start Weekly Quiz <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
                               ) : item.type === 'lecture' ? (
-                                <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                                <Button asChild className={cn("w-full", item.is_boss_project ? "bg-red-600 hover:bg-red-700" : "bg-purple-600 hover:bg-purple-700")}>
                                   <Link href={`/lecture/${item.id}`}>
-                                    Open Lecture Room <ArrowRight className="ml-2 h-4 w-4" />
+                                    {item.is_boss_project ? 'Enter Boss Room' : 'Open Lecture Room'} <ArrowRight className="ml-2 h-4 w-4" />
                                   </Link>
                                 </Button>
                               ) : (
@@ -561,6 +618,14 @@ export default function DashboardPage() {
                   </div>
                 </section>
               )}
+
+              <DailyBounty onComplete={(reward) => {
+                supabase.auth.getUser().then(({ data: { user } }) => {
+                  if (user && profile) {
+                    supabase.from('profiles').update({ total_points: profile.total_points + reward }).eq('id', user.id).then(() => fetchData());
+                  }
+                });
+              }} />
 
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4" /> Activity Log</CardTitle></CardHeader>
