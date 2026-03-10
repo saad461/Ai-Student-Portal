@@ -1,5 +1,35 @@
 -- Advanced Learning System Schema Extensions
 
+-- 0. Courses and Access (If not already in main schema)
+create table if not exists courses (
+  id uuid default uuid_generate_v4() primary key,
+  slug text unique not null,
+  name text not null,
+  description text,
+  thumbnail_url text,
+  index integer not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create table if not exists user_courses (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  course_id uuid references courses(id) on delete cascade not null,
+  status text default 'unlocked' check (status in ('locked', 'unlocked', 'completed')),
+  unlocked_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(user_id, course_id)
+);
+
+-- 0.1 User Perks (For shop items like streak freeze, boosters)
+create table if not exists user_perks (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  perk_id text not null, -- 'streak_freeze', 'xp_booster', etc.
+  purchased_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  expires_at timestamp with time zone,
+  is_active boolean default true
+);
+
 -- 1. Resources table: Books, Cheat Sheets, Roadmaps, etc.
 create table if not exists resources (
   id uuid default uuid_generate_v4() primary key,
@@ -93,7 +123,19 @@ create policy "Users can insert their own challenge submissions" on challenge_su
 -- Job Listings: Viewable by everyone
 create policy "Job listings are viewable by everyone" on job_listings for select using (true);
 
+-- RLS for Courses & Perks
+alter table courses enable row level security;
+alter table user_courses enable row level security;
+alter table user_perks enable row level security;
+
+create policy "Courses are viewable by everyone" on courses for select using (true);
+create policy "Users can view their own course access" on user_courses for select using (auth.uid() = user_id);
+create policy "Users can view their own perks" on user_perks for select using (auth.uid() = user_id);
+
 -- Admin full access
+create policy "Admins can manage courses" on courses for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can manage user_courses" on user_courses for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Admins can manage user_perks" on user_perks for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can manage resources" on resources for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can manage user_resources" on user_resources for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Admins can manage daily_challenges" on daily_challenges for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
