@@ -137,6 +137,30 @@ export async function saveModuleAction(module: any) {
   return { success: !error, data: data?.[0], error };
 }
 
+export async function reviewSubmissionAction(submissionId: string, feedback: string, score: number, status: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('submissions')
+    .update({
+      ai_feedback: feedback,
+      ai_score: score,
+      ai_status: status,
+      status: status === 'passed' ? 'reviewed' : 'extra_task_assigned'
+    })
+    .eq('id', submissionId)
+    .select();
+
+  return { success: !error, data: data?.[0], error };
+}
+
 export async function deleteModuleAction(id: string) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
@@ -151,6 +175,58 @@ export async function deleteModuleAction(id: string) {
     .from('modules').delete().eq('id', id);
 
   return { success: !error, error };
+}
+
+export async function saveResourceAction(resource: any) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('resources')
+    .upsert(resource)
+    .select();
+
+  return { success: !error, data: data?.[0], error };
+}
+
+export async function deleteResourceAction(id: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { error } = await supabaseAdmin
+    .from('resources').delete().eq('id', id);
+
+  return { success: !error, error };
+}
+
+export async function saveDailyChallengeAction(challenge: any) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('daily_challenges')
+    .upsert(challenge)
+    .select();
+
+  return { success: !error, data: data?.[0], error };
 }
 
 export async function saveCourseAction(course: any) {

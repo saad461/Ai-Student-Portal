@@ -54,7 +54,11 @@ import {
   uploadVideoAction,
   saveCourseAction,
   deleteCourseAction,
-  unlockCourseForStudentAction
+  unlockCourseForStudentAction,
+  saveResourceAction,
+  deleteResourceAction,
+  saveDailyChallengeAction,
+  reviewSubmissionAction
 } from './actions';
 import { CurriculumItem, QuizQuestion, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
@@ -68,14 +72,48 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon } from 'lucide-react';
+
+interface Resource {
+  id?: string;
+  title: string;
+  description: string;
+  type: 'book' | 'cheat_sheet' | 'roadmap' | 'note' | 'case_study';
+  content?: string;
+  external_url?: string;
+  thumbnail_url?: string;
+  price_points: number;
+  is_published: boolean;
+}
+
+interface DailyChallenge {
+  id?: string;
+  title: string;
+  description: string;
+  initial_code: any;
+  test_cases: any;
+  difficulty: 'easy' | 'medium' | 'hard';
+  points_reward: number;
+  active_date: string;
+}
+
+interface StudentSubmission {
+  id: string;
+  curriculum_id: string;
+  status: string;
+  submitted_at: string;
+  github_url: string;
+  ai_score?: number;
+  ai_feedback?: string;
+  ai_status?: string;
+}
 
 interface StudentProfile {
   id: string;
   full_name: string;
   enrollment_date: string;
   is_pro: boolean;
-  submissions: { curriculum_id: string; status: string; submitted_at: string }[];
+  submissions: StudentSubmission[];
 }
 
 interface SorryMessage {
@@ -98,8 +136,10 @@ export default function AdminDashboard() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges'>('students');
 
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
@@ -108,6 +148,8 @@ export default function AdminDashboard() {
   const [editingModule, setEditingModule] = useState<Partial<Module> | null>(null);
   const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
   const [editingCourse, setEditingCourse] = useState<Partial<Course> | null>(null);
+  const [editingResource, setEditingResource] = useState<Partial<Resource> | null>(null);
+  const [editingChallenge, setEditingChallenge] = useState<Partial<DailyChallenge> | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -164,8 +206,21 @@ export default function AdminDashboard() {
       .order('date', { ascending: false });
 
     setAttendance(attendanceData || []);
+
+    const { data: resourcesData } = await supabase
+      .from('resources')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setResources(resourcesData || []);
+
+    const { data: challengesData } = await supabase
+      .from('daily_challenges')
+      .select('*')
+      .order('active_date', { ascending: false });
+    setChallenges(challengesData || []);
+
     setLoading(false);
-  }, []);
+  }, [selectedCourseId]);
 
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
@@ -243,6 +298,34 @@ export default function AdminDashboard() {
     if (res.success) fetchAdminData();
   };
 
+  const handleSaveResource = async (res: Partial<Resource>) => {
+    const result = await saveResourceAction(res);
+    if (result.success) {
+      success('Resource saved successfully!');
+      setEditingResource(null);
+      fetchAdminData();
+    } else {
+      toastError('Error saving resource: ' + JSON.stringify(result.error));
+    }
+  };
+
+  const handleDeleteResource = async (id: string) => {
+    if (!confirm('Are you sure?')) return;
+    const res = await deleteResourceAction(id);
+    if (res.success) fetchAdminData();
+  };
+
+  const handleSaveChallenge = async (challenge: Partial<DailyChallenge>) => {
+    const result = await saveDailyChallengeAction(challenge);
+    if (result.success) {
+      success('Challenge saved successfully!');
+      setEditingChallenge(null);
+      fetchAdminData();
+    } else {
+      toastError('Error saving challenge: ' + JSON.stringify(result.error));
+    }
+  };
+
   const handleUnlockCourse = async (email: string, courseId: string) => {
     const res = await unlockCourseForStudentAction(email, courseId);
     if (res.success) {
@@ -305,6 +388,8 @@ export default function AdminDashboard() {
           <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-2" /> Structure</Button>
           <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Content</Button>
           <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-2" /> Attendance</Button>
+          <Button variant={activeTab === 'library' ? 'default' : 'ghost'} onClick={() => setActiveTab('library')}><Library className="h-4 w-4 mr-2" /> Library</Button>
+          <Button variant={activeTab === 'challenges' ? 'default' : 'ghost'} onClick={() => setActiveTab('challenges')}><Trophy className="h-4 w-4 mr-2" /> Challenges</Button>
           <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-2" /> Insights</Button>
         </div>
 
@@ -592,6 +677,62 @@ export default function AdminDashboard() {
               </Table>
             </Card>
           </div>
+        ) : activeTab === 'library' ? (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold flex items-center gap-2"><Library className="h-5 w-5" /> Library Management</h2>
+              <Button onClick={() => setEditingResource({ title: '', type: 'book', price_points: 0, is_published: true })}>
+                <Plus className="h-4 w-4 mr-2" /> Add Resource
+              </Button>
+            </div>
+            <Card>
+              <Table>
+                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Type</TableHead><TableHead>Price</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {resources.map((res) => (
+                    <TableRow key={res.id}>
+                      <TableCell className="font-bold">{res.title}</TableCell>
+                      <TableCell><Badge variant="secondary">{res.type.replace('_', ' ')}</Badge></TableCell>
+                      <TableCell>{res.price_points} pts</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => setEditingResource(res)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteResource(res.id!)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+        ) : activeTab === 'challenges' ? (
+           <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold flex items-center gap-2"><Trophy className="h-5 w-5" /> Daily Challenges</h2>
+              <Button onClick={() => setEditingChallenge({ title: '', difficulty: 'easy', points_reward: 50, active_date: new Date().toISOString().split('T')[0] })}>
+                <Plus className="h-4 w-4 mr-2" /> Add Challenge
+              </Button>
+            </div>
+            <Card>
+              <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Title</TableHead><TableHead>Difficulty</TableHead><TableHead>Reward</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {challenges.map((ch) => (
+                    <TableRow key={ch.id}>
+                      <TableCell>{ch.active_date}</TableCell>
+                      <TableCell className="font-bold">{ch.title}</TableCell>
+                      <TableCell><Badge variant={ch.difficulty === 'hard' ? 'destructive' : ch.difficulty === 'medium' ? 'default' : 'secondary'}>{ch.difficulty}</Badge></TableCell>
+                      <TableCell>{ch.points_reward} pts</TableCell>
+                      <TableCell>
+                         <Button variant="ghost" size="icon" onClick={() => setEditingChallenge(ch)}><Edit className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-500">
              <div className="flex justify-between items-end">
@@ -691,22 +832,55 @@ export default function AdminDashboard() {
         )}
 
         <Dialog open={!!viewingStudent} onOpenChange={(open) => !open && setViewingStudent(null)}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Student Details: {viewingStudent?.full_name}</DialogTitle></DialogHeader>
-            <div className="space-y-6 py-4">
-              <h3 className="font-bold text-lg border-b pb-2">Submission History</h3>
-              <Table>
-                <TableHeader><TableRow><TableHead>Lecture ID</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {viewingStudent?.submissions?.map((sub, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-mono text-xs">{sub.curriculum_id}</TableCell>
-                      <TableCell><Badge variant={sub.status === 'skipped' ? 'outline' : 'default'} className={sub.status === 'skipped' ? 'text-orange-500 border-orange-500' : 'bg-green-600'}>{sub.status.toUpperCase()}</Badge></TableCell>
-                      <TableCell className="text-xs">{new Date(sub.submitted_at).toLocaleDateString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Student Profile: {viewingStudent?.full_name}</DialogTitle></DialogHeader>
+            <div className="space-y-8 py-4">
+              <div className="space-y-4">
+                 <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter"><Send className="h-5 w-5" /> Recent Submissions</h3>
+                 <div className="grid grid-cols-1 gap-4">
+                    {viewingStudent?.submissions?.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map((sub) => (
+                      <Card key={sub.id} className="overflow-hidden">
+                         <CardHeader className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-row justify-between items-center border-b">
+                            <div className="flex gap-2 items-center">
+                               <Badge variant="outline">{sub.curriculum_id}</Badge>
+                               <span className="text-xs font-bold text-muted-foreground">{new Date(sub.submitted_at).toLocaleString()}</span>
+                            </div>
+                            <div className="flex gap-2">
+                               {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><GithubIcon className="h-3 w-3 mr-2" /> Repo</a></Button>}
+                               <Badge className={cn(
+                                 sub.status === 'reviewed' ? 'bg-green-600' : 'bg-amber-500'
+                               )}>{sub.status.toUpperCase()}</Badge>
+                            </div>
+                         </CardHeader>
+                         <CardContent className="p-4 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                               <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">AI Feedback & Grade</Label>
+                                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 text-xs font-medium italic min-h-[60px]">
+                                     {sub.ai_feedback || "No AI feedback yet. Grade this submission to trigger AI review."}
+                                  </div>
+                               </div>
+                               <div className="flex flex-col justify-center items-center p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border">
+                                  <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">AI Score</div>
+                                  <div className="text-4xl font-black text-primary">{sub.ai_score || 0}<span className="text-lg text-muted-foreground">/100</span></div>
+                               </div>
+                            </div>
+                            <div className="flex justify-end gap-2 border-t pt-4">
+                               <Button variant="outline" size="sm" onClick={async () => {
+                                  const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
+                                  if (res.success) {
+                                     success('AI Review generated!');
+                                     fetchAdminData();
+                                  }
+                               }}>
+                                 <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
+                               </Button>
+                            </div>
+                         </CardContent>
+                      </Card>
+                    ))}
+                 </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -1085,6 +1259,85 @@ export default function AdminDashboard() {
               <div className="space-y-2"><Label>Thumbnail URL (Optional)</Label><Input value={editingCourse?.thumbnail_url || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, thumbnail_url: e.target.value }))} /></div>
             </div>
             <DialogFooter><Button onClick={() => handleSaveCourse(editingCourse!)}>Save Course</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingResource} onOpenChange={(open) => !open && setEditingResource(null)}>
+          <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+            <DialogHeader><DialogTitle>{editingResource?.id ? 'Edit' : 'Add'} Library Resource</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <select className="w-full p-2 border rounded" value={editingResource?.type} onChange={(e) => setEditingResource(prev => ({ ...prev!, type: e.target.value as any }))}>
+                    <option value="book">Book</option>
+                    <option value="cheat_sheet">Cheat Sheet</option>
+                    <option value="roadmap">Roadmap</option>
+                    <option value="note">Note</option>
+                    <option value="case_study">Case Study</option>
+                  </select>
+                </div>
+                <div className="space-y-2"><Label>Price (Skill Points)</Label><Input type="number" value={editingResource?.price_points} onChange={(e) => setEditingResource(prev => ({ ...prev!, price_points: parseInt(e.target.value) }))} /></div>
+              </div>
+              <div className="space-y-2"><Label>Title</Label><Input value={editingResource?.title} onChange={(e) => setEditingResource(prev => ({ ...prev!, title: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Description</Label><Textarea value={editingResource?.description} onChange={(e) => setEditingResource(prev => ({ ...prev!, description: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>External URL (PDF/Link)</Label><Input value={editingResource?.external_url} onChange={(e) => setEditingResource(prev => ({ ...prev!, external_url: e.target.value }))} /></div>
+              <div className="space-y-2">
+                <Label>Content (Markdown/HTML)</Label>
+                <RichTextEditor content={editingResource?.content || ''} onChange={(c) => setEditingResource(prev => ({ ...prev!, content: c }))} />
+              </div>
+            </div>
+            <DialogFooter><Button onClick={() => handleSaveResource(editingResource!)}>Save Resource</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editingChallenge} onOpenChange={(open) => !open && setEditingChallenge(null)}>
+          <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
+            <DialogHeader><DialogTitle>{editingChallenge?.id ? 'Edit' : 'Add'} Daily Challenge</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2"><Label>Active Date</Label><Input type="date" value={editingChallenge?.active_date} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, active_date: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>Difficulty</Label>
+                  <select className="w-full p-2 border rounded" value={editingChallenge?.difficulty} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, difficulty: e.target.value as any }))}>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+                <div className="space-y-2"><Label>Points Reward</Label><Input type="number" value={editingChallenge?.points_reward} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, points_reward: parseInt(e.target.value) }))} /></div>
+              </div>
+              <div className="space-y-2"><Label>Title</Label><Input value={editingChallenge?.title} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, title: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Description</Label><Textarea value={editingChallenge?.description} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, description: e.target.value }))} /></div>
+              <div className="space-y-2">
+                <Label>Initial Code (JSON)</Label>
+                <Textarea
+                  className="font-mono text-xs"
+                  value={JSON.stringify(editingChallenge?.initial_code || {}, null, 2)}
+                  onChange={(e) => {
+                    try {
+                      setEditingChallenge(prev => ({ ...prev!, initial_code: JSON.parse(e.target.value) }));
+                    } catch(err) {
+                      console.error("Invalid JSON for Initial Code:", err);
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Test Cases (JSON)</Label>
+                <Textarea
+                  className="font-mono text-xs"
+                  value={JSON.stringify(editingChallenge?.test_cases || [], null, 2)}
+                  onChange={(e) => {
+                    try {
+                      setEditingChallenge(prev => ({ ...prev!, test_cases: JSON.parse(e.target.value) }));
+                    } catch(err) {
+                      console.error("Invalid JSON for Test Cases:", err);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <DialogFooter><Button onClick={() => handleSaveChallenge(editingChallenge!)}>Save Challenge</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
