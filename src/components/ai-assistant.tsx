@@ -27,6 +27,8 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<'cloud' | 'native'>('cloud');
+  const [timeSinceLastActivity, setTimeSinceLastActivity] = useState(0);
+  const [hasNudged, setHasNudged] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Initialize messages from sessionStorage
@@ -55,6 +57,33 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // AI Nudge Logic: Detect if student is stuck
+  useEffect(() => {
+    if (isOpen || hasNudged) return;
+
+    const interval = setInterval(() => {
+      setTimeSinceLastActivity(prev => {
+        if (prev >= 1200) { // 20 minutes (1200 seconds)
+          triggerNudge();
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, hasNudged]);
+
+  const triggerNudge = () => {
+    setHasNudged(true);
+    setIsOpen(true);
+    const nudgeMessage = {
+      role: 'assistant',
+      content: "I've noticed you've been on this topic for a while. Need a quick hint or a breakdown to keep moving forward? I'm here to help!"
+    };
+    setMessages(prev => [...prev, nudgeMessage as Message]);
+  };
 
   useEffect(() => {
     const checkNativeAI = async () => {

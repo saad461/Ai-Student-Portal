@@ -59,6 +59,7 @@ export interface CurriculumItem {
     requirements: string[];
   };
   attached_quiz?: QuizQuestion[];
+  is_boss_project?: boolean;
   module_index?: number;
   module_name?: string;
   lecture_index?: number;
@@ -637,4 +638,29 @@ export const CURRICULUM: CurriculumItem[] = [
     theory_content: 'A web worker is a JavaScript that runs in the background, independently of other scripts, without affecting the performance of the page...',
     required_focus_hours: 1,
   },
+  {
+    id: 'm1-boss',
+    week: 1,
+    day: 'Final Boss',
+    type: 'assignment',
+    title: 'The Semantic Citadel',
+    description: 'Demonstrate your total mastery of HTML. This is a module-final Boss Challenge.',
+    is_boss_project: true,
+    module_index: 1,
+    module_name: 'HTML Foundation',
+    lecture_index: 34,
+    theory_content: '<h1>Module 1: Boss Project</h1><p>You have reached the end of the HTML Foundation. Your mission is to build the "Semantic Citadel", a multi-page, pixel-perfect, fully semantic web portal from scratch.</p>',
+    attached_assignment: {
+      title: 'The Semantic Citadel',
+      description: 'Build a complete, semantic multi-page portal.',
+      requirements: [
+        'Complete semantic structure (header, main, section, footer)',
+        'Accessible forms with validation',
+        'Complex data tables for project statistics',
+        'Embedded media (video/audio)',
+        'Native Web Component integration'
+      ]
+    },
+    required_focus_hours: 5
+  }
 ];
