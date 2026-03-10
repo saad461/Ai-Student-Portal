@@ -106,10 +106,11 @@ export default function ShopPage() {
         await supabase.from('user_courses').insert({ user_id: profile.id, course_id: id, status: 'unlocked' });
         setMyCourses([...myCourses, id]);
       } else {
-        // Handle perks (streak freeze, booster) - maybe a user_perks table
-        await supabase.from('extra_tasks').insert({ // Using extra_tasks as a proxy for "active items" for now or just log it
-           student_id: profile.id,
-           description: `Purchased Perk: ${name}`
+        // Handle perks (streak freeze, booster)
+        await supabase.from('user_perks').insert({
+           user_id: profile.id,
+           perk_id: id,
+           is_active: true
         });
       }
 
