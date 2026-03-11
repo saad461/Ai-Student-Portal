@@ -19,7 +19,7 @@ export async function markAttendance(userId: string) {
     // 2. Get profile for streak/points calculation
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('current_streak, total_points, last_punch_in')
+      .select('current_streak, total_points, last_punch_in, has_streak_freeze')
       .eq('id', userId)
       .single();
 
