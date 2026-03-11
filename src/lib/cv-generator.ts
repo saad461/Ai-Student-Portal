@@ -66,21 +66,33 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
   // Skills
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('TECHNICAL SKILLS', 20, 115);
+  doc.text('TECHNICAL SKILLS & PROFICIENCY', 20, 115);
   doc.line(20, 118, 190, 118);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.skills.join(' • '), 20, 125);
+
+  const skillsPerRow = 3;
+  data.skills.forEach((skill, index) => {
+     const x = 20 + (index % skillsPerRow) * 60;
+     const y = 125 + Math.floor(index / skillsPerRow) * 8;
+     doc.setFillColor(240, 240, 240);
+     doc.rect(x, y - 5, 55, 6, 'F');
+     doc.setTextColor(50, 50, 50);
+     doc.text(skill, x + 5, y - 1);
+  });
+
+  const nextY = 125 + Math.ceil(data.skills.length / skillsPerRow) * 8 + 10;
 
   // Projects / Progress
   doc.setFontSize(14);
+  doc.setTextColor(0,0,0);
   doc.setFont('helvetica', 'bold');
-  doc.text('PROJECTS & MILESTONES', 20, 145);
-  doc.line(20, 148, 190, 148);
+  doc.text('VERIFIED PROJECTS & MILESTONES', 20, nextY);
+  doc.line(20, nextY + 3, 190, nextY + 3);
 
   autoTable(doc, {
-    startY: 155,
+    startY: nextY + 8,
     head: [['Project / Module Name', 'Verification Status']],
     body: data.projects.map(p => [p.title, p.status.toUpperCase()]),
     theme: 'grid',

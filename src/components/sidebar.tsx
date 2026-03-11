@@ -19,7 +19,8 @@ import {
   Briefcase,
   Mic,
   Heart,
-  ShoppingCart
+  ShoppingCart,
+  Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
@@ -60,6 +61,7 @@ export function Sidebar() {
     { name: 'Skill Store', href: '/shop', icon: ShoppingCart },
     { name: 'My Library', href: '/library', icon: Library },
     { name: 'Challenges', href: '/challenges', icon: Trophy },
+    { name: 'Leaderboard', href: '/leaderboard', icon: Star },
     { name: 'Career Center', href: '/career', icon: Briefcase },
     { name: 'Interview Prep', href: '/interview-prep', icon: Mic },
     { name: 'Feeling Tired?', href: '/wellness', icon: Heart },

@@ -267,11 +267,20 @@ export async function rewardStudentAction(amount: number, reason: string, source
 
   if (logError) return { success: false, error: logError.message };
 
-  // 3. Update profile
-  const { error: profileError } = await supabaseAdmin
-    .from('profiles')
-    .update({ total_points: (profileData?.total_points || 0) + validatedAmount })
-    .eq('id', user.id);
+  // 3. Update profile using SQL increment to prevent race conditions
+  const { error: profileError } = await supabaseAdmin.rpc('increment_points', {
+    user_id: user.id,
+    amount: validatedAmount
+  });
+
+  // Fallback if RPC is not defined
+  if (profileError) {
+    console.warn('increment_points RPC failed, falling back to manual update', profileError);
+    await supabaseAdmin
+      .from('profiles')
+      .update({ total_points: (profileData?.total_points || 0) + validatedAmount })
+      .eq('id', user.id);
+  }
 
   if (profileError) return { success: false, error: profileError.message };
 
