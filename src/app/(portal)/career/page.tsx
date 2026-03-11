@@ -56,10 +56,14 @@ export default function CareerPage() {
 
     try {
       const res = await fetch('/api/jobs');
+      if (!res.ok) {
+        throw new Error(`API Error: ${res.status}`);
+      }
       const jobsData = await res.json();
       setJobs(jobsData);
     } catch (err) {
-      console.error("Failed to fetch jobs");
+      console.error("Failed to fetch jobs", err);
+      toastError("AI Job Market is currently offline. Showing cached results.");
     }
 
     const { data: profileData } = await supabase
@@ -167,10 +171,16 @@ export default function CareerPage() {
                    onKeyDown={async (e) => {
                      if (e.key === 'Enter' && searchQuery) {
                         setLoading(true);
-                        const res = await fetch(`/api/jobs?query=${encodeURIComponent(searchQuery)}`);
-                        const data = await res.json();
-                        setJobs(data);
-                        setLoading(false);
+                        try {
+                          const res = await fetch(`/api/jobs?query=${encodeURIComponent(searchQuery)}`);
+                          if (!res.ok) throw new Error("Search failed");
+                          const data = await res.json();
+                          setJobs(data);
+                        } catch (err) {
+                          toastError("AI Search unavailable. Please try again later.");
+                        } finally {
+                          setLoading(false);
+                        }
                      }
                    }}
                  />

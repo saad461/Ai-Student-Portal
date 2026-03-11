@@ -116,8 +116,10 @@ export const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify }, re
         placeholder="Enter characters shown above"
         value={userInput}
         onChange={(e) => {
-          setUserInput(e.target.value);
-          onVerify(e.target.value.toLowerCase() === captchaText.toLowerCase());
+          const val = e.target.value;
+          setUserInput(val);
+          const isV = val.toLowerCase() === captchaText.toLowerCase();
+          onVerify(isV);
         }}
         className="text-center font-mono tracking-widest uppercase"
       />

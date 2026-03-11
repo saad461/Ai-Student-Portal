@@ -65,6 +65,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz'>('theory');
   const [readTimeSeconds, setReadTimeSeconds] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
 
   const isTheoryDone = submission?.completion_data?.theory_read;
 
@@ -130,6 +131,13 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     fetchData();
   }, [fetchData]);
 
+  const headings = useMemo(() => {
+    if (Array.isArray(lecture?.content) && lecture.content.length > 0) {
+      return lecture.content;
+    }
+    return extractHeadings(lecture?.theory_content);
+  }, [lecture?.theory_content, lecture?.content]);
+
   useEffect(() => {
     if (activeTab !== 'theory') return;
 
@@ -138,15 +146,32 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       const scrollHeight = element.scrollHeight - element.clientHeight;
       if (scrollHeight <= 0) {
         setScrollProgress(100);
-        return;
+      } else {
+        const scrolled = (element.scrollTop / scrollHeight) * 100;
+        setScrollProgress(scrolled);
       }
-      const scrolled = (element.scrollTop / scrollHeight) * 100;
-      setScrollProgress(scrolled);
+
+      // Detect active heading
+      const headingElements = headings.map(h => document.getElementById(h.id)).filter(Boolean);
+      let currentActiveId = null;
+      for (const el of headingElements) {
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 150) {
+            currentActiveId = el.id;
+          } else {
+            break;
+          }
+        }
+      }
+      setActiveHeadingId(currentActiveId || (headings[0]?.id || null));
     };
 
     window.addEventListener('scroll', handleScroll);
+    // Initial check
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [activeTab]);
+  }, [activeTab, headings]);
 
   const updateCompletion = async (newData: any) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -219,13 +244,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     if (!nextItem) return false;
     return isFullyDone; // Current must be done to unlock next
   }, [nextItem, isFullyDone]);
-
-  const headings = useMemo(() => {
-    if (Array.isArray(lecture?.content) && lecture.content.length > 0) {
-      return lecture.content;
-    }
-    return extractHeadings(lecture?.theory_content);
-  }, [lecture?.theory_content, lecture?.content]);
 
   if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
   if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;
@@ -476,21 +494,32 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                                <span className="text-xs font-black uppercase tracking-widest">In this lecture</span>
                             </div>
                             <div className="flex flex-col gap-2">
-                              {headings.map((h, i) => (
-                                <a
-                                  key={i}
-                                  href={`#${h.id}`}
-                                  className={cn(
-                                    "text-sm hover:text-primary transition-colors flex items-center gap-2 py-1",
-                                    h.level === 1 ? "font-bold text-slate-700 dark:text-slate-300" :
-                                    h.level === 2 ? "pl-4 text-slate-500 dark:text-slate-500 border-l-2 ml-1" :
-                                    "pl-8 text-slate-400 dark:text-slate-600 border-l ml-1 italic"
-                                  )}
-                                >
-                                  {h.level === 1 && <div className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" />}
-                                  {h.text}
-                                </a>
-                              ))}
+                              {headings.map((h, i) => {
+                                const isActive = activeHeadingId === h.id;
+                                return (
+                                  <a
+                                    key={i}
+                                    href={`#${h.id}`}
+                                    className={cn(
+                                      "text-sm transition-all duration-300 flex items-center gap-2 py-1",
+                                      h.level === 1 ? "font-bold" :
+                                      h.level === 2 ? "pl-4 ml-1 border-l-2" :
+                                      "pl-8 ml-1 border-l italic",
+                                      isActive
+                                        ? "text-primary border-primary scale-[1.02] translate-x-1"
+                                        : "text-slate-500 hover:text-primary/70 border-slate-200 dark:border-slate-800"
+                                    )}
+                                  >
+                                    {h.level === 1 && (
+                                      <div className={cn(
+                                        "h-1.5 w-1.5 rounded-full shrink-0 transition-all",
+                                        isActive ? "bg-primary scale-125 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-primary/30"
+                                      )} />
+                                    )}
+                                    {h.text}
+                                  </a>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -512,16 +541,43 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                       {!isTheoryDone && (
                         <div className="space-y-4">
                           {!isReadTimeMet && effectiveReadMinutes > 0 && (
-                            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center justify-between">
-                              <div className="flex items-center gap-3 text-primary">
-                                <Clock className="h-5 w-5 animate-pulse" />
-                                <span className="font-bold">Reading requirement in progress...</span>
+                            <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-500">
+                              <div className="relative h-32 w-32">
+                                <svg className="h-full w-full" viewBox="0 0 100 100">
+                                  <circle
+                                    className="text-primary/10 stroke-current"
+                                    strokeWidth="8"
+                                    fill="transparent"
+                                    r="40"
+                                    cx="50"
+                                    cy="50"
+                                  />
+                                  <motion.circle
+                                    className="text-primary stroke-current"
+                                    strokeWidth="8"
+                                    strokeLinecap="round"
+                                    fill="transparent"
+                                    r="40"
+                                    cx="50"
+                                    cy="50"
+                                    initial={{ strokeDasharray: "251.2", strokeDashoffset: "251.2" }}
+                                    animate={{ strokeDashoffset: 251.2 - (251.2 * Math.min(1, readTimeSeconds / (effectiveReadMinutes * 60))) }}
+                                    transition={{ duration: 0.5, ease: "linear" }}
+                                    style={{ transformOrigin: "50% 50%", transform: "rotate(-90deg)" }}
+                                  />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                   <Clock className="h-6 w-6 text-primary mb-1 animate-pulse" />
+                                   <span className="text-xl font-black tabular-nums">
+                                      {Math.max(0, Math.ceil((effectiveReadMinutes * 60 - readTimeSeconds) / 60))}m
+                                   </span>
+                                </div>
                               </div>
-                              <div className="text-right">
-                                <span className="text-2xl font-black tabular-nums">
-                                  {Math.max(0, Math.ceil((effectiveReadMinutes * 60 - readTimeSeconds) / 60))}
-                                </span>
-                                <span className="text-xs uppercase font-bold ml-1 opacity-60">mins left</span>
+                              <div className="space-y-2">
+                                <h4 className="text-xl font-black uppercase tracking-tight">Theory Lock Active</h4>
+                                <p className="text-sm text-muted-foreground max-w-xs font-medium">
+                                  This lecture requires at least <span className="text-primary font-bold">{effectiveReadMinutes} minutes</span> of deep reading to ensure mastery of the concepts.
+                                </p>
                               </div>
                             </div>
                           )}
@@ -530,22 +586,27 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             disabled={!isReadTimeMet}
                             size="lg"
                             className={cn(
-                              "w-full h-20 text-xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95",
+                              "w-full h-24 text-xl font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 group",
                               isReadTimeMet
-                                ? "shadow-primary/20 hover:scale-[1.01]"
-                                : "opacity-50 cursor-not-allowed grayscale shadow-none"
+                                ? "bg-primary hover:bg-primary/90 shadow-primary/20 hover:scale-[1.01]"
+                                : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-50 grayscale shadow-none"
                             )}
                           >
                             {isReadTimeMet ? (
-                              <>
-                                I have mastered the theory
-                                <ArrowRight className="ml-3 h-6 w-6" />
-                              </>
+                              <div className="flex items-center gap-3">
+                                <span>I have mastered the theory</span>
+                                <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                              </div>
                             ) : (
-                              <>
-                                <Lock className="mr-3 h-5 w-5" />
-                                Reading... ({Math.floor(readTimeSeconds / 60)}/{effectiveReadMinutes}m)
-                              </>
+                              <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-2">
+                                  <Lock className="h-5 w-5" />
+                                  <span>Reading in progress</span>
+                                </div>
+                                <span className="text-[10px] font-bold opacity-60 tracking-[0.2em] mt-1 italic">
+                                  {Math.floor(readTimeSeconds / 60)}m / {effectiveReadMinutes}m COMPLETE
+                                </span>
+                              </div>
                             )}
                           </Button>
                         </div>
