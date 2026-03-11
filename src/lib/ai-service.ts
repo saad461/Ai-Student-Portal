@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
 export async function generateAIResponse(prompt: string, systemPrompt: string = "You are a professional assistant.", responseFormat: 'text' | 'json' = 'text') {
   const providers = [
     { name: 'groq', key: process.env.GROQ_API_KEY, url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile' },
@@ -15,10 +13,22 @@ export async function generateAIResponse(prompt: string, systemPrompt: string = 
       console.log(`Attempting AI generation with ${provider.name}...`);
 
       if (provider.name === 'gemini') {
-        const genAI = new GoogleGenerativeAI(provider.key);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const result = await model.generateContent(systemPrompt + "\n\n" + prompt);
-        const text = result.response.text();
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${provider.key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: systemPrompt + "\n\n" + prompt }] }]
+            })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            console.error("Gemini error:", err);
+            throw new Error(`Gemini failed with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        const text = data.candidates[0].content.parts[0].text;
         return responseFormat === 'json' ? JSON.parse(text.replace(/```json|```/g, '').trim()) : text;
       }
 
