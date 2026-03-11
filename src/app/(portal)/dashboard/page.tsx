@@ -68,6 +68,8 @@ interface Profile {
   total_points: number;
   last_punch_in: string | null;
   agreed_tc: boolean;
+  has_streak_freeze?: boolean;
+  xp_booster_until?: string | null;
   achievements?: string[];
   email?: string;
   phone_number?: string;
@@ -100,6 +102,7 @@ export default function DashboardPage() {
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
   const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
   const [rewardHistory, setRewardHistory] = useState<any[]>([]);
+  const [userPerks, setUserPerks] = useState<any[]>([]);
 
   const [githubUrl, setGithubUrl] = useState('');
   const [lastSubmittedUrl, setLastSubmittedUrl] = useState('');
@@ -151,6 +154,12 @@ export default function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(10);
     setRewardHistory(rewards || []);
+
+    const { data: perks } = await supabase
+      .from('user_perks')
+      .select('*')
+      .eq('user_id', user.id);
+    setUserPerks(perks || []);
 
     const { data: subs } = await supabase
       .from('submissions')
@@ -290,18 +299,15 @@ export default function DashboardPage() {
   );
 
   const handlePurchase = async (item: ShopItem) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !profile) return;
+    const { purchaseShopItemAction } = await import('@/app/admin/actions');
+    const res = await purchaseShopItemAction(item.id, item.price);
 
-    // Deduct points (Simplified: Deducting XP for now as Skill Points are 1:10 ratio of XP)
-    const newTotalPoints = profile.total_points - (item.price * 10);
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ total_points: newTotalPoints })
-      .eq('id', user.id);
-
-    if (!error) fetchData();
+    if (res.success) {
+      success(`Purchased ${item.name}! Check your profile for active perks.`);
+      fetchData();
+    } else {
+      toastError('Failed to complete purchase: ' + res.error);
+    }
   };
 
   return (
@@ -332,6 +338,16 @@ export default function DashboardPage() {
                       {profile?.is_pro && (
                         <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none animate-pulse h-5 text-[10px] px-1.5">
                           <Zap className="h-3 w-3 mr-1 fill-white" /> PRO
+                        </Badge>
+                      )}
+                      {profile?.xp_booster_until && new Date(profile.xp_booster_until) > new Date() && (
+                        <Badge variant="outline" className="text-orange-600 border-orange-600 animate-pulse h-5 text-[10px] px-1.5">
+                           2X XP ACTIVE
+                        </Badge>
+                      )}
+                      {profile?.has_streak_freeze && (
+                        <Badge variant="outline" className="text-blue-500 border-blue-500 h-5 text-[10px] px-1.5">
+                           FREEZE ACTIVE
                         </Badge>
                       )}
                    </div>
@@ -462,7 +478,7 @@ export default function DashboardPage() {
                              totalPoints: profile?.total_points || 0,
                              level: getLevel(profile?.total_points || 0),
                              streak: profile?.current_streak || 0
-                           })}
+                           }, !!userPerks.find(p => p.perk_id === 'resume_template'))}
                          >
                             <FileUser className="h-4 w-4" /> Export CV
                          </Button>

@@ -35,6 +35,7 @@ export async function markAttendance(userId: string) {
 
     // 4. Calculate new streak
     let newStreak = 1;
+    let usedFreeze = false;
     if (profile.last_punch_in) {
       const lastPunch = new Date(profile.last_punch_in);
       const todayDate = new Date();
@@ -48,14 +49,23 @@ export async function markAttendance(userId: string) {
         newStreak = (profile.current_streak || 0) + 1;
       } else if (isToday) {
         newStreak = profile.current_streak || 1;
+      } else if (profile.has_streak_freeze) {
+        // Streak would have reset, but we use freeze!
+        newStreak = (profile.current_streak || 0) + 1;
+        usedFreeze = true;
       }
     }
 
     // 5. Update profile with points and streak
     const { error: profileUpdateError } = await supabase.from('profiles').update({
       current_streak: newStreak,
-      last_punch_in: new Date().toISOString()
+      last_punch_in: new Date().toISOString(),
+      has_streak_freeze: usedFreeze ? false : profile.has_streak_freeze
     }).eq('id', userId);
+
+    if (usedFreeze) {
+       await supabase.from('user_perks').update({ used_count: 1 }).eq('user_id', userId).eq('perk_id', 'streak_freeze');
+    }
 
     // 6. Use Reward Log system for points
     const { rewardStudentAction } = await import('@/app/admin/actions');
