@@ -64,6 +64,8 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [githubUrl, setGithubUrl] = useState('');
 
   const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz'>('theory');
+  const [userPerks, setUserPerks] = useState<any[]>([]);
+  const [showHint, setShowHint] = useState(false);
   const [readTimeSeconds, setReadTimeSeconds] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
@@ -124,6 +126,9 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       setSubmission(subData as unknown as Submission);
       setGithubUrl(subData.github_url || '');
     }
+
+    const { data: perks } = await supabase.from('user_perks').select('*').eq('user_id', user.id);
+    setUserPerks(perks || []);
 
     setLoading(false);
   }, [resolvedParams.id]);
@@ -410,7 +415,32 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                  </Badge>
                )}
             </div>
-            <p className="text-xl text-muted-foreground max-w-3xl leading-relaxed">{lecture.description}</p>
+            <div className="flex justify-between items-start gap-6">
+              <p className="text-xl text-muted-foreground max-w-3xl leading-relaxed">{lecture.description}</p>
+              {userPerks.find(p => p.perk_id === 'lecture_hint') && (
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-amber-200 bg-amber-50 text-amber-700 font-bold gap-2 hover:bg-amber-100"
+                  onClick={() => setShowHint(!showHint)}
+                >
+                  <HelpCircle className="h-4 w-4" /> {showHint ? 'Hide Hint' : 'Use Hint Perk'}
+                </Button>
+              )}
+            </div>
+            {showHint && (
+               <motion.div
+                 initial={{ opacity: 0, y: -10 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 className="p-6 bg-amber-500/10 border-2 border-amber-500/20 rounded-2xl"
+               >
+                  <div className="flex items-center gap-2 text-amber-700 font-black uppercase text-xs mb-2">
+                     <Zap className="h-4 w-4 fill-amber-500" /> Pro Learning Hint
+                  </div>
+                  <p className="text-amber-900 font-medium">
+                     Focus on the core architecture of this module. A key tip: {lecture.title} often relies on understanding how data flows between components. Check the external resources for a cheat sheet!
+                  </p>
+               </motion.div>
+            )}
           </header>
 
           <div className="flex gap-2 border-b pb-px overflow-x-auto no-scrollbar sticky top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10 pt-2">
@@ -793,8 +823,19 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                 {lecture.attached_quiz ? (
                   <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border">
                     <QuizModule
+                      key={submission?.completion_data?.quiz_completed ? 'done' : 'new'}
                       questions={lecture.attached_quiz}
                       onComplete={handleQuizComplete}
+                      canRetake={userPerks.some(p => p.perk_id === 'quiz_retake')}
+                      onRetake={async () => {
+                         const { data: { user } } = await supabase.auth.getUser();
+                         if (user) {
+                           await supabase.from('user_perks').delete().eq('user_id', user.id).eq('perk_id', 'quiz_retake').limit(1);
+                           const newData = { ...submission?.completion_data, quiz_completed: false };
+                           await supabase.from('submissions').update({ completion_data: newData }).eq('student_id', user.id).eq('curriculum_id', resolvedParams.id);
+                           fetchData();
+                         }
+                      }}
                     />
                   </div>
                 ) : (
