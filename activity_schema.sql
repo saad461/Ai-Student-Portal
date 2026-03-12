@@ -31,3 +31,19 @@ create policy "Users can delete their own notifications" on notifications for de
 create policy "Admins can view all activity" on student_activity for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "Students can insert their own activity" on student_activity for insert with check (auth.uid() = student_id);
 create policy "Admins can manage notifications" on notifications for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+-- Add achievements to profiles if not exists
+alter table profiles add column if not exists achievements text[] default '{}';
+
+-- RPC for atomic point increments
+create or replace function increment_points(user_id uuid, amount int)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  update profiles
+  set total_points = coalesce(total_points, 0) + amount
+  where id = user_id;
+end;
+$$;

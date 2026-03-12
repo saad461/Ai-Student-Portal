@@ -219,9 +219,6 @@ export async function logActivityAction(type: string, details: any = {}, url?: s
 }
 
 export async function createNotificationAction(studentId: string, title: string, message: string, type: 'info' | 'success' | 'warning' | 'achievement' = 'info') {
-  const isAdmin = await authorizeAdmin();
-  if (!isAdmin) return { success: false, error: 'Unauthorized' };
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false };

@@ -20,7 +20,7 @@ export function SkillShop({ skillPoints, onPurchase }: SkillShopProps) {
 
   const handleBuy = (item: ShopItem) => {
     if (skillPoints < item.price) {
-      error(`You need ${item.price - skillPoints} more Skill Points!`);
+      error(`You need ${item.price - skillPoints} more Sparks!`);
       return;
     }
     onPurchase(item);
@@ -62,9 +62,9 @@ export function SkillShop({ skillPoints, onPurchase }: SkillShopProps) {
                        <Sparkles className="h-6 w-6" />
                     </div>
                     <div>
-                       <h2 className="text-xl font-black uppercase tracking-tighter">Skill Shop</h2>
+                       <h2 className="text-xl font-black uppercase tracking-tighter">Spark Shop</h2>
                        <div className="flex items-center gap-1 text-xs font-bold opacity-90">
-                          <Zap className="h-3 w-3 fill-white" /> {skillPoints} Available Points
+                          <Zap className="h-3 w-3 fill-white" /> {skillPoints} Available Sparks
                        </div>
                     </div>
                  </div>
@@ -96,7 +96,7 @@ export function SkillShop({ skillPoints, onPurchase }: SkillShopProps) {
                            variant={skillPoints >= item.price ? "default" : "secondary"}
                            className="w-full mt-4 h-10 font-bold text-xs uppercase"
                          >
-                            {skillPoints >= item.price ? 'Purchase Item' : 'Insufficient Points'}
+                            {skillPoints >= item.price ? 'Purchase Item' : 'Insufficient Sparks'}
                          </Button>
                       </CardContent>
                    </Card>
