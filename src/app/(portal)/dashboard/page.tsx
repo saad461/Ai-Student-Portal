@@ -488,11 +488,11 @@ export default function DashboardPage() {
                       <KnowledgeRadar
                         size={240}
                         data={[
-                          { label: 'HTML', value: Math.min(100, (submissions.filter(s => s.curriculum_id.startsWith('m1')).length / 10) * 100) },
-                          { label: 'CSS', value: 45 },
-                          { label: 'JS', value: 30 },
-                          { label: 'AI', value: 10 },
-                          { label: 'LOGIC', value: 60 },
+                          { label: 'HTML', value: Math.min(100, (submissions.filter(s => s.curriculum_id.includes('html')).length / 5) * 100 || 20) },
+                          { label: 'CSS', value: Math.min(100, (submissions.filter(s => s.curriculum_id.includes('css')).length / 5) * 100 || 15) },
+                          { label: 'JS', value: Math.min(100, (submissions.filter(s => s.curriculum_id.includes('js')).length / 5) * 100 || 10) },
+                          { label: 'AI', value: Math.min(100, (submissions.filter(s => s.curriculum_id.includes('ai')).length / 3) * 100 || 5) },
+                          { label: 'LOGIC', value: Math.min(100, (submissions.filter(s => s.status === 'reviewed').length / 10) * 100 || 30) },
                         ]}
                       />
                    </div>

@@ -9,16 +9,22 @@ interface CodeCompilerProps {
   initialHtml?: string;
   initialCss?: string;
   initialJs?: string;
+  onChange?: (codes: { html: string; css: string; js: string }) => void;
 }
 
 export function CodeCompiler({
   initialHtml = '<h1>Hello World</h1>',
   initialCss = 'h1 { color: blue; }',
-  initialJs = 'console.log("Compiler active!");'
+  initialJs = 'console.log("Compiler active!");',
+  onChange
 }: CodeCompilerProps) {
   const [html, setHtml] = useState(initialHtml);
   const [css, setCss] = useState(initialCss);
   const [js, setJs] = useState(initialJs);
+
+  useEffect(() => {
+    onChange?.({ html, css, js });
+  }, [html, css, js, onChange]);
   const [output, setOutput] = useState('');
   const [activeTab, setActiveTab] = useState<'html' | 'css' | 'js'>('html');
   const [copied, setCopied] = useState(false);
