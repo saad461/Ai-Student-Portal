@@ -941,7 +941,7 @@ export default function AdminDashboard() {
                             </div>
                          </div>
                        ))}
-                       {(!viewingStudent as any)?.student_activity?.length && (
+                       {!viewingStudent?.student_activity?.length && (
                           <div className="text-center py-12 text-muted-foreground italic">No activity recorded yet.</div>
                        )}
                     </div>

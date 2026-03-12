@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Zap, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { Target, Zap, CheckCircle2, Loader2, Sparkles, Code2, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import confetti from 'canvas-confetti';
 
 interface Bounty {
@@ -26,7 +28,10 @@ const BOUNTIES: Bounty[] = [
 export function DailyBounty({ onComplete }: { onComplete: (reward: number) => void }) {
   const [bounty, setBounty] = useState<Bounty | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isVerifyOpen, setIsVerifyOpen] = useState(false);
+  const [userCode, setUserCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
     // Select bounty based on day of the month
@@ -38,15 +43,32 @@ export function DailyBounty({ onComplete }: { onComplete: (reward: number) => vo
   }, []);
 
   const handleComplete = async () => {
+    if (!userCode.trim()) return;
     setLoading(true);
-    // Simulate verification
-    await new Promise(r => setTimeout(r, 1500));
+    setVerifyError(null);
 
-    setIsCompleted(true);
-    localStorage.setItem(`bounty_completed_${new Date().toLocaleDateString('en-CA')}`, 'true');
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    onComplete(bounty?.reward || 0);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/verify-bounty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: userCode, task: bounty?.task })
+      });
+      const data = await res.json();
+
+      if (data.isValid) {
+        setIsCompleted(true);
+        localStorage.setItem(`bounty_completed_${new Date().toLocaleDateString('en-CA')}`, 'true');
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        onComplete(bounty?.reward || 0);
+        setIsVerifyOpen(false);
+      } else {
+        setVerifyError(data.feedback || "Requirement not met. Please check your code.");
+      }
+    } catch (err) {
+      setVerifyError("Verification service unavailable.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!bounty) return null;
@@ -79,8 +101,8 @@ export function DailyBounty({ onComplete }: { onComplete: (reward: number) => vo
                +{bounty.reward} XP
             </div>
             {!isCompleted ? (
-              <Button size="sm" onClick={handleComplete} disabled={loading} className="font-bold px-4">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Claim Reward'}
+              <Button size="sm" onClick={() => setIsVerifyOpen(true)} className="font-bold px-4">
+                Claim Reward
               </Button>
             ) : (
               <div className="text-green-600 flex items-center gap-1 font-bold text-sm">
@@ -89,6 +111,46 @@ export function DailyBounty({ onComplete }: { onComplete: (reward: number) => vo
             )}
          </div>
       </CardContent>
+
+      <Dialog open={isVerifyOpen} onOpenChange={setIsVerifyOpen}>
+        <DialogContent className="sm:max-w-2xl">
+           <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                 <Code2 className="h-5 w-5 text-primary" /> Verify Daily Bounty
+              </DialogTitle>
+              <DialogDescription>
+                 To claim your <strong>{bounty.reward} XP</strong>, paste the code snippet you wrote for:
+                 <span className="block mt-2 p-2 bg-muted rounded italic font-medium">"{bounty.task}"</span>
+              </DialogDescription>
+           </DialogHeader>
+
+           <div className="space-y-4 py-4">
+              <Textarea
+                placeholder="Paste your code here..."
+                className="font-mono text-xs min-h-[200px]"
+                value={userCode}
+                onChange={(e) => setUserCode(e.target.value)}
+              />
+              {verifyError && (
+                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-xs text-destructive flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <p>{verifyError}</p>
+                 </div>
+              )}
+           </div>
+
+           <DialogFooter>
+              <Button variant="ghost" onClick={() => setIsVerifyOpen(false)}>Cancel</Button>
+              <Button
+                onClick={handleComplete}
+                disabled={loading || !userCode.trim()}
+                className="font-black uppercase tracking-widest"
+              >
+                 {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analyzing...</> : 'Submit for Review'}
+              </Button>
+           </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
