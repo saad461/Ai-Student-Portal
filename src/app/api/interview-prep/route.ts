@@ -1,13 +1,13 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+import { generateAIResponse } from "@/lib/ai-service";
 
 export async function POST(req: Request) {
   try {
-    const { messages, currentModule } = await req.json();
+    const { messages, currentModule, isFinal } = await req.json();
 
-    const systemPrompt = `
+    const systemPrompt = isFinal
+      ? `You are a technical interview evaluator. Based on the conversation history, provide a detailed score (0-100) and constructive feedback on the student's performance regarding ${currentModule}.`
+      : `
       You are an expert technical interviewer for a software engineering position.
       The student is currently learning ${currentModule}.
       Conduct a professional, encouraging, but rigorous mock interview.
@@ -15,54 +15,23 @@ export async function POST(req: Request) {
       Keep your responses professional and focused on the technical aspects of ${currentModule}.
     `;
 
-    const chatHistory = messages.map((m: any) => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.content
-    }));
+    const prompt = isFinal
+      ? `Evaluate the following interview session for ${currentModule}:\n\n${(messages || []).map((m: any) => `${m.role === 'assistant' ? 'Interviewer' : 'Student'}: ${m.content}`).join('\n')}`
+      : `
+      Current Module: ${currentModule}
 
-    if (process.env.GROQ_API_KEY) {
-       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-         method: "POST",
-         headers: {
-           "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-           "Content-Type": "application/json"
-         },
-         body: JSON.stringify({
-           model: "llama-3.3-70b-versatile",
-           messages: [
-             { role: "system", content: systemPrompt },
-             ...chatHistory
-           ],
-           temperature: 0.7,
-           max_tokens: 1024
-         })
-       });
-       const data = await res.json();
-       if (data.choices && data.choices[0]) {
-         return NextResponse.json({ answer: data.choices[0].message.content });
-       }
-    }
+      Conversation History:
+      ${(messages || []).map((m: any) => `${m.role === 'assistant' ? 'Interviewer' : 'Student'}: ${m.content}`).join('\n')}
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({
-        answer: "I'm your AI Interviewer. (Note: API Key is missing, this is a simulated response). Tell me about your experience with " + currentModule
-      });
-    }
+      Provide the next question or response as the Interviewer.
+    `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const result = await model.generateContent({
-      contents: [
-        { role: 'user', parts: [{ text: systemPrompt }] },
-        ...messages.map((m: any) => ({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }]
-        }))
-      ]
-    });
-    const response = await result.response;
-    return NextResponse.json({ answer: response.text() });
+    const answer = await generateAIResponse(prompt, systemPrompt);
+    return NextResponse.json({ answer });
   } catch (error) {
     console.error("Interview Prep AI Error:", error);
-    return NextResponse.json({ error: "Failed to generate response" }, { status: 500 });
+    return NextResponse.json({
+      answer: "I'm having a bit of trouble connecting to the interview server. Let's try that again."
+    });
   }
 }

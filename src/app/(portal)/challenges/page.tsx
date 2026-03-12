@@ -222,14 +222,11 @@ export default function ChallengesPage() {
            </div>
 
            <div className="lg:col-span-2 flex flex-col gap-6">
-              <div className="flex-1 bg-background border-2 rounded-[2rem] overflow-hidden flex flex-col shadow-2xl">
-                 <div className="flex-1 relative">
-                    <textarea
-                      className="absolute inset-0 w-full h-full bg-slate-950 text-blue-400 p-8 font-mono text-sm resize-none focus:outline-none"
-                      defaultValue={challenge.initial_code?.js || '// Write your solution here...'}
-                      onChange={(e) => setCurrentCode(e.target.value)}
-                    />
-                 </div>
+              <div className="flex-1 bg-background rounded-[2rem] overflow-hidden flex flex-col shadow-2xl">
+                 <CodeCompiler
+                   initialJs={challenge.initial_code?.js || '// Write your solution here...'}
+                   onChange={(codes) => setCurrentCode(codes.js || '')}
+                 />
               </div>
               <Button
                 size="lg"

@@ -34,6 +34,8 @@ export default function InterviewPrepPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [currentModule, setCurrentModule] = useState<string>('Introduction');
   const [interviewStarted, setInterviewStarted] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,6 +81,15 @@ export default function InterviewPrepPage() {
     setIsTyping(false);
   };
 
+  const speak = (text: string) => {
+    if (!isVoiceEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const handleSend = async () => {
     if (!userInput.trim()) return;
 
@@ -102,11 +113,46 @@ export default function InterviewPrepPage() {
       const data = await res.json();
       if (data.answer) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+        speak(data.answer);
       }
     } catch (err) {
       toastError('Failed to get AI response.');
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const endInterview = async () => {
+    if (messages.length < 3) {
+      setInterviewStarted(false);
+      setMessages([]);
+      return;
+    }
+
+    setIsEnding(true);
+    setIsTyping(true);
+
+    try {
+      const res = await fetch('/api/interview-prep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          currentModule,
+          isFinal: true
+        })
+      });
+
+      const data = await res.json();
+      if (data.answer) {
+        setMessages(prev => [...prev, { role: 'assistant', content: `### INTERVIEW EVALUATION\n\n${data.answer}` }]);
+      }
+      success("Interview evaluation complete!");
+    } catch (err) {
+      toastError("Failed to generate evaluation.");
+    } finally {
+      setIsTyping(false);
+      setIsEnding(true);
     }
   };
 
@@ -122,11 +168,46 @@ export default function InterviewPrepPage() {
              Targeting Skills: <Badge variant="secondary" className="font-black uppercase">{currentModule}</Badge>
            </p>
         </div>
-        {!interviewStarted && (
-          <Button size="lg" className="h-14 px-8 font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-105 transition-all" onClick={startInterview}>
-            Start Mock Interview <Play className="h-5 w-5 ml-2 fill-current" />
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {interviewStarted && !isEnding && (
+            <Button
+              variant={isVoiceEnabled ? "default" : "outline"}
+              size="icon"
+              className="h-14 w-14 rounded-2xl"
+              onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+              title={isVoiceEnabled ? "Disable Voice" : "Enable Voice"}
+            >
+              <Mic className={cn("h-6 w-6", isVoiceEnabled && "animate-pulse")} />
+            </Button>
+          )}
+          {interviewStarted && !isEnding && (
+            <Button
+              variant="destructive"
+              className="h-14 px-6 font-black uppercase rounded-2xl"
+              onClick={endInterview}
+            >
+              End Interview
+            </Button>
+          )}
+          {isEnding && (
+            <Button
+              variant="outline"
+              className="h-14 px-6 font-black uppercase rounded-2xl"
+              onClick={() => {
+                setInterviewStarted(false);
+                setIsEnding(false);
+                setMessages([]);
+              }}
+            >
+              New Session
+            </Button>
+          )}
+          {!interviewStarted && (
+            <Button size="lg" className="h-14 px-8 font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-105 transition-all" onClick={startInterview}>
+              Start Mock Interview <Play className="h-5 w-5 ml-2 fill-current" />
+            </Button>
+          )}
+        </div>
       </header>
 
       {!interviewStarted ? (
@@ -189,20 +270,22 @@ export default function InterviewPrepPage() {
                )}
              </div>
 
-             <div className="p-6 bg-background/50 backdrop-blur-md border-t">
-                <div className="flex gap-4">
-                   <Input
-                     placeholder="Type your response..."
-                     className="h-14 rounded-2xl border-2 focus:border-primary text-lg px-6"
-                     value={userInput}
-                     onChange={(e) => setUserInput(e.target.value)}
-                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                   />
-                   <Button onClick={handleSend} size="icon" className="h-14 w-14 shrink-0 rounded-2xl shadow-xl shadow-primary/20">
-                      <ArrowRight className="h-6 w-6" />
-                   </Button>
+             {!isEnding && (
+                <div className="p-6 bg-background/50 backdrop-blur-md border-t">
+                  <div className="flex gap-4">
+                    <Input
+                      placeholder="Type your response..."
+                      className="h-14 rounded-2xl border-2 focus:border-primary text-lg px-6"
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    />
+                    <Button onClick={handleSend} size="icon" className="h-14 w-14 shrink-0 rounded-2xl shadow-xl shadow-primary/20">
+                        <ArrowRight className="h-6 w-6" />
+                    </Button>
+                  </div>
                 </div>
-             </div>
+             )}
           </div>
         </div>
       )}
