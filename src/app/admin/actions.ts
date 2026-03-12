@@ -158,6 +158,15 @@ export async function reviewSubmissionAction(submissionId: string, feedback: str
     .eq('id', submissionId)
     .select();
 
+  if (!error && data?.[0]) {
+    await createNotificationAction(
+      data[0].student_id,
+      'Submission Reviewed',
+      `Your assignment has been reviewed with a score of ${score}/100.`,
+      status === 'passed' ? 'success' : 'warning'
+    );
+  }
+
   return { success: !error, data: data?.[0], error };
 }
 
@@ -173,6 +182,59 @@ export async function deleteModuleAction(id: string) {
 
   const { error } = await supabaseAdmin
     .from('modules').delete().eq('id', id);
+
+  return { success: !error, error };
+}
+
+export async function logActivityAction(type: string, details: any = {}, url?: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return { success: false };
+
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {}
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false };
+
+  const { error } = await supabase
+    .from('student_activity')
+    .insert({
+      student_id: user.id,
+      activity_type: type,
+      details,
+      page_url: url
+    });
+
+  return { success: !error };
+}
+
+export async function createNotificationAction(studentId: string, title: string, message: string, type: 'info' | 'success' | 'warning' | 'achievement' = 'info') {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .insert({
+      student_id: studentId,
+      title,
+      message,
+      type
+    });
 
   return { success: !error, error };
 }

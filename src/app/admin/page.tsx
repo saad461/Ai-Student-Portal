@@ -73,7 +73,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff } from 'lucide-react';
 
 interface Resource {
   id?: string;
@@ -115,6 +115,7 @@ interface StudentProfile {
   enrollment_date: string;
   is_pro: boolean;
   submissions: StudentSubmission[];
+  student_activity?: any[];
 }
 
 interface SorryMessage {
@@ -145,6 +146,7 @@ export default function AdminDashboard() {
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
+  const [studentTab, setStudentTab] = useState<'submissions' | 'activity'>('submissions');
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
   const [editingModule, setEditingModule] = useState<Partial<Module> | null>(null);
   const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
@@ -161,7 +163,7 @@ export default function AdminDashboard() {
     setLoading(true);
     const { data: profiles } = await supabase
       .from('profiles')
-      .select(`*, submissions (*)`);
+      .select(`*, submissions (*), student_activity (*)`);
 
     setStudents((profiles as unknown as StudentProfile[]) || []);
 
@@ -836,54 +838,115 @@ export default function AdminDashboard() {
 
         <Dialog open={!!viewingStudent} onOpenChange={(open) => !open && setViewingStudent(null)}>
           <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Student Profile: {viewingStudent?.full_name}</DialogTitle></DialogHeader>
-            <div className="space-y-8 py-4">
-              <div className="space-y-4">
-                 <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter"><Send className="h-5 w-5" /> Recent Submissions</h3>
-                 <div className="grid grid-cols-1 gap-4">
-                    {viewingStudent?.submissions?.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map((sub) => (
-                      <Card key={sub.id} className="overflow-hidden">
-                         <CardHeader className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-row justify-between items-center border-b">
-                            <div className="flex gap-2 items-center">
-                               <Badge variant="outline">{sub.curriculum_id}</Badge>
-                               <span className="text-xs font-bold text-muted-foreground">{new Date(sub.submitted_at).toLocaleString()}</span>
-                            </div>
-                            <div className="flex gap-2">
-                               {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><GithubIcon className="h-3 w-3 mr-2" /> Repo</a></Button>}
-                               <Badge className={cn(
-                                 sub.status === 'reviewed' ? 'bg-green-600' : 'bg-amber-500'
-                               )}>{sub.status.toUpperCase()}</Badge>
-                            </div>
-                         </CardHeader>
-                         <CardContent className="p-4 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                               <div className="space-y-2">
-                                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">AI Feedback & Grade</Label>
-                                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 text-xs font-medium italic min-h-[60px]">
-                                     {sub.ai_feedback || "No AI feedback yet. Grade this submission to trigger AI review."}
+            <DialogHeader>
+               <div className="flex justify-between items-center pr-8">
+                  <DialogTitle>Student Profile: {viewingStudent?.full_name}</DialogTitle>
+                  <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                     <Button
+                        variant={studentTab === 'submissions' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="text-xs font-bold"
+                        onClick={() => setStudentTab('submissions')}
+                     >Submissions</Button>
+                     <Button
+                        variant={studentTab === 'activity' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="text-xs font-bold"
+                        onClick={() => setStudentTab('activity')}
+                     >Activity Log</Button>
+                  </div>
+               </div>
+            </DialogHeader>
+
+            <div className="py-4">
+              {studentTab === 'submissions' ? (
+                 <div className="space-y-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter"><Send className="h-5 w-5" /> Recent Submissions</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                       {viewingStudent?.submissions?.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map((sub) => (
+                         <Card key={sub.id} className="overflow-hidden">
+                            <CardHeader className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-row justify-between items-center border-b">
+                               <div className="flex gap-2 items-center">
+                                  <Badge variant="outline">{sub.curriculum_id}</Badge>
+                                  <span className="text-xs font-bold text-muted-foreground">{new Date(sub.submitted_at).toLocaleString()}</span>
+                               </div>
+                               <div className="flex gap-2">
+                                  {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><GithubIcon className="h-3 w-3 mr-2" /> Repo</a></Button>}
+                                  <Badge className={cn(
+                                    sub.status === 'reviewed' ? 'bg-green-600' : 'bg-amber-500'
+                                  )}>{sub.status.toUpperCase()}</Badge>
+                               </div>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-4">
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">AI Feedback & Grade</Label>
+                                     <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 text-xs font-medium italic min-h-[60px]">
+                                        {sub.ai_feedback || "No AI feedback yet. Grade this submission to trigger AI review."}
+                                     </div>
+                                  </div>
+                                  <div className="flex flex-col justify-center items-center p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border">
+                                     <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">AI Score</div>
+                                     <div className="text-4xl font-black text-primary">{sub.ai_score || 0}<span className="text-lg text-muted-foreground">/100</span></div>
                                   </div>
                                </div>
-                               <div className="flex flex-col justify-center items-center p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border">
-                                  <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">AI Score</div>
-                                  <div className="text-4xl font-black text-primary">{sub.ai_score || 0}<span className="text-lg text-muted-foreground">/100</span></div>
+                               <div className="flex justify-end gap-2 border-t pt-4">
+                                  <Button variant="outline" size="sm" onClick={async () => {
+                                     const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
+                                     if (res.success) {
+                                        success('AI Review generated!');
+                                        fetchAdminData();
+                                     }
+                                  }}>
+                                    <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
+                                  </Button>
                                </div>
-                            </div>
-                            <div className="flex justify-end gap-2 border-t pt-4">
-                               <Button variant="outline" size="sm" onClick={async () => {
-                                  const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
-                                  if (res.success) {
-                                     success('AI Review generated!');
-                                     fetchAdminData();
-                                  }
-                               }}>
-                                 <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
-                               </Button>
-                            </div>
-                         </CardContent>
-                      </Card>
-                    ))}
+                            </CardContent>
+                         </Card>
+                       ))}
+                    </div>
                  </div>
-              </div>
+              ) : (
+                 <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                       <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter"><MousePointer2 className="h-5 w-5" /> Activity Timeline</h3>
+                       <Badge variant="outline">{viewingStudent?.student_activity?.length || 0} Events Logged</Badge>
+                    </div>
+
+                    <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 pl-8 space-y-8">
+                       {viewingStudent?.student_activity?.sort((a:any, b:any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((act: any) => (
+                         <div key={act.id} className="relative">
+                            <div className={cn(
+                               "absolute -left-[41px] top-0 h-6 w-6 rounded-full border-4 border-background flex items-center justify-center",
+                               act.activity_type === 'login' ? "bg-blue-500" :
+                               act.activity_type === 'tab_switch' ? "bg-orange-500" : "bg-emerald-500"
+                            )}>
+                               {act.activity_type === 'login' ? <LogIn className="h-3 w-3 text-white" /> :
+                                act.activity_type === 'tab_switch' ? <MonitorOff className="h-3 w-3 text-white" /> :
+                                <MousePointer2 className="h-3 w-3 text-white" />}
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border">
+                               <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                     <span className="text-xs font-black uppercase tracking-widest text-primary">{act.activity_type.replace('_', ' ')}</span>
+                                     <h4 className="font-bold text-sm">{act.page_url || '/'}</h4>
+                                  </div>
+                                  <span className="text-[10px] font-medium text-muted-foreground">{new Date(act.created_at).toLocaleString()}</span>
+                               </div>
+                               {act.details && Object.keys(act.details).length > 0 && (
+                                  <div className="text-[10px] bg-white dark:bg-black p-2 rounded border font-mono opacity-80">
+                                     {JSON.stringify(act.details)}
+                                  </div>
+                               )}
+                            </div>
+                         </div>
+                       ))}
+                       {(!viewingStudent as any)?.student_activity?.length && (
+                          <div className="text-center py-12 text-muted-foreground italic">No activity recorded yet.</div>
+                       )}
+                    </div>
+                 </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
