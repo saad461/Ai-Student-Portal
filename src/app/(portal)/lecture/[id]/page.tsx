@@ -26,7 +26,9 @@ import {
   List,
   Clock,
   Link as LinkIcon,
-  Terminal
+  Terminal,
+  Zap,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';

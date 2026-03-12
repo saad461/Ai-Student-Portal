@@ -43,6 +43,15 @@ export function MentalMath() {
       generateProblem();
     } else {
       setIsPlaying(false);
+      handleGameOver();
+    }
+  };
+
+  const handleGameOver = async () => {
+    if (score >= 10) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Mental Math: Score ${score}`, 'game', `math-${today}`);
     }
   };
 
@@ -71,6 +80,7 @@ export function MentalMath() {
                 </Button>
               ))}
            </div>
+           <Button variant="link" className="text-xs text-red-400 p-0 h-auto font-black uppercase mt-8" onClick={() => { setIsPlaying(false); handleGameOver(); }}>End Game</Button>
         </div>
       )}
     </div>
