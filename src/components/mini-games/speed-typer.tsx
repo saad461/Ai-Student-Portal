@@ -25,7 +25,7 @@ export function SpeedTyper() {
   }, [isPlaying, timeLeft]);
 
   const handleGameOver = async () => {
-    if (score >= 10) {
+    if (score >= 15) {
       const { rewardStudentAction } = await import('@/app/admin/actions');
       const today = new Date().toLocaleDateString('en-CA');
       await rewardStudentAction(5, `Speed Typer: Score ${score}`, 'game', `typer-${today}`);

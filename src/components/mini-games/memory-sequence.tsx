@@ -41,7 +41,7 @@ export function MemorySequence() {
   };
 
   const handleMemoryGameOver = async (level: number) => {
-    if (level >= 5) {
+    if (level >= 8) {
       const { rewardStudentAction } = await import('@/app/admin/actions');
       const today = new Date().toLocaleDateString('en-CA');
       await rewardStudentAction(10, `Memory Sequence: Lvl ${level}`, 'game', `memory-${today}`);
