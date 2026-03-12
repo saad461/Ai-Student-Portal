@@ -230,6 +230,7 @@ export default function DashboardPage() {
           { id: 'pro-unlocked', title: 'Elite Status', unlocked: profile.is_pro },
           { id: 'deep-worker', title: 'Deep Worker', unlocked: totalFocusMinutes >= 600 },
           { id: 'quiz-master', title: 'Quiz Master', unlocked: submissions.some(s => s.completion_data?.quiz_score === 100) },
+          { id: 'git-expert', title: 'Git Expert', unlocked: submissions.some(s => s.curriculum_id.toLowerCase().includes('git') && s.status === 'submitted') },
        ];
 
        const newUnlocks = achievements.filter(a => a.unlocked && !profile.achievements?.includes(a.id));

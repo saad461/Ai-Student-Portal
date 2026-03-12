@@ -11,9 +11,11 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 interface QuizModuleProps {
   questions: QuizQuestion[];
   onComplete: (score: number) => void;
+  canRetake?: boolean;
+  onRetake?: () => void;
 }
 
-export function QuizModule({ questions, onComplete }: QuizModuleProps) {
+export function QuizModule({ questions, onComplete, canRetake, onRetake }: QuizModuleProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -53,6 +55,16 @@ export function QuizModule({ questions, onComplete }: QuizModuleProps) {
           <p className="text-muted-foreground text-lg">
             You got {score} out of {questions.length} questions correct.
           </p>
+
+          {canRetake && percentage < 80 && (
+            <div className="p-4 bg-primary/5 border border-primary/10 rounded-2xl space-y-3">
+               <p className="text-xs font-bold text-primary uppercase tracking-widest">Retake Available!</p>
+               <Button onClick={onRetake} className="w-full font-black uppercase">
+                  Use Quiz Retake Perk
+               </Button>
+            </div>
+          )}
+
           <div className="space-y-4 mt-6 text-left">
             {questions.map((q, idx) => (
               <div key={idx} className="p-3 border rounded-md">

@@ -83,39 +83,27 @@ export default function ShopPage() {
   };
 
   const handlePurchase = async (id: string, type: 'resource' | 'course' | 'perk', price: number, name: string) => {
-    if ((profile?.total_points || 0) < price) {
-      toastError(`Insufficient points! You need ${price - profile.total_points} more points.`);
+    const currentSparks = Math.floor((profile?.total_points || 0) / 10);
+    if (currentSparks < price) {
+      toastError(`Insufficient Sparks! You need ${price - currentSparks} more Sparks.`);
       return;
     }
 
     setLoading(true);
     try {
-      // 1. Deduct Points
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ total_points: profile.total_points - price })
-        .eq('id', profile.id);
+      // Use the verified server action for all shop transactions
+      const { purchaseShopItemAction } = await import('@/app/admin/actions');
+      const res = await purchaseShopItemAction(id, price);
 
-      if (updateError) throw updateError;
-
-      // 2. Grant Access
-      if (type === 'resource') {
-        await supabase.from('user_resources').insert({ user_id: profile.id, resource_id: id });
-        setMyResources([...myResources, id]);
-      } else if (type === 'course') {
-        await supabase.from('user_courses').insert({ user_id: profile.id, course_id: id, status: 'unlocked' });
-        setMyCourses([...myCourses, id]);
+      if (res.success) {
+        success(`Successfully purchased ${name}!`);
+        // Update local state immediately for better UX
+        if (type === 'resource') setMyResources([...myResources, id]);
+        if (type === 'course') setMyCourses([...myCourses, id]);
+        fetchData();
       } else {
-        // Handle perks (streak freeze, booster)
-        await supabase.from('user_perks').insert({
-           user_id: profile.id,
-           perk_id: id,
-           is_active: true
-        });
+        toastError(res.error || 'Transaction failed.');
       }
-
-      success(`Successfully purchased ${name}!`);
-      fetchData(); // Refresh balance
     } catch (err) {
       toastError('Transaction failed. Please try again.');
     } finally {
@@ -131,9 +119,9 @@ export default function ShopPage() {
          <div className="relative z-10 space-y-2">
             <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4">
                <ShoppingCart className="h-12 w-12 text-primary" />
-               SKILL STORE
+               SPARK SHOP
             </h1>
-            <p className="text-slate-400 font-bold text-lg max-w-md leading-tight">Invest your earned points into premium growth assets and boosters.</p>
+            <p className="text-slate-400 font-bold text-lg max-w-md leading-tight">Invest your Student Sparks into premium growth assets and boosters.</p>
          </div>
 
          <div className="relative z-10 bg-white/10 backdrop-blur-2xl border border-white/20 p-8 rounded-3xl flex items-center gap-6 shadow-2xl">
@@ -141,8 +129,8 @@ export default function ShopPage() {
                <Zap className="h-10 w-10 fill-current" />
             </div>
             <div>
-               <div className="text-xs font-black uppercase tracking-widest text-slate-400">Total Balance</div>
-               <div className="text-4xl font-black text-white tabular-nums">{profile?.total_points || 0} <span className="text-sm opacity-50">PTS</span></div>
+               <div className="text-xs font-black uppercase tracking-widest text-slate-400">Total Sparks</div>
+               <div className="text-4xl font-black text-white tabular-nums">{Math.floor((profile?.total_points || 0) / 10)} <span className="text-sm opacity-50">SPARKS</span></div>
             </div>
          </div>
 
@@ -276,7 +264,7 @@ export default function ShopPage() {
                           <Zap className="h-5 w-5 fill-amber-500" /> {perk.price}
                        </div>
                        <Button variant="secondary" className="w-full h-12 rounded-xl font-black uppercase tracking-tighter group-hover:bg-amber-500 group-hover:text-white transition-colors" onClick={() => handlePurchase(perk.id, 'perk', perk.price, perk.name)}>
-                          Activate Perk
+                          Purchase Perk
                        </Button>
                     </div>
                  </Card>
