@@ -24,7 +24,7 @@ export function ReflexMaster() {
 
   const handleGameOver = async () => {
     if (score > highScore) setHighScore(score);
-    if (score >= 15) {
+    if (score >= 25) {
       const { rewardStudentAction } = await import('@/app/admin/actions');
       const today = new Date().toLocaleDateString('en-CA');
       await rewardStudentAction(5, `Reflex Master: Score ${score}`, 'game', `reflex-${today}`);

@@ -18,9 +18,13 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
   const doc = new jsPDF();
 
   if (isPremium) {
-     // Apply some premium styles (mocked for now)
+     // Premium Background Gradient Effect
      doc.setFillColor(240, 240, 255);
      doc.rect(0, 0, 210, 297, 'F');
+
+     // Decorative accent for premium
+     doc.setFillColor(60, 80, 255);
+     doc.rect(0, 0, 10, 297, 'F');
   }
   const primaryColor = [0, 0, 0]; // Black for professional look
 
