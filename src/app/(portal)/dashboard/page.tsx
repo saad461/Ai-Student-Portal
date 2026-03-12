@@ -82,6 +82,12 @@ interface Submission {
   curriculum_id: string;
   github_url: string;
   status: string;
+  completion_data?: {
+    theory_read?: boolean;
+    quiz_completed?: boolean;
+    quiz_score?: number;
+    assignment_submitted?: boolean;
+  };
 }
 
 interface ExtraTask {
@@ -212,6 +218,44 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Handle Achievement Unlocks
+  useEffect(() => {
+    if (!profile) return;
+
+    const checkAchievements = async () => {
+       const achievements = [
+          { id: 'streak-7', title: '7 Day Streak', unlocked: (profile.current_streak || 0) >= 7 },
+          { id: 'first-submission', title: 'First Steps', unlocked: submissions.some(s => s.status === 'submitted') },
+          { id: 'pro-unlocked', title: 'Elite Status', unlocked: profile.is_pro },
+          { id: 'deep-worker', title: 'Deep Worker', unlocked: totalFocusMinutes >= 600 },
+          { id: 'quiz-master', title: 'Quiz Master', unlocked: submissions.some(s => s.completion_data?.quiz_score === 100) },
+       ];
+
+       const newUnlocks = achievements.filter(a => a.unlocked && !profile.achievements?.includes(a.id));
+
+       if (newUnlocks.length > 0) {
+          const updatedAchievements = [...(profile.achievements || []), ...newUnlocks.map(a => a.id)];
+
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          // Update Profile
+          await supabase.from('profiles').update({ achievements: updatedAchievements }).eq('id', user.id);
+
+          // Trigger Notifications & Confetti
+          for (const ach of newUnlocks) {
+             const { createNotificationAction } = await import('@/app/admin/actions');
+             await createNotificationAction(user.id, 'Achievement Unlocked!', `You've earned the "${ach.title}" badge!`, 'achievement');
+             success(`Unlocked Achievement: ${ach.title}`);
+          }
+          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+          fetchData();
+       }
+    };
+
+    checkAchievements();
+  }, [profile, submissions, totalFocusMinutes, success, fetchData]);
 
   const handleSubmitAssignment = async (curriculumId: string) => {
     setSubmittingId(curriculumId);
@@ -378,13 +422,13 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-primary/5 border-primary/10">
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">XP Points</CardTitle>
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total XP</CardTitle>
                 <div className="text-xl font-black text-primary">{profile?.total_points || 0}</div>
               </CardHeader>
             </Card>
             <Card className="bg-amber-500/5 border-amber-500/10">
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Skill Points</CardTitle>
+                <CardTitle className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Student Sparks</CardTitle>
                 <div className="text-xl font-black text-amber-600 flex items-center gap-1">
                    <Zap className="h-4 w-4 fill-amber-500" />
                    {getSkillPoints(profile?.total_points || 0)}
@@ -427,7 +471,15 @@ export default function DashboardPage() {
                   { id: 'quiz-master', title: 'Quiz Master', icon: Star, color: 'text-yellow-500', desc: 'Perfect quiz score' },
                   { id: 'git-expert', title: 'Git Expert', icon: Github, color: 'text-slate-400', desc: 'Completed Git Mastery' },
                 ].map(badge => {
-                  const isUnlocked = profile?.achievements?.includes(badge.id) || (badge.id === 'pro-unlocked' && profile?.is_pro) || (badge.id === 'streak-7' && (profile?.current_streak || 0) >= 7);
+                  const isUnlocked =
+                    profile?.achievements?.includes(badge.id) ||
+                    (badge.id === 'pro-unlocked' && profile?.is_pro) ||
+                    (badge.id === 'streak-7' && (profile?.current_streak || 0) >= 7) ||
+                    (badge.id === 'first-submission' && submissions.some(s => s.status === 'submitted')) ||
+                    (badge.id === 'deep-worker' && totalFocusMinutes >= 600) || // 10 hours
+                    (badge.id === 'quiz-master' && submissions.some(s => s.completion_data?.quiz_score === 100)) ||
+                    (badge.id === 'git-expert' && submissions.some(s => s.curriculum_id.toLowerCase().includes('git') && s.status === 'submitted'));
+
                   return (
                     <Card key={badge.id} className={cn("relative group transition-all duration-500", !isUnlocked && "opacity-40 grayscale")}>
                        <CardContent className="p-4 flex flex-col items-center text-center gap-2">
