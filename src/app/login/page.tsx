@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { Captcha } from '@/components/captcha';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 import { safeEncode, safeDecode } from '@/lib/auth-utils';
+import { logActivityAction } from '../admin/actions';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -97,6 +98,7 @@ export default function LoginPage() {
         localStorage.removeItem('login_remember');
       }
 
+      await logActivityAction('login', { method: 'email_pin' }, '/login');
       router.push('/dashboard');
     } catch (err: unknown) {
       console.error('Login error:', err);

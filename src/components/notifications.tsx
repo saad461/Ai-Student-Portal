@@ -42,20 +42,37 @@ export function NotificationBell() {
      const { data: { user } } = await supabase.auth.getUser();
      if (!user) return;
 
-     // Simulate notifications for now since table might not exist yet
-     const dummy: Notification[] = [
-        { id: '1', title: 'Achievement Unlocked!', message: 'You earned the "7-Day Streak" badge.', type: 'achievement', read: false, created_at: new Date().toISOString() },
-        { id: '2', title: 'Review Completed', message: 'Your assignment "HTML Basics" has been reviewed.', type: 'success', read: true, created_at: new Date(Date.now() - 86400000).toISOString() },
-        { id: '3', title: 'System Update', message: 'The interactive compiler now supports React.', type: 'info', read: false, created_at: new Date(Date.now() - 3600000).toISOString() },
-     ];
-     setNotifications(dummy);
+     const { data } = await supabase
+       .from('notifications')
+       .select('*')
+       .eq('student_id', user.id)
+       .order('created_at', { ascending: false })
+       .limit(20);
+
+     setNotifications(data || []);
   };
 
-  const markAllRead = () => {
-     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllRead = async () => {
+     const { data: { user } } = await supabase.auth.getUser();
+     if (!user) return;
+
+     await supabase
+       .from('notifications')
+       .update({ read: true })
+       .eq('student_id', user.id);
+
+     fetchNotifications();
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
+     const { data: { user } } = await supabase.auth.getUser();
+     if (!user) return;
+
+     await supabase
+       .from('notifications')
+       .delete()
+       .eq('student_id', user.id);
+
      setNotifications([]);
      setIsOpen(false);
   };

@@ -36,6 +36,7 @@ import { motion } from 'framer-motion';
 import { CodeCompiler } from '@/components/code-compiler';
 import { AIAssistant } from '@/components/ai-assistant';
 import { AudioReader } from '@/components/audio-reader';
+import { logActivityAction } from '@/app/admin/actions';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -129,7 +130,10 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    if (resolvedParams.id) {
+       logActivityAction('lecture_view', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
+    }
+  }, [fetchData, resolvedParams.id]);
 
   const headings = useMemo(() => {
     if (Array.isArray(lecture?.content) && lecture.content.length > 0) {
@@ -205,6 +209,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
   const handleMarkTheoryRead = () => {
     updateCompletion({ theory_read: true });
+    logActivityAction('theory_mastered', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
     if (lecture?.attached_assignment) setActiveTab('assignment');
     else if (lecture?.attached_quiz) setActiveTab('quiz');
   };
