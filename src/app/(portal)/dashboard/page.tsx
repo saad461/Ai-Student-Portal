@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, QuizQuestion, isItemUnlocked } from '@/lib/curriculum';
 import { useTheme } from '@/components/theme-provider';
 import {
@@ -334,12 +332,8 @@ export default function DashboardPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
-        <DashboardSkeleton />
-      </main>
+    <div className="p-4 lg:p-8">
+      <DashboardSkeleton />
     </div>
   );
 
@@ -356,16 +350,13 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+    <div className="p-4 lg:p-8">
       <OnboardingTour />
       <SkillShop
         skillPoints={getSkillPoints(profile?.total_points || 0)}
         onPurchase={handlePurchase}
       />
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
-        <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8">
           <header id="dashboard-header" className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
@@ -741,7 +732,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </main>
 
       {activeQuiz && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">

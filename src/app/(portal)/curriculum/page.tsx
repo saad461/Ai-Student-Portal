@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, isItemUnlocked, Module, SubModule, Course } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -184,20 +182,13 @@ function CurriculumContent() {
   const displayModules = modules.length > 0 ? modules : Array.from({ length: 24 }, (_, i) => ({ id: (i + 1).toString(), index: i + 1, name: `Module ${i + 1}` }));
 
   if (loading) return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
-        <CurriculumSkeleton />
-      </main>
+    <div className="p-4 lg:p-8">
+      <CurriculumSkeleton />
     </div>
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
+    <div className="p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
           <header className="flex justify-between items-end">
             <div>
@@ -552,7 +543,6 @@ function CurriculumContent() {
             ))}
           </Tabs>
         </div>
-      </main>
       <TermsModal isOpen={showTerms} onAgree={handleAgreeTC} />
     </div>
   );

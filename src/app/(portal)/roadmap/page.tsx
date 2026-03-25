@@ -1,18 +1,13 @@
 'use client';
 
 import { TechRoadmap } from '@/components/tech-roadmap';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { motion } from 'framer-motion';
 import { Zap, ArrowRight, Shield, Cpu, Code } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RoadmapPage() {
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 overflow-x-hidden relative">
+    <div className="bg-slate-950 text-white selection:bg-blue-500/30 relative min-h-screen overflow-x-hidden">
         {/* Animated Background Mesh */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 animate-pulse" />
@@ -85,7 +80,6 @@ export default function RoadmapPage() {
         <footer className="relative z-10 py-12 text-center border-t border-white/5 text-slate-500 text-sm font-medium tracking-wide">
           &copy; {new Date().getFullYear()} Zohan Ali Portal &bull; Designed for Professional Growth
         </footer>
-      </main>
     </div>
   );
 }

@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { AttendanceHeatmap } from '@/components/attendance-heatmap';
 import {
   Card,
@@ -83,10 +81,7 @@ export default function StudentAttendancePage() {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
+    <div className="p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
           <header>
             <h1 className="text-3xl font-bold">My Attendance</h1>
@@ -209,7 +204,6 @@ export default function StudentAttendancePage() {
             </CardContent>
           </Card>
         </div>
-      </main>
     </div>
   );
 }
