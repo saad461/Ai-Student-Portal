@@ -7,7 +7,24 @@ import { CURRICULUM } from '@/lib/curriculum';
 
 export async function verifyAdminPassword(password: string) {
   const correctPassword = process.env.ADMIN_PASSWORD || 'admin123';
-  return password === correctPassword;
+  const isValid = password === correctPassword;
+
+  if (isValid) {
+    const cookieStore = await cookies();
+    cookieStore.set('admin_access', 'true', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 // 24 hours
+    });
+  }
+
+  return isValid;
+}
+
+export async function adminLogoutAction() {
+  const cookieStore = await cookies();
+  cookieStore.delete('admin_access');
+  return { success: true };
 }
 
 export async function seedCurriculumAction() {
@@ -544,11 +561,14 @@ export async function unlockCourseForStudentAction(email: string, courseId: stri
 }
 
 async function authorizeAdmin() {
+  const cookieStore = await cookies();
+  const adminAccess = cookieStore.get('admin_access');
+  if (adminAccess?.value === 'true') return true;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) return false;
 
-  const cookieStore = await cookies();
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {

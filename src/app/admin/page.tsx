@@ -54,6 +54,7 @@ import {
   uploadVideoAction,
   saveCourseAction,
   deleteCourseAction,
+  adminLogoutAction,
   unlockCourseForStudentAction,
   saveResourceAction,
   deleteResourceAction,
@@ -383,7 +384,11 @@ export default function AdminDashboard() {
             }}>
               <Database className="h-4 w-4 mr-2" /> Seed Curriculum
             </Button>
-            <Button variant="outline" onClick={() => { localStorage.removeItem('admin_auth'); router.push('/admin/login'); }}>
+            <Button variant="outline" onClick={async () => {
+              await adminLogoutAction();
+              localStorage.removeItem('admin_auth');
+              router.push('/admin/login');
+            }}>
               Logout Admin
             </Button>
           </div>
