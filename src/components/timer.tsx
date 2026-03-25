@@ -13,7 +13,37 @@ export function DeepWorkTimer() {
   const [isActive, setIsActive] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [isFocusRoomOpen, setIsFocusRoomOpen] = useState(false);
+  const [moduleContext, setModuleContext] = useState({ index: 1, name: 'Web Fundamentals' });
   const sessionStartTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    async function fetchContext() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('current_course_id')
+            .eq('id', user.id)
+            .single();
+
+        if (profile?.current_course_id) {
+            const { data: modules } = await supabase
+                .from('modules')
+                .select('index, name')
+                .eq('course_id', profile.current_course_id)
+                .order('index', { ascending: false });
+
+            // For tasks, we'll use the user's highest unlocked module or current one
+            // In a real scenario, we'd check submissions, but for Focus Room,
+            // the highest indexed module in their current course is a good context provider.
+            if (modules && modules.length > 0) {
+                setModuleContext({ index: modules[0].index, name: modules[0].name });
+            }
+        }
+    }
+    fetchContext();
+  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -147,6 +177,8 @@ export function DeepWorkTimer() {
         isOpen={isFocusRoomOpen}
         onClose={() => setIsFocusRoomOpen(false)}
         onSaveSession={saveSession}
+        moduleIndex={moduleContext.index}
+        moduleName={moduleContext.name}
       />
     </Card>
   );
