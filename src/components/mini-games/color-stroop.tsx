@@ -23,10 +23,19 @@ export function ColorStroop() {
     if (isPlaying && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
       return () => clearInterval(timer);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft === 0 && isPlaying) {
       setIsPlaying(false);
+      handleGameOver();
     }
   }, [isPlaying, timeLeft]);
+
+  const handleGameOver = async () => {
+    if (score >= 20) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Color Stroop: Score ${score}`, 'game', `stroop-${today}`);
+    }
+  };
 
   const startGame = () => {
     setScore(0);

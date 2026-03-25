@@ -30,6 +30,7 @@ export function TouchPath() {
     if (visited.includes(idx)) return;
     if (idx !== visited.length) {
       setIsPlaying(false);
+      handleGameOver();
       return;
     }
     const nextVisited = [...visited, idx];
@@ -38,6 +39,14 @@ export function TouchPath() {
     if (nextVisited.length === nodes.length) {
       setScore(prev => prev + 1);
       setTimeout(generatePath, 300);
+    }
+  };
+
+  const handleGameOver = async () => {
+    if (score >= 10) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Touch Path: Score ${score}`, 'game', `path-${today}`);
     }
   };
 
@@ -70,6 +79,7 @@ export function TouchPath() {
                 {i + 1}
              </motion.button>
            ))}
+           <Button variant="link" className="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs text-red-400 p-0 h-auto font-black uppercase" onClick={() => { setIsPlaying(false); handleGameOver(); }}>End Game</Button>
         </div>
       )}
     </div>

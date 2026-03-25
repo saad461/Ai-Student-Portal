@@ -35,6 +35,14 @@ export function GridLogic() {
     }
   };
 
+  const handleGameOver = async () => {
+    if (score >= 10) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Grid Logic: Score ${score}`, 'game', `grid-${today}`);
+    }
+  };
+
   return (
     <div className="w-full h-[500px] bg-slate-900 rounded-[2rem] flex flex-col items-center justify-center p-8 gap-8">
       <div className="text-center space-y-2">
@@ -45,9 +53,12 @@ export function GridLogic() {
       </div>
 
       {!isPlaying ? (
-        <Button size="lg" className="h-16 px-12 rounded-2xl font-black uppercase" onClick={startGame}>
-           Start Puzzle
-        </Button>
+        <div className="text-center space-y-4">
+           {score > 0 && <p className="text-2xl text-white font-black uppercase">Result: {score}</p>}
+           <Button size="lg" className="h-16 px-12 rounded-2xl font-black uppercase" onClick={startGame}>
+              Start Puzzle
+           </Button>
+        </div>
       ) : (
         <div className="flex gap-12 items-center">
            <div className="space-y-4">
@@ -71,7 +82,12 @@ export function GridLogic() {
            </div>
         </div>
       )}
-      {isPlaying && <div className="text-white font-black">Score: {score}</div>}
+      {isPlaying && (
+        <div className="flex gap-4 absolute bottom-8">
+          <div className="text-white font-black">Score: {score}</div>
+          <Button variant="link" className="text-xs text-red-400 p-0 h-auto font-black uppercase" onClick={() => { setIsPlaying(false); handleGameOver(); }}>End Game</Button>
+        </div>
+      )}
     </div>
   );
 }

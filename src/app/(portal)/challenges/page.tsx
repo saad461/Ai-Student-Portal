@@ -76,25 +76,45 @@ export default function ChallengesPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !challenge) return;
 
-    // Simulate validation
-    setTimeout(async () => {
-      const { error } = await supabase
-        .from('challenge_submissions')
-        .insert({
-          user_id: user.id,
-          challenge_id: challenge.id,
-          submitted_code: code,
-          is_correct: true
-        });
+    try {
+      const res = await fetch('/api/verify-challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          title: challenge.title,
+          description: challenge.description,
+          testCases: (challenge as any).test_cases
+        })
+      });
+      const data = await res.json();
 
-      if (!error) {
-        success('Challenge Completed! +50 XP and Skill Points awarded.');
-        setCompletedToday(true);
+      if (data.isCorrect) {
+        const { error } = await supabase
+          .from('challenge_submissions')
+          .insert({
+            user_id: user.id,
+            challenge_id: challenge.id,
+            submitted_code: code,
+            is_correct: true
+          });
+
+        if (!error) {
+          const { rewardStudentAction } = await import('@/app/admin/actions');
+          await rewardStudentAction(challenge.points_reward, `Daily Challenge: ${challenge.title}`, 'challenge', challenge.id);
+          success(`Challenge Completed! +${challenge.points_reward} XP awarded.`);
+          setCompletedToday(true);
+        } else {
+          toastError('Failed to save submission.');
+        }
       } else {
-        toastError('Failed to save submission.');
+        toastError(data.feedback || "Your solution is incorrect. Check requirements.");
       }
+    } catch (err) {
+      toastError('Verification service unavailable.');
+    } finally {
       setIsSubmitting(false);
-    }, 2000);
+    }
   };
 
   if (loading) return <div className="p-8 text-center animate-pulse">Scanning for today's challenge...</div>;

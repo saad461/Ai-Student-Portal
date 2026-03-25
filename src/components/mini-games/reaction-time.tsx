@@ -27,6 +27,15 @@ export function ReactionTime() {
       const diff = Date.now() - startTime;
       setResult(diff);
       setStatus('result');
+      handleGameOver(diff);
+    }
+  };
+
+  const handleGameOver = async (ms: number) => {
+    if (ms <= 300) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Reaction Time: ${ms}ms`, 'game', `react-${today}`);
     }
   };
 

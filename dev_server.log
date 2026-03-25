@@ -1,0 +1,17 @@
+
+> student-portal@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 6.1s
+ HEAD /login 200 in 3.0s (compile: 1944ms, render: 1024ms)
+ GET /login 200 in 141ms (compile: 21ms, render: 119ms)
+○ Compiling /lecture/[id] ...
+ GET /lecture/some-id 200 in 5.7s (compile: 5.3s, render: 472ms)
+ POST /lecture/some-id 200 in 774ms (compile: 252ms, render: 522ms)
+ POST /lecture/some-id 200 in 203ms (compile: 67ms, render: 136ms)

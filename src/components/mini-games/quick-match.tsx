@@ -32,6 +32,15 @@ export function QuickMatch() {
       nextPair();
     } else {
       setIsPlaying(false);
+      handleGameOver();
+    }
+  };
+
+  const handleGameOver = async () => {
+    if (score >= 20) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Quick Match: Score ${score}`, 'game', `match-${today}`);
     }
   };
 
@@ -57,6 +66,9 @@ export function QuickMatch() {
            <div className="flex gap-4">
               <Button size="lg" variant="destructive" className="flex-1 h-16 text-xl font-black rounded-2xl" onClick={() => handleDecision(false)}>DIFFERENT</Button>
               <Button size="lg" className="flex-1 h-16 text-xl font-black rounded-2xl bg-emerald-600" onClick={() => handleDecision(true)}>SAME</Button>
+           </div>
+           <div className="flex justify-center mt-8">
+              <Button variant="link" className="text-xs text-red-400 p-0 h-auto font-black uppercase" onClick={() => { setIsPlaying(false); handleGameOver(); }}>End Game</Button>
            </div>
         </div>
       )}
