@@ -130,7 +130,7 @@ function CurriculumContent() {
     const { data: curriculumData } = await supabase
       .from('curriculum')
       .select('*')
-      .eq('course_id', targetCourseId)
+      .or(`course_id.eq.${targetCourseId},course_id.is.null`)
       .order('week', { ascending: true });
 
     setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
@@ -289,7 +289,7 @@ function CurriculumContent() {
             <TabsContent value="all" className="space-y-4">
               {displayModules.map((m) => {
                 const moduleSubModules = subModules.filter(s => s.module_id === m.id);
-                const moduleLectures = curriculum.filter(item => item.week === m.index);
+              const moduleLectures = curriculum.filter(item => item.module_id === m.id || (!item.module_id && item.week === m.index));
                 const isExpanded = expandedModules.includes(m.id);
 
                 return (
