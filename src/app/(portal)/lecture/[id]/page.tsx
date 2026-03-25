@@ -25,6 +25,7 @@ import {
   ChevronRight,
   List,
   Clock,
+  Sparkles,
   Link as LinkIcon,
   Terminal,
   Zap,
@@ -37,6 +38,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CodeCompiler } from '@/components/code-compiler';
 import { AIAssistant } from '@/components/ai-assistant';
+import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
 import { logActivityAction } from '@/app/admin/actions';
 import ReactMarkdown from 'react-markdown';
@@ -64,7 +66,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [submittingId, setSubmittingId] = useState(false);
   const [githubUrl, setGithubUrl] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz'>('theory');
+  const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz' | 'explain'>('theory');
   const [userPerks, setUserPerks] = useState<any[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [readTimeSeconds, setReadTimeSeconds] = useState(0);
@@ -459,6 +461,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               </Button>
             )}
 
+            <Button
+              variant="ghost"
+              className={cn(
+                "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                activeTab === 'explain' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
+              )}
+              onClick={() => setActiveTab('explain')}
+            >
+              <Sparkles className="h-4 w-4 mr-2" /> AI Explain
+            </Button>
+
             {lecture.video_url && (
               <Button
                 variant="ghost"
@@ -843,6 +856,14 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                   <div className="text-center py-20 text-muted-foreground bg-slate-100 rounded-3xl border-2 border-dashed">No quiz required for this lecture.</div>
                 )}
               </div>
+            )}
+
+            {activeTab === 'explain' && (
+              <AIExplainSection
+                lectureId={lecture.id}
+                lectureTitle={lecture.title}
+                lectureContent={lecture.theory_content || ''}
+              />
             )}
           </div>
 
