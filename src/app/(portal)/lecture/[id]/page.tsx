@@ -26,6 +26,7 @@ import {
   List,
   Clock,
   Sparkles,
+  Zap,
   Link as LinkIcon,
   Terminal,
   Zap,
