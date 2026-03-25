@@ -11,6 +11,7 @@ export interface Course {
   description?: string;
   thumbnail_url?: string;
   index: number;
+  parent_id?: string;
   status?: 'locked' | 'unlocked' | 'completed';
 }
 

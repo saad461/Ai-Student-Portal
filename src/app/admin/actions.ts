@@ -39,6 +39,7 @@ export async function seedCurriculumAction() {
   ]);
 
   // 3. Create initial module linked to web-dev
+  // If it's a subcourse, we would find its parent. For seeding, let's keep it simple.
   const { data: webDevMod } = await supabaseAdmin
     .from('modules')
     .upsert({
