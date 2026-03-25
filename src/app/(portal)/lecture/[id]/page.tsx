@@ -28,7 +28,7 @@ import {
   Link as LinkIcon,
   Terminal,
   Zap,
-  HelpCircle
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
@@ -42,7 +42,6 @@ import { logActivityAction } from '@/app/admin/actions';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { ExternalLink } from 'lucide-react';
 
 interface Submission {
   id: string;
