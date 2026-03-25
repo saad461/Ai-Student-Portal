@@ -2,16 +2,37 @@
 > student-portal@0.1.0 dev
 > next dev
 
-▲ Next.js 16.1.6 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://192.168.0.2:3000
-- Environments: .env.local
+   ▲ Next.js 15.1.6
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
 
-✓ Starting...
-✓ Ready in 6.1s
- HEAD /login 200 in 3.0s (compile: 1944ms, render: 1024ms)
- GET /login 200 in 141ms (compile: 21ms, render: 119ms)
-○ Compiling /lecture/[id] ...
- GET /lecture/some-id 200 in 5.7s (compile: 5.3s, render: 472ms)
- POST /lecture/some-id 200 in 774ms (compile: 252ms, render: 522ms)
- POST /lecture/some-id 200 in 203ms (compile: 67ms, render: 136ms)
+ ✓ Starting...
+ ✓ Ready in 1940ms
+ ○ Compiling /shop ...
+ ✓ Compiled /shop in 14.3s (1983 modules)
+ GET /shop 200 in 15400ms
+ POST /shop 200 in 194ms
+ ○ Compiling /library ...
+ ✓ Compiled /library in 1689ms (1984 modules)
+ GET /shop 200 in 389ms
+ GET /library 200 in 2143ms
+ POST /library 200 in 106ms
+ ○ Compiling /challenges ...
+ ✓ Compiled /challenges in 624ms (1995 modules)
+ GET /challenges 200 in 834ms
+ POST /challenges 200 in 70ms
+ ○ Compiling /career ...
+ ✓ Compiled /career in 4.5s (2494 modules)
+ GET /career 200 in 4811ms
+ POST /career 200 in 71ms
+ ○ Compiling /interview-prep ...
+ ✓ Compiled /interview-prep in 782ms (2509 modules)
+ GET /interview-prep 200 in 1009ms
+ POST /interview-prep 200 in 76ms
+ ○ Compiling /wellness ...
+ ✓ Compiled /wellness in 5s (2582 modules)
+ GET /wellness 200 in 5199ms
+ ⨯ [Error: aborted] { code: 'ECONNRESET', digest: '1052313065' }
+ POST /wellness 200 in 55ms
+ GET /shop 200 in 84ms
+ POST /shop 200 in 13ms
