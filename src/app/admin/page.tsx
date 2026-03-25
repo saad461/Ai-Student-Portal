@@ -136,6 +136,7 @@ export default function AdminDashboard() {
   const [modules, setModules] = useState<Module[]>([]);
   const [subModules, setSubModules] = useState<SubModule[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [parentCourses, setParentCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [attendance, setAttendance] = useState<any[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -180,6 +181,7 @@ export default function AdminDashboard() {
       .order('index', { ascending: true });
     const fetchedCourses = (coursesData as Course[]) || [];
     setCourses(fetchedCourses);
+    setParentCourses(fetchedCourses.filter(c => !c.parent_id));
 
     // Set default selected course if not set
     if (fetchedCourses.length > 0 && !selectedCourseId) {
@@ -1319,6 +1321,19 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Course Name</Label><Input value={editingCourse?.name || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} /></div>
                 <div className="space-y-2"><Label>Slug</Label><Input value={editingCourse?.slug || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, slug: e.target.value }))} /></div>
+              </div>
+              <div className="space-y-2">
+                <Label>Parent Course (Optional)</Label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={editingCourse?.parent_id || ''}
+                  onChange={(e) => setEditingCourse(prev => ({ ...prev!, parent_id: e.target.value || undefined }))}
+                >
+                  <option value="">No Parent (This is a Parent Course)</option>
+                  {parentCourses.filter(c => c.id !== editingCourse?.id).map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2"><Label>Index</Label><Input type="number" value={editingCourse?.index || 1} onChange={(e) => setEditingCourse(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingCourse?.description || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, description: e.target.value }))} /></div>

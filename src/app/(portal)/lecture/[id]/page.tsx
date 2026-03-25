@@ -29,7 +29,6 @@ import {
   Zap,
   Link as LinkIcon,
   Terminal,
-  Zap,
   ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

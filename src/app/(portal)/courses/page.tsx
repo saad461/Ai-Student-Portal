@@ -6,14 +6,16 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Course } from '@/lib/curriculum';
-import { Lock, Play, CheckCircle2, Star, Sparkles, Shield, Cpu, Code } from 'lucide-react';
+import { Lock, Play, CheckCircle2, Star, Sparkles, Shield, Cpu, Code, ChevronRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { Sidebar } from '@/components/sidebar';
 import { PortalNavbar } from '@/components/portal-navbar';
 import { cn } from '@/lib/utils';
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [parentCourses, setParentCourses] = useState<Course[]>([]);
+  const [subCourses, setSubCourses] = useState<Course[]>([]);
+  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,7 +41,8 @@ export default function CoursesPage() {
         };
       });
 
-      setCourses(merged);
+      setParentCourses(merged.filter(c => !c.parent_id));
+      setSubCourses(merged.filter(c => c.parent_id));
       setLoading(false);
     }
     fetchCourses();
@@ -82,13 +85,15 @@ export default function CoursesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {courses.map((course) => {
+        {parentCourses.map((course) => {
           const isLocked = course.status === 'locked';
           const isCompleted = course.status === 'completed';
+          const currentSubCourses = subCourses.filter(sc => sc.parent_id === course.id);
+          const isExpanded = expandedCourse === course.id;
 
           return (
             <Card key={course.id} className={cn(
-              "relative overflow-hidden border-2 transition-all duration-300 group",
+              "relative overflow-hidden border-2 transition-all duration-300 group h-fit",
               isLocked ? "opacity-75 grayscale-[0.5]" : "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10"
             )}>
               {/* Premium Background Decoration */}
@@ -119,10 +124,30 @@ export default function CoursesPage() {
                 <CardTitle className="text-2xl font-bold mt-4">{course.name}</CardTitle>
               </CardHeader>
 
-              <CardContent className="relative z-10 min-h-[100px]">
+              <CardContent className="relative z-10 space-y-4">
                 <p className="text-muted-foreground leading-relaxed">
                   {course.description || "Master industry-standard techniques and tools in this comprehensive program."}
                 </p>
+
+                {/* Sub-Courses Collapsible */}
+                {isExpanded && currentSubCourses.length > 0 && (
+                  <div className="pt-4 space-y-3 border-t border-primary/10 animate-in slide-in-from-top-4 duration-300">
+                    <p className="text-xs font-bold uppercase tracking-widest text-primary/70">Program Curriculum</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {currentSubCourses.map(sc => (
+                        <Link key={sc.id} href={`/curriculum?course=${sc.id}`} className="group/item">
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-transparent hover:border-primary/30 hover:bg-primary/5 transition-all">
+                             <div className="flex items-center gap-3">
+                                <div className="h-2 w-2 rounded-full bg-primary/40 group-hover/item:bg-primary transition-colors" />
+                                <span className="text-sm font-semibold">{sc.name}</span>
+                             </div>
+                             <ChevronRight className="h-4 w-4 text-muted-foreground group-hover/item:translate-x-1 transition-transform" />
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
 
               <CardFooter className="relative z-10 pt-4">
@@ -131,12 +156,32 @@ export default function CoursesPage() {
                     Complete Previous Course to Unlock
                   </Button>
                 ) : (
-                  <Link href={`/curriculum?course=${course.id}`} className="w-full">
-                    <Button className="w-full group-hover:scale-[1.02] transition-transform font-bold">
-                      {isCompleted ? "Review Course" : "Start Learning"}
-                      <Play className="ml-2 h-4 w-4 fill-current" />
-                    </Button>
-                  </Link>
+                  <div className="w-full space-y-2">
+                    {currentSubCourses.length > 0 ? (
+                      <>
+                        <Button
+                          className="w-full group-hover:scale-[1.02] transition-transform font-bold"
+                          onClick={() => setExpandedCourse(isExpanded ? null : course.id)}
+                        >
+                          {isExpanded ? "Hide Details" : "Start Learning"}
+                          {isExpanded ? <ChevronDown className="ml-2 h-4 w-4" /> : <Play className="ml-2 h-4 w-4 fill-current" />}
+                        </Button>
+
+                        {!isExpanded && (
+                          <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-bold">
+                            Includes {currentSubCourses.length} Sub-Courses
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <Link href={`/curriculum?course=${course.id}`} className="w-full">
+                        <Button className="w-full group-hover:scale-[1.02] transition-transform font-bold">
+                          {isCompleted ? "Review Course" : "Start Learning"}
+                          <Play className="ml-2 h-4 w-4 fill-current" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 )}
               </CardFooter>
 
