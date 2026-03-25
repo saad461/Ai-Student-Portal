@@ -296,7 +296,13 @@ export default function AdminDashboard() {
       setEditingCourse(null);
       fetchAdminData();
     } else {
-      toastError('Error saving course: ' + JSON.stringify(res.error));
+      let msg = 'An unknown error occurred.';
+      if (typeof res.error === 'object' && (res.error as any).code === '23505') {
+        msg = 'The course slug (URL identifier) is already in use by another course. Please choose a unique slug.';
+      } else {
+        msg = typeof res.error === 'string' ? res.error : JSON.stringify(res.error);
+      }
+      toastError('Error saving course: ' + msg);
     }
   };
 
@@ -487,7 +493,17 @@ export default function AdminDashboard() {
                      value={selectedCourseId}
                      onChange={(e) => setSelectedCourseId(e.target.value)}
                    >
-                     {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                     {parentCourses.map(parent => (
+                       <optgroup key={parent.id} label={parent.name}>
+                         <option value={parent.id}>{parent.name} (Main)</option>
+                         {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                           <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                         ))}
+                       </optgroup>
+                     ))}
+                     {courses.filter(c => !c.parent_id && !parentCourses.find(pc => pc.id === c.id)).map(standalone => (
+                       <option key={standalone.id} value={standalone.id}>{standalone.name}</option>
+                     ))}
                    </select>
                 </div>
               </div>
@@ -555,7 +571,14 @@ export default function AdminDashboard() {
                      value={selectedCourseId}
                      onChange={(e) => setSelectedCourseId(e.target.value)}
                    >
-                     {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                     {parentCourses.map(parent => (
+                       <optgroup key={parent.id} label={parent.name}>
+                         <option value={parent.id}>{parent.name} (Main)</option>
+                         {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                           <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                         ))}
+                       </optgroup>
+                     ))}
                    </select>
                 </div>
               </div>
