@@ -130,7 +130,7 @@ function CurriculumContent() {
     const { data: curriculumData } = await supabase
       .from('curriculum')
       .select('*')
-      .in('week', moduleIndices)
+      .eq('course_id', targetCourseId)
       .order('week', { ascending: true });
 
     setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);

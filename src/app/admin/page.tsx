@@ -588,6 +588,8 @@ export default function AdminDashboard() {
                 const lastSub = subModules.filter(s => s.module_id === lastMod?.id).pop();
                 setEditingItem({
                   id: `new-${Date.now()}`,
+                  course_id: selectedCourseId,
+                  module_id: lastMod?.id,
                   week: lastMod?.index || 1,
                   module_name: lastMod?.name || '',
                   day: 'Lecture 1',
@@ -604,14 +606,34 @@ export default function AdminDashboard() {
             </div>
             {modules.filter(m => m.course_id === selectedCourseId).length > 0 ? modules.filter(m => m.course_id === selectedCourseId).map(mod => {
               const moduleSubModules = subModules.filter(s => s.module_id === mod.id);
-              const moduleLectures = curriculum.filter(i => i.week === mod.index);
+              const moduleLectures = curriculum.filter(i => i.module_id === mod.id || (i.course_id === selectedCourseId && i.week === mod.index));
 
               return (
                 <div key={mod.id} className="space-y-6">
-                  <div className="flex items-center gap-4">
-                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">M{mod.index}</div>
-                     <h3 className="text-xl font-bold">{mod.name}</h3>
-                     <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
+                  <div className="flex items-center justify-between gap-4">
+                     <div className="flex items-center gap-4 flex-1">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">M{mod.index}</div>
+                        <h3 className="text-xl font-bold">{mod.name}</h3>
+                        <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setEditingItem({
+                          id: `new-${Date.now()}`,
+                          course_id: selectedCourseId,
+                          module_id: mod.id,
+                          week: mod.index,
+                          module_name: mod.name,
+                          day: `Lecture ${moduleLectures.length + 1}`,
+                          type: 'lecture',
+                          title: '',
+                          description: '',
+                          lecture_index: (moduleLectures[moduleLectures.length - 1]?.lecture_index || 0) + 1
+                       })}
+                     >
+                       <Plus className="h-3 w-3 mr-1" /> Add Lecture
+                     </Button>
                   </div>
 
                   <div className="space-y-8 pl-4 border-l-2 border-slate-100 dark:border-slate-800 ml-5">
@@ -991,14 +1013,22 @@ export default function AdminDashboard() {
                     <Label>Parent Module</Label>
                     <select
                       className="w-full p-2 rounded border bg-background"
-                      value={editingItem?.week || ''}
+                      value={editingItem?.module_id || ''}
                       onChange={(e) => {
-                        const mod = modules.find(m => m.index === parseInt(e.target.value));
-                        setEditingItem(prev => ({ ...prev!, week: parseInt(e.target.value), module_name: mod?.name || '' }))
+                        const mod = modules.find(m => m.id === e.target.value);
+                        setEditingItem(prev => ({
+                           ...prev!,
+                           module_id: e.target.value,
+                           week: mod?.index || 1,
+                           module_name: mod?.name || '',
+                           course_id: mod?.course_id || prev?.course_id
+                        }))
                       }}
                     >
                       <option value="">Select Module</option>
-                      {modules.map(m => <option key={m.id} value={m.index}>M{m.index}: {m.name}</option>)}
+                      {modules.filter(m => m.course_id === editingItem?.course_id).map(m => (
+                        <option key={m.id} value={m.id}>M{m.index}: {m.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">
