@@ -356,7 +356,9 @@ export default function AdminDashboard() {
   };
 
   const moveItem = async (item: CurriculumItem, direction: 'up' | 'down') => {
-    const moduleItems = curriculum.filter(i => i.week === item.week).sort((a, b) => (a.lecture_index || 0) - (b.lecture_index || 0));
+    const moduleItems = curriculum
+      .filter(i => (i.module_id && i.module_id === item.module_id) || (!i.module_id && i.week === item.week && i.course_id === item.course_id))
+      .sort((a, b) => (a.lecture_index || 0) - (b.lecture_index || 0));
     const currentIndex = moduleItems.findIndex(i => i.id === item.id);
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
 
@@ -606,7 +608,7 @@ export default function AdminDashboard() {
             </div>
             {modules.filter(m => m.course_id === selectedCourseId).length > 0 ? modules.filter(m => m.course_id === selectedCourseId).map(mod => {
               const moduleSubModules = subModules.filter(s => s.module_id === mod.id);
-              const moduleLectures = curriculum.filter(i => i.module_id === mod.id || (i.course_id === selectedCourseId && i.week === mod.index));
+              const moduleLectures = curriculum.filter(i => i.module_id === mod.id || (!i.module_id && i.week === mod.index && (i.course_id === selectedCourseId || !i.course_id)));
 
               return (
                 <div key={mod.id} className="space-y-6">
@@ -666,6 +668,8 @@ export default function AdminDashboard() {
                               className="h-full min-h-[100px] border-2 border-dashed hover:border-primary hover:bg-primary/5 group"
                               onClick={() => setEditingItem({
                                 id: `new-${Date.now()}`,
+                                course_id: selectedCourseId,
+                                module_id: mod.id,
                                 week: mod.index,
                                 module_name: mod.name,
                                 sub_module_id: sub.id,
@@ -692,12 +696,14 @@ export default function AdminDashboard() {
                           <ChevronRight className="h-4 w-4" /> Uncategorized Lectures
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                           {moduleLectures.filter(l => !l.sub_module_id).map((item) => (
+                           {moduleLectures.filter(l => !l.sub_module_id).sort((a,b) => (a.lecture_index || 0) - (b.lecture_index || 0)).map((item) => (
                               <Card key={item.id} className="group hover:shadow-md transition-shadow relative">
                                 <CardHeader className="pb-2">
                                   <div className="flex justify-between items-start">
                                     <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'up')}><Clock className="h-4 w-4 rotate-180" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'down')}><Clock className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
@@ -1021,7 +1027,9 @@ export default function AdminDashboard() {
                            module_id: e.target.value,
                            week: mod?.index || 1,
                            module_name: mod?.name || '',
-                           course_id: mod?.course_id || prev?.course_id
+                           course_id: mod?.course_id || prev?.course_id,
+                           sub_module_id: undefined, // Clear sub-module when module changes
+                           sub_module_name: undefined
                         }))
                       }}
                     >
@@ -1042,7 +1050,11 @@ export default function AdminDashboard() {
                       }}
                     >
                       <option value="">No Sub-Module</option>
-                      {subModules.filter(s => s.module_id === modules.find(m => m.index === editingItem?.week)?.id).map(s => (
+                      {subModules.filter(s => s.module_id === editingItem?.module_id).map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                      {/* Fallback to index-based if module_id not matching above (legacy) */}
+                      {subModules.filter(s => s.module_id === modules.find(m => m.index === editingItem?.week && m.course_id === editingItem?.course_id)?.id).map(s => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
