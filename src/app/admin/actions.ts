@@ -116,7 +116,9 @@ export async function saveCurriculumItemAction(item: any) {
       lecture_index: parseInt(item.lecture_index) || 1,
       required_focus_hours: parseFloat(item.required_focus_hours) || 0,
       required_read_minutes: parseInt(item.required_read_minutes) || 0,
-      sub_module_id: (item.sub_module_id && item.sub_module_id !== '') ? item.sub_module_id : null
+      sub_module_id: (item.sub_module_id && item.sub_module_id !== '') ? item.sub_module_id : null,
+      course_id: (item.course_id && item.course_id !== '') ? item.course_id : null,
+      module_id: (item.module_id && item.module_id !== '') ? item.module_id : null
     };
 
     // If it's a new item or index changed, we might need to shift

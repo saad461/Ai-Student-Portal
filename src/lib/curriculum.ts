@@ -61,6 +61,8 @@ export interface CurriculumItem {
   };
   attached_quiz?: QuizQuestion[];
   is_boss_project?: boolean;
+  course_id?: string;
+  module_id?: string;
   module_index?: number;
   module_name?: string;
   lecture_index?: number;
