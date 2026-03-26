@@ -206,6 +206,59 @@ export async function deleteModuleAction(id: string) {
   return { success: !error, error };
 }
 
+export async function getAdminDataAction() {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  try {
+    const [
+      { data: profiles },
+      { data: messages },
+      { data: courses },
+      { data: curriculum },
+      { data: modules },
+      { data: subModules },
+      { data: attendance },
+      { data: resources },
+      { data: challenges }
+    ] = await Promise.all([
+      supabaseAdmin.from('profiles').select('*, submissions (*), student_activity (*)').eq('role', 'student'),
+      supabaseAdmin.from('messages').select('*, profiles(full_name)').order('created_at', { ascending: false }),
+      supabaseAdmin.from('courses').select('*').order('index', { ascending: true }),
+      supabaseAdmin.from('curriculum').select('*').order('week', { ascending: true }),
+      supabaseAdmin.from('modules').select('*').order('index', { ascending: true }),
+      supabaseAdmin.from('sub_modules').select('*').order('index', { ascending: true }),
+      supabaseAdmin.from('attendance').select('*, profiles(full_name)').order('date', { ascending: false }),
+      supabaseAdmin.from('resources').select('*').order('created_at', { ascending: false }),
+      supabaseAdmin.from('daily_challenges').select('*').order('active_date', { ascending: false })
+    ]);
+
+    return {
+      success: true,
+      data: {
+        profiles: profiles || [],
+        messages: messages || [],
+        courses: courses || [],
+        curriculum: curriculum || [],
+        modules: modules || [],
+        subModules: subModules || [],
+        attendance: attendance || [],
+        resources: resources || [],
+        challenges: challenges || []
+      }
+    };
+  } catch (err: any) {
+    console.error('Fetch Admin Data Error:', err);
+    return { success: false, error: err.message || 'Unknown error' };
+  }
+}
+
 export async function logActivityAction(type: string, details: any = {}, url?: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
