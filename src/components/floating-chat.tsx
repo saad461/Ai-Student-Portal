@@ -41,6 +41,7 @@ export function FloatingChat() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isRequestingCall, setIsRequestingCall] = useState(false);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { success, error: toastError } = useToast();
 
@@ -61,17 +62,22 @@ export function FloatingChat() {
       fetchVideoSessions(user.id);
 
       // Find an admin to chat with (for simplicity, we pick the first admin found)
-      const { data: adminData } = await supabase
+      setIsLoadingAdmin(true);
+      const { data: adminData, error: adminError } = await supabase
         .from('profiles')
         .select('id')
         .eq('role', 'admin')
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (adminData) setAdminId(adminData.id);
+      if (adminError) {
+        console.error('Error finding admin profile:', adminError.message);
+      }
 
-      // Fetch messages
       if (adminData) {
+        setAdminId(adminData.id);
+
+        // Fetch messages
         const { data: msgs } = await supabase
           .from('chat_messages')
           .select('*')
@@ -118,9 +124,12 @@ export function FloatingChat() {
           })
           .subscribe();
 
+        setIsLoadingAdmin(false);
         return () => {
           supabase.removeChannel(channel);
         };
+      } else {
+        setIsLoadingAdmin(false);
       }
     };
 
@@ -273,7 +282,18 @@ export function FloatingChat() {
               {activeTab === 'chat' ? (
                 <>
                   <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth" ref={scrollRef}>
-                    {messages.length === 0 ? (
+                    {isLoadingAdmin ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
+                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                         <p className="text-xs font-bold uppercase tracking-widest">Connecting to Support...</p>
+                      </div>
+                    ) : !adminId ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
+                         <User className="h-12 w-12 mb-2" />
+                         <p className="text-xs font-bold uppercase tracking-widest">No Admin Available</p>
+                         <p className="text-[10px] max-w-[150px] mt-1 italic">Please wait for an administrator to be assigned.</p>
+                      </div>
+                    ) : messages.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
                          <MessageCircle className="h-12 w-12 mb-2" />
                          <p className="text-xs font-bold uppercase tracking-widest">Start a conversation</p>
