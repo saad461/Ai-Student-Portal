@@ -61,27 +61,18 @@ export function FloatingChat() {
       setUserId(user.id);
       fetchVideoSessions(user.id);
 
-      // Find an admin to chat with (for simplicity, we pick the first admin found)
-      setIsLoadingAdmin(true);
-      const { data: adminData, error: adminError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'admin')
-        .limit(1)
-        .maybeSingle();
+      // Use the dedicated System Support profile for all student chats
+      const systemAdminId = '00000000-0000-0000-0000-000000000000';
+      setAdminId(systemAdminId);
+      setIsLoadingAdmin(false);
 
-      if (adminError) {
-        console.error('Error finding admin profile:', adminError.message);
-      }
-
-      if (adminData) {
-        setAdminId(adminData.id);
+      if (user.id) {
 
         // Fetch messages
         const { data: msgs } = await supabase
           .from('chat_messages')
           .select('*')
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${adminData.id}),and(sender_id.eq.${adminData.id},receiver_id.eq.${user.id})`)
+          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${systemAdminId}),and(sender_id.eq.${systemAdminId},receiver_id.eq.${user.id})`)
           .order('created_at', { ascending: true });
 
         if (msgs) {
@@ -145,10 +136,8 @@ export function FloatingChat() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !userId) return;
 
-    if (!adminId) {
-      toastError('No admin available to receive your message.');
-      return;
-    }
+    // Use default System Support ID if no adminId found
+    const targetAdminId = adminId || '00000000-0000-0000-0000-000000000000';
 
     setIsSending(true);
     try {
@@ -156,20 +145,14 @@ export function FloatingChat() {
         .from('chat_messages')
         .insert({
           sender_id: userId,
-          receiver_id: adminId,
+          receiver_id: targetAdminId,
           content: newMessage.trim()
         });
 
       if (error) {
         toastError('Failed to send message: ' + error.message);
       } else {
-        // Also create a persistent notification for the admin
-        await supabase.from('notifications').insert({
-          student_id: adminId,
-          title: 'New Message',
-          message: `You received a new message from a student.`,
-          type: 'info'
-        });
+        // Notifications are usually for auth.users, so we skip for the fixed ID
         setNewMessage('');
       }
     } catch (err: any) {

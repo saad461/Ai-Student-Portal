@@ -154,7 +154,7 @@ export default function AdminDashboard() {
   const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [newChatInput, setNewChatInput] = useState('');
-  const [adminId, setAdminId] = useState<string | null>(null);
+  const [adminId, setAdminId] = useState<string>('00000000-0000-0000-0000-000000000000');
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const [studentVideoSessions, setStudentVideoSessions] = useState<any[]>([]);
@@ -183,6 +183,7 @@ export default function AdminDashboard() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) setAdminId(user.id);
+    else setAdminId('00000000-0000-0000-0000-000000000000'); // Default to System Support ID
 
     if (res.success && res.data) {
       const {
@@ -256,6 +257,7 @@ export default function AdminDashboard() {
   }, [chatMessages]);
 
   const fetchChat = async (studentId: string) => {
+    if (!adminId) return;
     const { data: msgs } = await supabase
       .from('chat_messages')
       .select('*')
