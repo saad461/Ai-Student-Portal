@@ -1,9 +1,8 @@
--- ==========================================
--- REAL-TIME INTERACTION SCHEMA (CHAT & VIDEO)
--- ==========================================
+-- ====================================================================
+-- FINAL REAL-TIME INTERACTION SCHEMA (CHAT & VIDEO)
+-- ====================================================================
 
--- 1. CLEANUP OLD MESSAGES (DESTRUCTIVE)
--- This removes the old messages table and its foreign key dependencies (like extra_tasks)
+-- 1. CLEANUP OLD MESSAGES (RESOLVES DEPENDENCY ERRORS)
 DROP TABLE IF EXISTS messages CASCADE;
 
 -- 2. CREATE CHAT_MESSAGES TABLE
@@ -86,10 +85,10 @@ CREATE POLICY "Everyone can view admin profiles" ON profiles FOR SELECT USING (r
 
 
 -- ====================================================================
--- DEVELOPER NOTE: HOW TO CREATE AN ADMIN
+-- AUTO-PROMOTER: This makes your first user an Admin in the database
+-- so the chat has a recipient to talk to immediately.
 -- ====================================================================
--- 1. Sign up as a user in your student portal
--- 2. Run the query below in Supabase SQL editor to promote yourself:
---
--- UPDATE profiles SET role = 'admin' WHERE id = (SELECT id FROM profiles LIMIT 1);
+UPDATE profiles
+SET role = 'admin'
+WHERE id = (SELECT id FROM profiles LIMIT 1);
 -- ====================================================================
