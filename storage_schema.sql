@@ -1,73 +1,35 @@
+-- BUCKET INITIALIZATION
+-- Run these commands to prepare your Supabase storage for uploads.
+-- Note: If you get "must be owner of table objects", please create these
+-- buckets MANUALLY in your Supabase Dashboard under 'Storage'.
+
 -- 1. Create Buckets
--- These buckets are required for the Admin Panel uploads to work.
--- 'public: true' allows students to view/download via direct link.
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values
-  ('curriculum-videos', 'curriculum-videos', true, 524288000, null), -- 500MB for videos
-  ('curriculum-images', 'curriculum-images', true, 5242880, array['image/*']), -- 5MB for images
-  ('library-resources', 'library-resources', true, 52428800, null) -- 50MB for books/resources
-on conflict (id) do nothing;
+INSERT INTO storage.buckets (id, name, public)
+VALUES
+  ('curriculum-videos', 'curriculum-videos', true),
+  ('curriculum-images', 'curriculum-images', true),
+  ('library-resources', 'library-resources', true)
+ON CONFLICT (id) DO NOTHING;
 
--- 2. Enable RLS on storage.objects
-alter table storage.objects enable row level security;
+-- 2. Storage Policies (Public Access)
+-- If policies already exist, you might need to drop them first or
+-- manage them via the Supabase Dashboard UI.
 
--- 3. Public Read Policies
-create policy "Public Read Curriculum Videos"
-  on storage.objects for select
-  using ( bucket_id = 'curriculum-videos' );
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (true);
 
-create policy "Public Read Curriculum Images"
-  on storage.objects for select
-  using ( bucket_id = 'curriculum-images' );
+-- 3. Admin Upload Policies (Based on profile role)
+CREATE POLICY "Admin Upload" ON storage.objects FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  )
+);
 
-create policy "Public Read Library Resources"
-  on storage.objects for select
-  using ( bucket_id = 'library-resources' );
-
--- 4. Admin Write Policies (Assuming 'admin' role in profiles)
--- Note: Replace with proper check based on your auth structure.
--- For this setup, we use the service role key in actions, but these policies
--- provide extra security for direct client uploads if ever implemented.
-
-create policy "Admin Upload Curriculum Videos"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'curriculum-videos'
-    and (select role from public.profiles where id = auth.uid()) = 'admin'
-  );
-
-create policy "Admin Upload Curriculum Images"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'curriculum-images'
-    and (select role from public.profiles where id = auth.uid()) = 'admin'
-  );
-
-create policy "Admin Upload Library Resources"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'library-resources'
-    and (select role from public.profiles where id = auth.uid()) = 'admin'
-  );
-
--- 5. Admin Delete Policies
-create policy "Admin Delete Curriculum Videos"
-  on storage.objects for delete
-  using (
-    bucket_id = 'curriculum-videos'
-    and (select role from public.profiles where id = auth.uid()) = 'admin'
-  );
-
-create policy "Admin Delete Curriculum Images"
-  on storage.objects for delete
-  using (
-    bucket_id = 'curriculum-images'
-    and (select role from public.profiles where id = auth.uid()) = 'admin'
-  );
-
-create policy "Admin Delete Library Resources"
-  on storage.objects for delete
-  using (
-    bucket_id = 'library-resources'
-    and (select role from public.profiles where id = auth.uid()) = 'admin'
-  );
+CREATE POLICY "Admin Delete" ON storage.objects FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  )
+);
