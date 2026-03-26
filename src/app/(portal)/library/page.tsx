@@ -58,6 +58,12 @@ export default function LibraryPage() {
     }
   };
 
+  const hasRichContent = (content?: string) => {
+     if (!content) return false;
+     const stripped = content.replace(/<[^>]*>/g, '').trim();
+     return stripped.length > 0;
+  };
+
   const handleDownload = (resource: Resource) => {
     if (!resource.external_url) return;
 
@@ -210,7 +216,10 @@ export default function LibraryPage() {
                     {isOwned ? (
                     <Button variant="outline" className="w-full font-bold uppercase tracking-tighter group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => {
                         setSelectedResource(res);
-                        setViewMode(isPDF(res.external_url) && !res.content ? 'pdf' : 'content');
+                        // If it's a book and has a PDF, prioritize PDF view.
+                        // Otherwise, if it has content, show content.
+                        const shouldShowPDF = isPDF(res.external_url) && (res.type === 'book' || !hasRichContent(res.content));
+                        setViewMode(shouldShowPDF ? 'pdf' : 'content');
                       }}>
                         Open Resource <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
@@ -236,7 +245,8 @@ export default function LibraryPage() {
               {resources.filter(r => myResources.includes(r.id)).map(res => (
                 <Card key={res.id} className="hover:border-primary transition-all cursor-pointer" onClick={() => {
                   setSelectedResource(res);
-                  setViewMode(isPDF(res.external_url) && !res.content ? 'pdf' : 'content');
+                  const shouldShowPDF = isPDF(res.external_url) && (res.type === 'book' || !hasRichContent(res.content));
+                  setViewMode(shouldShowPDF ? 'pdf' : 'content');
                 }}>
                    <CardHeader className="flex flex-row items-center gap-4">
                       <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -297,7 +307,7 @@ export default function LibraryPage() {
                     </div>
                  </div>
 
-                 {selectedResource.content && isPDF(selectedResource.external_url) && (
+                 {hasRichContent(selectedResource.content) && isPDF(selectedResource.external_url) && (
                     <div className="flex justify-center">
                        <div className="bg-background/50 p-1 rounded-xl border flex gap-1">
                           <Button
@@ -321,33 +331,46 @@ export default function LibraryPage() {
                  )}
               </div>
 
-              <div className="flex-1 overflow-hidden p-0 bg-muted/20">
+              <div className="flex-1 overflow-hidden p-0 bg-muted/20 relative">
                  {viewMode === 'pdf' && isPDF(selectedResource.external_url) ? (
                     <div className="w-full h-full flex flex-col">
-                       <div className="flex-1 relative">
+                       {/* Background state / fallback message for desktop if iframe fails */}
+                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 -z-10">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4" />
+                          <p className="text-sm font-medium text-muted-foreground">Preparing your document viewer...</p>
+                          <Button variant="outline" size="sm" className="mt-4 font-bold uppercase tracking-tighter" asChild>
+                             <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
+                                Open in New Tab <ExternalLink className="h-3 w-3 ml-2" />
+                             </a>
+                          </Button>
+                       </div>
+
+                       <div className="flex-1 relative z-0">
                           <iframe
-                             src={`${selectedResource.external_url}#view=FitH&toolbar=0`}
-                             className="w-full h-full border-none"
+                             src={`${selectedResource.external_url}#view=FitH&toolbar=0&navpanes=0`}
+                             className="w-full h-full border-none bg-white"
                              title={selectedResource.title}
                           />
-                          {/* Mobile Fallback Overlay */}
-                          <div className="absolute inset-0 flex md:hidden flex-col items-center justify-center bg-background/90 text-center p-8 space-y-4">
-                             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                                <Book className="h-8 w-8" />
+
+                          {/* Mobile Specific Fallback Overlay (Active on mobile) */}
+                          <div className="absolute inset-0 flex md:hidden flex-col items-center justify-center bg-background text-center p-8 space-y-4 z-20">
+                             <div className="h-20 w-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                                <Book className="h-10 w-10" />
                              </div>
-                             <div>
-                                <h4 className="font-bold">PDF Document</h4>
-                                <p className="text-xs text-muted-foreground">Mobile browsers may not display PDFs directly in the page.</p>
+                             <div className="max-w-xs">
+                                <h4 className="font-black tracking-tight uppercase">Document Ready</h4>
+                                <p className="text-xs text-muted-foreground mt-1">To ensure the best reading experience on mobile, please open the PDF in a new tab.</p>
                              </div>
-                             <Button size="sm" className="font-bold uppercase tracking-tighter" asChild>
+                             <Button size="lg" className="h-14 w-full max-w-[240px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20" asChild>
                                 <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
-                                   Open in New Tab <ExternalLink className="h-4 w-4 ml-2" />
+                                   Read Book <ExternalLink className="h-5 w-5 ml-2" />
                                 </a>
                              </Button>
+                             <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">or use download button above</p>
                           </div>
                        </div>
                     </div>
-                 ) : selectedResource.content ? (
+                 ) : hasRichContent(selectedResource.content) ? (
                     <div className="h-full overflow-y-auto p-8 prose dark:prose-invert max-w-none">
                        <div dangerouslySetInnerHTML={{ __html: selectedResource.content }} />
                     </div>
