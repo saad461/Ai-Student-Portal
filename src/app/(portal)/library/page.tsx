@@ -46,6 +46,17 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [viewMode, setViewMode] = useState<'content' | 'pdf'>('content');
+
+  const isPDF = (url?: string) => {
+    if (!url) return false;
+    try {
+       const path = new URL(url).pathname;
+       return path.toLowerCase().endsWith('.pdf');
+    } catch {
+       return url.toLowerCase().includes('.pdf');
+    }
+  };
 
   const handleDownload = (resource: Resource) => {
     if (!resource.external_url) return;
@@ -197,7 +208,10 @@ export default function LibraryPage() {
                   </CardHeader>
                   <CardContent className="flex justify-between items-center border-t pt-4">
                     {isOwned ? (
-                      <Button variant="outline" className="w-full font-bold uppercase tracking-tighter group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => setSelectedResource(res)}>
+                    <Button variant="outline" className="w-full font-bold uppercase tracking-tighter group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => {
+                        setSelectedResource(res);
+                        setViewMode(isPDF(res.external_url) && !res.content ? 'pdf' : 'content');
+                      }}>
                         Open Resource <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
                     ) : (
@@ -220,7 +234,10 @@ export default function LibraryPage() {
         <TabsContent value="my-collection">
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {resources.filter(r => myResources.includes(r.id)).map(res => (
-                <Card key={res.id} className="hover:border-primary transition-all cursor-pointer" onClick={() => setSelectedResource(res)}>
+                <Card key={res.id} className="hover:border-primary transition-all cursor-pointer" onClick={() => {
+                  setSelectedResource(res);
+                  setViewMode(isPDF(res.external_url) && !res.content ? 'pdf' : 'content');
+                }}>
                    <CardHeader className="flex flex-row items-center gap-4">
                       <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                          {getIcon(res.type)}
@@ -259,56 +276,100 @@ export default function LibraryPage() {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative bg-background w-full max-w-5xl h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-primary/20"
             >
-              <div className="p-6 border-b flex justify-between items-center bg-muted/30">
-                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
-                       {getIcon(selectedResource.type)}
+              <div className="p-6 border-b flex flex-col gap-4 bg-muted/30">
+                 <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                       <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
+                          {getIcon(selectedResource.type)}
+                       </div>
+                       <div>
+                          <h2 className="text-xl font-black tracking-tighter uppercase">{selectedResource.title}</h2>
+                          <p className="text-xs text-muted-foreground font-bold">{selectedResource.type.replace('_', ' ')}</p>
+                       </div>
                     </div>
-                    <div>
-                       <h2 className="text-xl font-black tracking-tighter uppercase">{selectedResource.title}</h2>
-                       <p className="text-xs text-muted-foreground font-bold">{selectedResource.type.replace('_', ' ')}</p>
+                    <div className="flex gap-2">
+                       <Button variant="ghost" size="icon" onClick={() => handleDownload(selectedResource)} className="rounded-full h-10 w-10" title="Download Resource">
+                          <Download className="h-5 w-5" />
+                       </Button>
+                       <Button variant="ghost" size="icon" onClick={() => setSelectedResource(null)} className="rounded-full h-10 w-10">
+                          <X className="h-5 w-5" />
+                       </Button>
                     </div>
                  </div>
-                 <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleDownload(selectedResource)} className="rounded-full h-10 w-10" title="Download Resource">
-                       <Download className="h-5 w-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setSelectedResource(null)} className="rounded-full h-10 w-10">
-                       <X className="h-5 w-5" />
-                    </Button>
-                 </div>
+
+                 {selectedResource.content && isPDF(selectedResource.external_url) && (
+                    <div className="flex justify-center">
+                       <div className="bg-background/50 p-1 rounded-xl border flex gap-1">
+                          <Button
+                             variant={viewMode === 'content' ? 'default' : 'ghost'}
+                             size="sm"
+                             className="h-8 font-bold text-[10px] uppercase"
+                             onClick={() => setViewMode('content')}
+                          >
+                             Description
+                          </Button>
+                          <Button
+                             variant={viewMode === 'pdf' ? 'default' : 'ghost'}
+                             size="sm"
+                             className="h-8 font-bold text-[10px] uppercase"
+                             onClick={() => setViewMode('pdf')}
+                          >
+                             View PDF
+                          </Button>
+                       </div>
+                    </div>
+                 )}
               </div>
 
               <div className="flex-1 overflow-hidden p-0 bg-muted/20">
-                 {selectedResource.external_url ? (
-                   <div className="w-full h-full">
-                      {selectedResource.external_url.toLowerCase().endsWith('.pdf') ? (
-                         <iframe
-                            src={`${selectedResource.external_url}#toolbar=0`}
-                            className="w-full h-full border-none"
-                            title={selectedResource.title}
-                         />
-                      ) : (
-                         <div className="h-full flex flex-col items-center justify-center text-center space-y-6 p-8">
-                            <div className="h-24 w-24 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
-                               <ExternalLink className="h-10 w-10" />
-                            </div>
-                            <div className="max-w-md">
-                               <h3 className="text-2xl font-black tracking-tighter uppercase">External Document</h3>
-                               <p className="text-muted-foreground font-medium italic">This resource cannot be previewed directly. Please use the button below to open it.</p>
-                            </div>
-                            <Button size="lg" className="h-14 px-10 font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20" asChild>
-                               <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
-                                 Open Resource <ExternalLink className="h-5 w-5 ml-2" />
-                               </a>
-                            </Button>
-                         </div>
-                      )}
-                   </div>
+                 {viewMode === 'pdf' && isPDF(selectedResource.external_url) ? (
+                    <div className="w-full h-full flex flex-col">
+                       <div className="flex-1 relative">
+                          <iframe
+                             src={`${selectedResource.external_url}#view=FitH&toolbar=0`}
+                             className="w-full h-full border-none"
+                             title={selectedResource.title}
+                          />
+                          {/* Mobile Fallback Overlay */}
+                          <div className="absolute inset-0 flex md:hidden flex-col items-center justify-center bg-background/90 text-center p-8 space-y-4">
+                             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                                <Book className="h-8 w-8" />
+                             </div>
+                             <div>
+                                <h4 className="font-bold">PDF Document</h4>
+                                <p className="text-xs text-muted-foreground">Mobile browsers may not display PDFs directly in the page.</p>
+                             </div>
+                             <Button size="sm" className="font-bold uppercase tracking-tighter" asChild>
+                                <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
+                                   Open in New Tab <ExternalLink className="h-4 w-4 ml-2" />
+                                </a>
+                             </Button>
+                          </div>
+                       </div>
+                    </div>
+                 ) : selectedResource.content ? (
+                    <div className="h-full overflow-y-auto p-8 prose dark:prose-invert max-w-none">
+                       <div dangerouslySetInnerHTML={{ __html: selectedResource.content }} />
+                    </div>
+                 ) : selectedResource.external_url ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 p-8">
+                       <div className="h-24 w-24 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
+                          <ExternalLink className="h-10 w-10" />
+                       </div>
+                       <div className="max-w-md">
+                          <h3 className="text-2xl font-black tracking-tighter uppercase">External Resource</h3>
+                          <p className="text-muted-foreground font-medium italic">This resource is hosted externally or is a document that cannot be previewed directly.</p>
+                       </div>
+                       <Button size="lg" className="h-14 px-10 font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20" asChild>
+                          <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
+                            Open Resource <ExternalLink className="h-5 w-5 ml-2" />
+                          </a>
+                       </Button>
+                    </div>
                  ) : (
-                   <div className="h-full overflow-y-auto p-8 prose dark:prose-invert max-w-none">
-                      <div dangerouslySetInnerHTML={{ __html: selectedResource.content || '<p>No content provided.</p>' }} />
-                   </div>
+                    <div className="h-full flex items-center justify-center text-muted-foreground italic">
+                       No content or document available for this resource.
+                    </div>
                  )}
               </div>
             </motion.div>
