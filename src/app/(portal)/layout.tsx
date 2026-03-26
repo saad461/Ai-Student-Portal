@@ -4,6 +4,8 @@ import { useMemo } from 'react';
 import { RestScreen } from '@/components/rest-screen';
 import { AttendanceTracker } from '@/components/attendance-tracker';
 import { ActivityTracker } from '@/components/activity-tracker';
+import { Sidebar } from '@/components/sidebar';
+import { PortalNavbar } from '@/components/portal-navbar';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const isWeekend = useMemo(() => {
@@ -20,10 +22,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <>
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
       <ActivityTracker />
       <AttendanceTracker />
-      {children}
-    </>
+      <Sidebar />
+      <PortalNavbar />
+      <main className="flex-1 w-full relative">
+        {children}
+      </main>
+    </div>
   );
 }

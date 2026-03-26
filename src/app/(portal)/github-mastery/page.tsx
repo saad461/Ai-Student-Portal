@@ -1,7 +1,5 @@
 'use client';
 
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Github, Terminal, GitBranch, GitPullRequest, GitMerge, ArrowRight } from 'lucide-react';
@@ -40,10 +38,7 @@ export default function GitHubMasteryPage() {
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
+    <div className="p-4 lg:p-8">
         <div className="max-w-4xl mx-auto space-y-8">
           <header>
             <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -86,7 +81,6 @@ export default function GitHubMasteryPage() {
             </code>
           </Card>
         </div>
-      </main>
     </div>
   );
 }
