@@ -15,7 +15,8 @@ import {
   Download,
   ExternalLink,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,18 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+
+  const handleDownload = (resource: Resource) => {
+    if (!resource.external_url) return;
+
+    const link = document.createElement('a');
+    link.href = resource.external_url;
+    link.download = resource.title;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     fetchData();
@@ -256,29 +269,46 @@ export default function LibraryPage() {
                        <p className="text-xs text-muted-foreground font-bold">{selectedResource.type.replace('_', ' ')}</p>
                     </div>
                  </div>
-                 <Button variant="ghost" size="icon" onClick={() => setSelectedResource(null)} className="rounded-full">
-                    <Download className="h-5 w-5" />
-                 </Button>
+                 <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleDownload(selectedResource)} className="rounded-full h-10 w-10" title="Download Resource">
+                       <Download className="h-5 w-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedResource(null)} className="rounded-full h-10 w-10">
+                       <X className="h-5 w-5" />
+                    </Button>
+                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 prose dark:prose-invert max-w-none">
+              <div className="flex-1 overflow-hidden p-0 bg-muted/20">
                  {selectedResource.external_url ? (
-                   <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                      <div className="h-24 w-24 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
-                         <ExternalLink className="h-10 w-10" />
-                      </div>
-                      <div className="max-w-md">
-                         <h3 className="text-2xl font-black tracking-tighter">EXTERNAL RESOURCE</h3>
-                         <p className="text-muted-foreground">This resource is hosted externally or is a PDF document.</p>
-                      </div>
-                      <Button size="lg" className="h-14 px-10 font-black uppercase tracking-widest rounded-2xl" asChild>
-                         <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
-                           Open Document <ExternalLink className="h-5 w-5 ml-2" />
-                         </a>
-                      </Button>
+                   <div className="w-full h-full">
+                      {selectedResource.external_url.toLowerCase().endsWith('.pdf') ? (
+                         <iframe
+                            src={`${selectedResource.external_url}#toolbar=0`}
+                            className="w-full h-full border-none"
+                            title={selectedResource.title}
+                         />
+                      ) : (
+                         <div className="h-full flex flex-col items-center justify-center text-center space-y-6 p-8">
+                            <div className="h-24 w-24 rounded-3xl bg-primary/10 flex items-center justify-center text-primary">
+                               <ExternalLink className="h-10 w-10" />
+                            </div>
+                            <div className="max-w-md">
+                               <h3 className="text-2xl font-black tracking-tighter uppercase">External Document</h3>
+                               <p className="text-muted-foreground font-medium italic">This resource cannot be previewed directly. Please use the button below to open it.</p>
+                            </div>
+                            <Button size="lg" className="h-14 px-10 font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20" asChild>
+                               <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
+                                 Open Resource <ExternalLink className="h-5 w-5 ml-2" />
+                               </a>
+                            </Button>
+                         </div>
+                      )}
                    </div>
                  ) : (
-                   <div dangerouslySetInnerHTML={{ __html: selectedResource.content || '<p>No content provided.</p>' }} />
+                   <div className="h-full overflow-y-auto p-8 prose dark:prose-invert max-w-none">
+                      <div dangerouslySetInnerHTML={{ __html: selectedResource.content || '<p>No content provided.</p>' }} />
+                   </div>
                  )}
               </div>
             </motion.div>
