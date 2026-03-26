@@ -114,7 +114,7 @@ export default function ShopPage() {
   if (loading && !profile) return <div className="p-12 text-center animate-pulse font-black text-2xl uppercase tracking-widest">Entering the Vault...</div>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12">
+    <div className="max-w-7xl mx-auto space-y-8 md:space-y-12">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-slate-900 text-white p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
          <div className="relative z-10 space-y-2">
             <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4">
