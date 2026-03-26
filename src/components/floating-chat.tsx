@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, User, Phone, Video, Calendar } from 'lucide-react';
+import { MessageCircle, X, Send, User, Phone, Video, Calendar, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -288,10 +288,21 @@ export function FloatingChat() {
                          <p className="text-xs font-bold uppercase tracking-widest">Connecting to Support...</p>
                       </div>
                     ) : !adminId ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
-                         <User className="h-12 w-12 mb-2" />
-                         <p className="text-xs font-bold uppercase tracking-widest">No Admin Available</p>
-                         <p className="text-[10px] max-w-[150px] mt-1 italic">Please wait for an administrator to be assigned.</p>
+                      <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
+                         <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                            <AlertTriangle className="h-8 w-8" />
+                         </div>
+                         <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-foreground">Support Offline</p>
+                            <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                               To enable chat, ensure at least one user in your Supabase <b>profiles</b> table has <b>role = &apos;admin&apos;</b>.
+                            </p>
+                         </div>
+                         <div className="pt-4 border-t w-full">
+                            <p className="text-[9px] font-mono bg-muted p-2 rounded text-left break-all">
+                               UPDATE profiles SET role = &apos;admin&apos; WHERE id = &apos;YOUR_USER_ID&apos;;
+                            </p>
+                         </div>
                       </div>
                     ) : messages.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
