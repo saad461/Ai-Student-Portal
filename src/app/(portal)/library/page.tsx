@@ -51,9 +51,12 @@ export default function LibraryPage() {
     if (!url) return '';
     try {
        const path = new URL(url).pathname;
-       return path.split('.').pop()?.toLowerCase() || '';
+       const parts = path.split('.');
+       return parts.length > 1 ? parts.pop()?.toLowerCase() || '' : '';
     } catch {
-       return url.split('.').pop()?.split('?')[0].toLowerCase() || '';
+       const cleanUrl = url.split('?')[0].split('#')[0];
+       const parts = cleanUrl.split('.');
+       return parts.length > 1 ? parts.pop()?.toLowerCase() || '' : '';
     }
   };
 
@@ -292,66 +295,65 @@ export default function LibraryPage() {
                  </div>
               </div>
 
-              <div className="flex-1 overflow-hidden p-0 bg-muted/20 relative">
+              <div className="flex-1 overflow-hidden p-0 bg-muted/20 relative flex flex-col">
                  {selectedResource.external_url ? (
-                   <div className="w-full h-full flex flex-col">
-                      {/* PDF View for Desktop */}
-                      {isPDF(selectedResource.external_url) && (
-                         <div className="hidden md:block w-full h-full relative">
-                            <iframe
-                               src={`${selectedResource.external_url}#view=FitH&toolbar=0&navpanes=0`}
-                               className="w-full h-full border-none bg-white"
-                               title={selectedResource.title}
-                            />
-                         </div>
-                      )}
-
-                      {/* Professional Fallback / Mobile View */}
-                      <div className={cn(
-                         "flex-1 flex flex-col items-center justify-center text-center p-8 space-y-6",
-                         isPDF(selectedResource.external_url) && "md:hidden"
-                      )}>
-                         <div className="h-24 w-24 rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                   <div className="w-full h-full flex flex-col items-center justify-center text-center p-8 space-y-8 animate-in fade-in zoom-in-95 duration-300">
+                      <div className="relative">
+                         <div className="h-32 w-32 rounded-[2.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                             {isPDF(selectedResource.external_url) ? (
-                               <Book className="h-12 w-12" />
+                               <Book className="h-16 w-16" />
                             ) : isWord(selectedResource.external_url) ? (
-                               <FileText className="h-12 w-12" />
+                               <FileText className="h-16 w-16" />
                             ) : (
-                               <ExternalLink className="h-12 w-12" />
+                               <ExternalLink className="h-16 w-16" />
                             )}
                          </div>
-
-                         <div className="max-w-sm">
-                            <Badge variant="outline" className="mb-4 uppercase tracking-widest font-black text-[10px]">
-                               {getFileExtension(selectedResource.external_url)} Document
-                            </Badge>
-                            <h3 className="text-2xl font-black tracking-tighter uppercase">Ready to Open</h3>
-                            <p className="text-muted-foreground font-medium mt-2">
-                               {isPDF(selectedResource.external_url)
-                                 ? "Click below to read your book in a full-screen optimized viewer."
-                                 : "This document is ready to be opened in your browser or office application."}
-                            </p>
+                         <div className="absolute -bottom-2 -right-2 bg-background border-2 border-primary/20 px-3 py-1 rounded-full shadow-lg">
+                            <span className="text-[10px] font-black uppercase tracking-tighter">{getFileExtension(selectedResource.external_url)}</span>
                          </div>
+                      </div>
 
-                         <div className="flex flex-col w-full max-w-xs gap-3">
-                            <Button size="lg" className="h-16 w-full font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20" asChild>
-                               <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
-                                  Open {selectedResource.type === 'book' ? 'Book' : 'Document'} <ExternalLink className="h-5 w-5 ml-2" />
-                               </a>
-                            </Button>
-                            <Button variant="outline" size="lg" className="h-14 w-full font-bold uppercase tracking-tighter rounded-2xl" onClick={() => handleDownload(selectedResource)}>
-                               Download File <Download className="h-5 w-5 ml-2" />
-                            </Button>
-                         </div>
-
-                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest opacity-50">
-                            High Quality Content • Secure Access
+                      <div className="max-w-md space-y-2">
+                         <h3 className="text-3xl font-black tracking-tighter uppercase">{selectedResource.title}</h3>
+                         <p className="text-muted-foreground font-medium">
+                            {isPDF(selectedResource.external_url)
+                              ? "Your book is ready. Open it in a new tab for an optimized full-screen reading experience."
+                              : "This document is ready to be viewed. You can open it directly or download it for offline use."}
                          </p>
+                      </div>
+
+                      <div className="flex flex-col w-full max-w-sm gap-4">
+                         <Button size="lg" className="h-20 w-full text-lg font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/30 transition-transform hover:scale-[1.02] active:scale-[0.98]" asChild>
+                            <a href={selectedResource.external_url} target="_blank" rel="noopener noreferrer">
+                               {isPDF(selectedResource.external_url) ? 'Open Book in Browser' : 'Open Document'} <ExternalLink className="h-6 w-6 ml-3" />
+                            </a>
+                         </Button>
+                         <Button variant="outline" size="lg" className="h-16 w-full font-bold uppercase tracking-widest rounded-3xl border-2 hover:bg-primary/5" onClick={() => handleDownload(selectedResource)}>
+                            Download for Offline <Download className="h-5 w-5 ml-3" />
+                         </Button>
+                      </div>
+
+                      <div className="flex items-center gap-6 pt-4">
+                         <div className="flex flex-col items-center gap-1">
+                            <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                               <CheckCircle2 className="h-5 w-5" />
+                            </div>
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-60">Verified</span>
+                         </div>
+                         <div className="flex flex-col items-center gap-1">
+                            <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                               <Zap className="h-5 w-5" />
+                            </div>
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-60">Instant</span>
+                         </div>
                       </div>
                    </div>
                  ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground italic">
-                       No document available for this resource.
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground italic space-y-4">
+                       <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                          <X className="h-8 w-8 opacity-20" />
+                       </div>
+                       <p>No document link found for this resource.</p>
                     </div>
                  )}
               </div>
