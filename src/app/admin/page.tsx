@@ -1190,7 +1190,9 @@ export default function AdminDashboard() {
                                <div className="flex gap-2">
                                   {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><GithubIcon className="h-3 w-3 mr-2" /> Repo</a></Button>}
                                   <Badge className={cn(
-                                    sub.status === 'reviewed' ? 'bg-green-600' : 'bg-amber-500'
+                                    sub.status === 'reviewed' ? 'bg-green-600' :
+                                    sub.status === 'priority_review' ? 'bg-red-600 animate-pulse' :
+                                    'bg-amber-500'
                                   )}>{sub.status.toUpperCase()}</Badge>
                                </div>
                             </CardHeader>

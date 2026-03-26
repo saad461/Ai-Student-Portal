@@ -484,6 +484,15 @@ export async function purchaseShopItemAction(itemId: string, priceInSkillPoints:
      await supabaseAdmin.from('profiles').update({ has_streak_freeze: true }).eq('id', user.id);
   }
 
+  if (itemId === 'priority_review') {
+     // Mark all currently 'submitted' assignments as priority
+     await supabaseAdmin
+       .from('submissions')
+       .update({ status: 'priority_review' })
+       .eq('student_id', user.id)
+       .eq('status', 'submitted');
+  }
+
   return { success: true };
 }
 

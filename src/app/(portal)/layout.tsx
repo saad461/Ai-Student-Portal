@@ -6,7 +6,8 @@ import { AttendanceTracker } from '@/components/attendance-tracker';
 import { ActivityTracker } from '@/components/activity-tracker';
 import { Sidebar } from '@/components/sidebar';
 import { PortalNavbar } from '@/components/portal-navbar';
-import { FloatingChat } from '@/components/floating-chat'; // 1. Add this import
+import { FloatingChat } from '@/components/floating-chat';
+import { SkillShop } from '@/components/skill-shop';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const isWeekend = useMemo(() => {
@@ -18,7 +19,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
         <RestScreen />
-        <FloatingChat /> 
+        <SkillShop />
+        <FloatingChat />
       </div>
     );
   }
@@ -32,6 +34,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 w-full relative min-w-0">
         {children}
       </main>
+      <SkillShop />
       <FloatingChat />
     </div>
   );
