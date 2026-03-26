@@ -54,6 +54,7 @@ import {
   uploadVideoAction,
   saveCourseAction,
   deleteCourseAction,
+  getAdminDataAction,
   adminLogoutAction,
   unlockCourseForStudentAction,
   saveResourceAction,
@@ -163,72 +164,44 @@ export default function AdminDashboard() {
 
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select(`*, submissions (*), student_activity (*)`);
+    const res = await getAdminDataAction();
 
-    setStudents((profiles as unknown as StudentProfile[]) || []);
+    if (res.success && res.data) {
+      const {
+        profiles,
+        messages,
+        courses: coursesData,
+        curriculum: curriculumData,
+        modules: modulesData,
+        subModules: subModulesData,
+        attendance: attendanceData,
+        resources: resourcesData,
+        challenges: challengesData
+      } = res.data;
 
-    const { data: msgs } = await supabase
-      .from('messages')
-      .select('*, profiles(full_name)')
-      .order('created_at', { ascending: false });
+      setStudents(profiles as StudentProfile[]);
+      setMessages(messages as SorryMessage[]);
 
-    setMessages((msgs as unknown as SorryMessage[]) || []);
+      const fetchedCourses = (coursesData as Course[]) || [];
+      setCourses(fetchedCourses);
+      setParentCourses(fetchedCourses.filter(c => !c.parent_id));
 
-    const { data: coursesData } = await supabase
-      .from('courses')
-      .select('*')
-      .order('index', { ascending: true });
-    const fetchedCourses = (coursesData as Course[]) || [];
-    setCourses(fetchedCourses);
-    setParentCourses(fetchedCourses.filter(c => !c.parent_id));
+      if (fetchedCourses.length > 0 && !selectedCourseId) {
+        setSelectedCourseId(fetchedCourses[0].id);
+      }
 
-    // Set default selected course if not set
-    if (fetchedCourses.length > 0 && !selectedCourseId) {
-       setSelectedCourseId(fetchedCourses[0].id);
+      setCurriculum(curriculumData as CurriculumItem[]);
+      setModules(modulesData as Module[]);
+      setSubModules(subModulesData as SubModule[]);
+      setAttendance(attendanceData);
+      setResources(resourcesData);
+      setChallenges(challengesData);
+    } else {
+      toastError('Error fetching admin data: ' + (res.error || 'Unknown error'));
     }
 
-    const { data: curriculumData } = await supabase
-      .from('curriculum')
-      .select('*')
-      .order('week', { ascending: true });
-
-    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
-
-    const { data: modulesData } = await supabase
-      .from('modules')
-      .select('*')
-      .order('index', { ascending: true });
-    setModules((modulesData as Module[]) || []);
-
-    const { data: subModulesData } = await supabase
-      .from('sub_modules')
-      .select('*')
-      .order('index', { ascending: true });
-    setSubModules((subModulesData as SubModule[]) || []);
-
-    const { data: attendanceData } = await supabase
-      .from('attendance')
-      .select('*, profiles(full_name)')
-      .order('date', { ascending: false });
-
-    setAttendance(attendanceData || []);
-
-    const { data: resourcesData } = await supabase
-      .from('resources')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setResources(resourcesData || []);
-
-    const { data: challengesData } = await supabase
-      .from('daily_challenges')
-      .select('*')
-      .order('active_date', { ascending: false });
-    setChallenges(challengesData || []);
-
     setLoading(false);
-  }, [selectedCourseId]);
+  }, [selectedCourseId, toastError]);
 
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
