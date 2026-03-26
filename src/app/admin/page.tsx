@@ -20,7 +20,6 @@ import {
   Plus,
   Search,
   FileText,
-  AlertTriangle,
   Database,
   BookOpen,
   Edit,
@@ -28,7 +27,6 @@ import {
   FilePlus,
   Layers,
   ChevronRight,
-  ChevronDown,
   Layout,
   Video as VideoIcon,
   PhoneCall,
@@ -36,7 +34,6 @@ import {
   SendHorizontal,
   X
 } from 'lucide-react';
-import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -61,14 +58,13 @@ import {
   deleteCourseAction,
   getAdminDataAction,
   adminLogoutAction,
-  unlockCourseForStudentAction,
   saveResourceAction,
   deleteResourceAction,
   saveDailyChallengeAction,
   reviewSubmissionAction,
   uploadResourceFileAction
 } from './actions';
-import { CurriculumItem, QuizQuestion, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
+import { CurriculumItem, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
   Table,
   TableBody,
@@ -80,7 +76,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff } from 'lucide-react';
 
 interface Resource {
   id?: string;
@@ -98,8 +94,8 @@ interface DailyChallenge {
   id?: string;
   title: string;
   description: string;
-  initial_code: any;
-  test_cases: any;
+  initial_code: Record<string, unknown>;
+  test_cases: Record<string, unknown>[];
   difficulty: 'easy' | 'medium' | 'hard';
   points_reward: number;
   active_date: string;
@@ -122,47 +118,35 @@ interface StudentProfile {
   enrollment_date: string;
   is_pro: boolean;
   submissions: StudentSubmission[];
-  student_activity?: any[];
-}
-
-interface SorryMessage {
-  id: string;
-  student_id: string;
-  body: string;
-  status: string;
-  created_at: string;
-  profiles: { full_name: string };
+  student_activity?: Record<string, unknown>[];
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<StudentProfile[]>([]);
-  const [messages, setMessages] = useState<any[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [subModules, setSubModules] = useState<SubModule[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [parentCourses, setParentCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [attendance, setAttendance] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, unknown>[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support'>('students');
 
   const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<Record<string, unknown>[]>([]);
   const [newChatInput, setNewChatInput] = useState('');
   const [adminId, setAdminId] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  const [studentVideoSessions, setStudentVideoSessions] = useState<any[]>([]);
-  const [ringingSession, setRingingSession] = useState<any | null>(null);
+  const [studentVideoSessions, setStudentVideoSessions] = useState<Record<string, unknown>[]>([]);
+  const [ringingSession, setRingingSession] = useState<Record<string, unknown> | null>(null);
   const [activeCallSessionId, setActiveCallSessionId] = useState<string | null>(null);
 
-  const [extraTaskText, setExtraTaskText] = useState('');
-  const [isAssigning, setIsAssigning] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
   const [studentTab, setStudentTab] = useState<'submissions' | 'activity'>('submissions');
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
@@ -228,26 +212,32 @@ export default function AdminDashboard() {
       const chatChannel = supabase
         .channel('admin_realtime_chat')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
-          if (selectedChatStudent) fetchChat(selectedChatStudent);
+          if (selectedChatStudent) {
+            fetchChat(selectedChatStudent).catch(console.error);
+          }
         })
         .subscribe();
 
       const videoChannel = supabase
         .channel('admin_video_calls')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'video_sessions' }, (payload: any) => {
-          if (payload.new && payload.new.is_ringing && !payload.old?.is_ringing) {
-             setRingingSession(payload.new);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'video_sessions' }, (payload) => {
+          const newPayload = payload.new as Record<string, unknown> | null;
+          const oldPayload = payload.old as Record<string, unknown> | null;
+          if (newPayload && newPayload.is_ringing && !oldPayload?.is_ringing) {
+             setRingingSession(newPayload);
           }
-          if (selectedChatStudent) fetchVideoSessions(selectedChatStudent);
+          if (selectedChatStudent) {
+            fetchVideoSessions(selectedChatStudent).catch(console.error);
+          }
         })
         .subscribe();
 
       return () => {
-        supabase.removeChannel(chatChannel);
-        supabase.removeChannel(videoChannel);
+        supabase.removeChannel(chatChannel).catch(console.error);
+        supabase.removeChannel(videoChannel).catch(console.error);
       };
     }
-  }, [router, fetchAdminData, selectedChatStudent]);
+  }, [router, fetchAdminData, selectedChatStudent, fetchChat, fetchVideoSessions]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -255,7 +245,7 @@ export default function AdminDashboard() {
     }
   }, [chatMessages]);
 
-  const fetchChat = async (studentId: string) => {
+  const fetchChat = useCallback(async (studentId: string) => {
     const { data: msgs } = await supabase
       .from('chat_messages')
       .select('*')
@@ -263,17 +253,17 @@ export default function AdminDashboard() {
       .order('created_at', { ascending: true });
 
     if (msgs) setChatMessages(msgs);
-    fetchVideoSessions(studentId);
-  };
+    fetchVideoSessions(studentId).catch(console.error);
+  }, [adminId, fetchVideoSessions]);
 
-  const fetchVideoSessions = async (studentId: string) => {
+  const fetchVideoSessions = useCallback(async (studentId: string) => {
     const { data } = await supabase
       .from('video_sessions')
       .select('*')
       .eq('student_id', studentId)
       .order('scheduled_at', { ascending: false });
     if (data) setStudentVideoSessions(data);
-  };
+  }, []);
 
   const updateVideoStatus = async (sessionId: string, status: string) => {
     await supabase.from('video_sessions').update({ status, admin_id: adminId }).eq('id', sessionId);
@@ -313,7 +303,7 @@ export default function AdminDashboard() {
       } else {
         toastError('Error saving curriculum: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
       }
-    } catch (err) {
+    } catch {
       toastError('An unexpected error occurred while saving.');
     } finally {
       setIsSaving(false);
@@ -362,7 +352,7 @@ export default function AdminDashboard() {
       fetchAdminData();
     } else {
       let msg = 'An unknown error occurred.';
-      if (typeof res.error === 'object' && (res.error as any).code === '23505') {
+      if (typeof res.error === 'object' && res.error !== null && (res.error as Record<string, unknown>).code === '23505') {
         msg = 'The course slug (URL identifier) is already in use by another course. Please choose a unique slug.';
       } else {
         msg = typeof res.error === 'string' ? res.error : JSON.stringify(res.error);
@@ -399,20 +389,12 @@ export default function AdminDashboard() {
     if (result.success) {
       success('Challenge saved successfully!');
       setEditingChallenge(null);
-      fetchAdminData();
+      fetchAdminData().catch(console.error);
     } else {
       toastError('Error saving challenge: ' + JSON.stringify(result.error));
     }
   };
 
-  const handleUnlockCourse = async (email: string, courseId: string) => {
-    const res = await unlockCourseForStudentAction(email, courseId);
-    if (res.success) {
-      success('Course unlocked successfully!');
-    } else {
-      toastError('Error unlocking course: ' + res.error);
-    }
-  };
 
   const handleDeleteCurriculum = async (id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
@@ -494,13 +476,13 @@ export default function AdminDashboard() {
                 </div>
                 <div className="text-center">
                    <h2 className="text-2xl font-black uppercase tracking-tighter">Incoming Call</h2>
-                   <p className="opacity-80 font-bold">{students.find(s => s.id === ringingSession?.student_id)?.full_name} is ringing...</p>
+                   <p className="opacity-80 font-bold">{students.find(s => s.id === (ringingSession as Record<string, unknown>)?.student_id)?.full_name} is ringing...</p>
                 </div>
                 <div className="flex gap-4 w-full px-4">
                    <Button
                     className="flex-1 h-14 bg-white text-emerald-600 hover:bg-slate-100 font-black uppercase tracking-widest text-xs"
                     onClick={() => {
-                        setActiveCallSessionId(ringingSession.id);
+                        setActiveCallSessionId((ringingSession as Record<string, unknown>).id as string);
                         setRingingSession(null);
                     }}
                    >
@@ -510,8 +492,8 @@ export default function AdminDashboard() {
                     variant="ghost"
                     className="flex-1 h-14 bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest text-xs border-none"
                     onClick={async () => {
-                       await updateVideoStatus(ringingSession.id, 'missed');
-                       await supabase.from('video_sessions').update({ is_ringing: false }).eq('id', ringingSession.id);
+                       await updateVideoStatus((ringingSession as Record<string, unknown>).id as string, 'missed');
+                       await supabase.from('video_sessions').update({ is_ringing: false }).eq('id', (ringingSession as Record<string, unknown>).id);
                        setRingingSession(null);
                     }}
                    >
@@ -604,7 +586,7 @@ export default function AdminDashboard() {
 
                                  if (!session) {
                                     const now = new Date();
-                                    const { data, error } = await supabase.from('video_sessions').insert({
+                                    const { data } = await supabase.from('video_sessions').insert({
                                        student_id: selectedChatStudent,
                                        admin_id: adminId,
                                        scheduled_at: now.toISOString(),
@@ -632,7 +614,7 @@ export default function AdminDashboard() {
                              </div>
                           ) : (
                              chatMessages.map(msg => (
-                                <div key={msg.id} className={cn(
+                                <div key={msg.id as string} className={cn(
                                    "flex flex-col max-w-[70%]",
                                    msg.sender_id === adminId ? "ml-auto items-end" : "items-start"
                                 )}>
@@ -640,10 +622,10 @@ export default function AdminDashboard() {
                                       "p-3 rounded-2xl text-sm font-medium shadow-sm",
                                       msg.sender_id === adminId ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-slate-100 dark:bg-slate-800 text-foreground rounded-tl-none border"
                                    )}>
-                                      {msg.content}
+                                      {msg.content as string}
                                    </div>
                                    <span className="text-[9px] text-muted-foreground mt-1 px-1">
-                                      {new Date(msg.created_at).toLocaleString()}
+                                      {new Date(msg.created_at as string).toLocaleString()}
                                    </span>
                                 </div>
                              ))
@@ -689,6 +671,7 @@ export default function AdminDashboard() {
                 <Card key={course.id} className="overflow-hidden group">
                   <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
                      {course.thumbnail_url ? (
+                       // eslint-disable-next-line @next/next/no-img-element
                        <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center text-slate-400">
@@ -980,7 +963,7 @@ export default function AdminDashboard() {
             }) : (
               <div className="p-12 text-center border-2 border-dashed rounded-xl">
                  <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                 <p className="text-slate-500">Create some Modules first in the "Course Structure" tab.</p>
+                 <p className="text-slate-500">Create some Modules first in the &quot;Course Structure&quot; tab.</p>
                  <Button variant="outline" className="mt-4" onClick={() => setActiveTab('structure')}>Go to Course Structure</Button>
               </div>
             )}
@@ -1214,7 +1197,7 @@ export default function AdminDashboard() {
                                      const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
                                      if (res.success) {
                                         success('AI Review generated!');
-                                        fetchAdminData();
+                                        fetchAdminData().catch(console.error);
                                      }
                                   }}>
                                     <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
@@ -1233,8 +1216,8 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 pl-8 space-y-8">
-                       {viewingStudent?.student_activity?.sort((a:any, b:any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((act: any) => (
-                         <div key={act.id} className="relative">
+                       {viewingStudent?.student_activity?.sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime()).map((act) => (
+                         <div key={act.id as string} className="relative">
                             <div className={cn(
                                "absolute -left-[41px] top-0 h-6 w-6 rounded-full border-4 border-background flex items-center justify-center",
                                act.activity_type === 'login' ? "bg-blue-500" :
@@ -1329,7 +1312,11 @@ export default function AdminDashboard() {
 
                 <div className="space-y-2">
                   <Label>Item Type</Label>
-                  <select className="w-full p-2 rounded border bg-background" value={editingItem?.type || 'lecture'} onChange={(e) => setEditingItem(prev => ({ ...prev!, type: e.target.value as any }))}>
+                  <select
+                    className="w-full p-2 rounded border bg-background"
+                    value={editingItem?.type || 'lecture'}
+                    onChange={(e) => setEditingItem(prev => ({ ...prev!, type: e.target.value as 'lecture' | 'assignment' | 'quiz' | 'task' }))}
+                  >
                     <option value="lecture">Lecture</option>
                     <option value="assignment">Assignment</option>
                     <option value="quiz">Quiz</option>
@@ -1385,8 +1372,8 @@ export default function AdminDashboard() {
                           success('Video uploaded successfully!');
                           setEditingItem(prev => ({ ...prev!, video_url: res.url }));
                         }
-                        else toastError('Upload failed: ' + res.error);
-                      } catch (err) { toastError('Upload error'); }
+                        else toastError('Upload failed: ' + (res.error as string));
+                      } catch { toastError('Upload error'); }
                       finally {
                         setIsVideoUploading(false);
                         if (videoInputRef.current) videoInputRef.current.value = '';
@@ -1501,13 +1488,13 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-3">
-                        {((Array.isArray(editingItem.content) ? editingItem.content : null) || extractHeadings(editingItem.theory_content)).map((entry: any, idx: number) => (
+                        {((Array.isArray(editingItem.content) ? editingItem.content : null) || (extractHeadings(editingItem.theory_content) as Record<string, unknown>[])).map((entry: Record<string, unknown>, idx: number) => (
                           <div key={idx} className="flex gap-2 items-center group">
                             <select
                               className="h-8 text-[10px] font-bold border rounded bg-transparent px-1 outline-none w-14 shrink-0"
-                              value={entry.level}
+                              value={entry.level as number}
                               onChange={(e) => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : (extractHeadings(editingItem.theory_content) as Record<string, unknown>[]));
                                 const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], level: parseInt(e.target.value) };
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
@@ -1525,7 +1512,7 @@ export default function AdminDashboard() {
                               )}
                               value={entry.text}
                               onChange={(e) => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : (extractHeadings(editingItem.theory_content) as Record<string, unknown>[]));
                                 const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], text: e.target.value };
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
@@ -1533,9 +1520,9 @@ export default function AdminDashboard() {
                             />
                             <Input
                               className="h-8 text-xs font-mono w-40"
-                              value={entry.id}
+                              value={entry.id as string}
                               onChange={(e) => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : (extractHeadings(editingItem.theory_content) as Record<string, unknown>[]));
                                 const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], id: e.target.value };
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
@@ -1546,10 +1533,11 @@ export default function AdminDashboard() {
                               size="icon"
                               className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100"
                               onClick={() => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
-                                const newToc = currentToc.filter((_: any, i: number) => i !== idx);
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : (extractHeadings(editingItem.theory_content) as Record<string, unknown>[]));
+                                const newToc = currentToc.filter((_, i) => i !== idx);
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
                               }}
+                              type="button"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1560,7 +1548,7 @@ export default function AdminDashboard() {
                           size="sm"
                           className="w-full border-2 border-dashed h-10 mt-2"
                           onClick={() => {
-                            const current = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                            const current = (Array.isArray(editingItem.content) ? editingItem.content : (extractHeadings(editingItem.theory_content) as Record<string, unknown>[]));
                             setEditingItem(prev => ({
                               ...prev!,
                               content: [...current, { text: 'New Link', id: 'new-link', level: 2 }]
@@ -1607,7 +1595,9 @@ export default function AdminDashboard() {
                         try {
                           const quiz = JSON.parse(e.target.value);
                           setEditingItem(prev => ({ ...prev!, attached_quiz: quiz }));
-                        } catch (err) {}
+                                } catch {
+                                  // Invalid JSON
+                                }
                       }}
                     />
                   </div>
@@ -1681,7 +1671,11 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Type</Label>
-                  <select className="w-full p-2 border rounded" value={editingResource?.type} onChange={(e) => setEditingResource(prev => ({ ...prev!, type: e.target.value as any }))}>
+                  <select
+                    className="w-full p-2 border rounded"
+                    value={editingResource?.type}
+                    onChange={(e) => setEditingResource(prev => ({ ...prev!, type: e.target.value as 'book' | 'cheat_sheet' | 'roadmap' | 'note' | 'case_study' }))}
+                  >
                     <option value="book">Book</option>
                     <option value="cheat_sheet">Cheat Sheet</option>
                     <option value="roadmap">Roadmap</option>
@@ -1728,8 +1722,8 @@ export default function AdminDashboard() {
                         success('Resource uploaded successfully!');
                         setEditingResource(prev => ({ ...prev!, external_url: res.url }));
                       }
-                      else toastError('Upload failed: ' + res.error);
-                    } catch (err) { toastError('Upload error'); }
+                      else toastError('Upload failed: ' + (res.error as string));
+                    } catch { toastError('Upload error'); }
                     finally {
                       setIsResourceUploading(false);
                       if (resourceFileRef.current) resourceFileRef.current.value = '';
@@ -1754,7 +1748,11 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>Active Date</Label><Input type="date" value={editingChallenge?.active_date} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, active_date: e.target.value }))} /></div>
                 <div className="space-y-2"><Label>Difficulty</Label>
-                  <select className="w-full p-2 border rounded" value={editingChallenge?.difficulty} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, difficulty: e.target.value as any }))}>
+                  <select
+                    className="w-full p-2 border rounded"
+                    value={editingChallenge?.difficulty}
+                    onChange={(e) => setEditingChallenge(prev => ({ ...prev!, difficulty: e.target.value as 'easy' | 'medium' | 'hard' }))}
+                  >
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
                     <option value="hard">Hard</option>

@@ -1,24 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
-  BookOpen,
   Code,
   ShieldCheck,
   Timer,
-  Trophy,
-  Users,
   Zap,
   CheckCircle2,
   ArrowRight
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {

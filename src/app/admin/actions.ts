@@ -85,20 +85,7 @@ export async function seedCurriculumAction() {
   return { success: true, data };
 }
 
-async function checkIsAdmin(supabase: any) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  return profile?.role === 'admin';
-}
-
-export async function saveCurriculumItemAction(item: any) {
+export async function saveCurriculumItemAction(item: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -112,10 +99,10 @@ export async function saveCurriculumItemAction(item: any) {
     // Sanitize item: ensure numbers are numbers and sub_module_id is a valid UUID or null
     const sanitized = {
       ...item,
-      week: parseInt(item.week) || 1,
-      lecture_index: parseInt(item.lecture_index) || 1,
-      required_focus_hours: parseFloat(item.required_focus_hours) || 0,
-      required_read_minutes: parseInt(item.required_read_minutes) || 0,
+      week: parseInt(String(item.week)) || 1,
+      lecture_index: parseInt(String(item.lecture_index)) || 1,
+      required_focus_hours: parseFloat(String(item.required_focus_hours)) || 0,
+      required_read_minutes: parseInt(String(item.required_read_minutes)) || 0,
       sub_module_id: (item.sub_module_id && item.sub_module_id !== '') ? item.sub_module_id : null,
       course_id: (item.course_id && item.course_id !== '') ? item.course_id : null,
       module_id: (item.module_id && item.module_id !== '') ? item.module_id : null
@@ -132,14 +119,14 @@ export async function saveCurriculumItemAction(item: any) {
 
     if (error) throw error;
 
-    return { success: true, data: data?.[0] };
-  } catch (err: any) {
+    return { success: true, data: data ? data[0] : null };
+  } catch (err) {
     console.error('Save Curriculum Error:', err);
-    return { success: false, error: err.message || 'Unknown error' };
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
 
-export async function saveModuleAction(module: any) {
+export async function saveModuleAction(module: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -154,7 +141,7 @@ export async function saveModuleAction(module: any) {
     .upsert(module)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data ? data[0] : null, error };
 }
 
 export async function reviewSubmissionAction(submissionId: string, feedback: string, score: number, status: string) {
@@ -178,7 +165,7 @@ export async function reviewSubmissionAction(submissionId: string, feedback: str
     .eq('id', submissionId)
     .select();
 
-  if (!error && data?.[0]) {
+  if (!error && data && data[0]) {
     await createNotificationAction(
       data[0].student_id,
       'Submission Reviewed',
@@ -187,7 +174,7 @@ export async function reviewSubmissionAction(submissionId: string, feedback: str
     );
   }
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data ? data[0] : null, error };
 }
 
 export async function deleteModuleAction(id: string) {
@@ -240,23 +227,23 @@ export async function getAdminDataAction() {
     return {
       success: true,
       data: {
-        profiles: profiles || [],
-        courses: courses || [],
-        curriculum: curriculum || [],
-        modules: modules || [],
-        subModules: subModules || [],
-        attendance: attendance || [],
-        resources: resources || [],
-        challenges: challenges || []
+        profiles: (profiles || []) as Record<string, unknown>[],
+        courses: (courses || []) as Record<string, unknown>[],
+        curriculum: (curriculum || []) as Record<string, unknown>[],
+        modules: (modules || []) as Record<string, unknown>[],
+        subModules: (subModules || []) as Record<string, unknown>[],
+        attendance: (attendance || []) as Record<string, unknown>[],
+        resources: (resources || []) as Record<string, unknown>[],
+        challenges: (challenges || []) as Record<string, unknown>[]
       }
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error('Fetch Admin Data Error:', err);
-    return { success: false, error: err.message || 'Unknown error' };
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
 
-export async function logActivityAction(type: string, details: any = {}, url?: string) {
+export async function logActivityAction(type: string, details: Record<string, unknown> = {}, url?: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) return { success: false };
@@ -320,7 +307,7 @@ export async function uploadResourceFileAction(formData: FormData) {
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('library-resources')
     .upload(fileName, file);
 
@@ -496,7 +483,7 @@ export async function purchaseShopItemAction(itemId: string, priceInSkillPoints:
   return { success: true };
 }
 
-export async function saveResourceAction(resource: any) {
+export async function saveResourceAction(resource: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -515,7 +502,7 @@ export async function saveResourceAction(resource: any) {
     })
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data ? data[0] : null, error };
 }
 
 export async function deleteResourceAction(id: string) {
@@ -534,7 +521,7 @@ export async function deleteResourceAction(id: string) {
   return { success: !error, error };
 }
 
-export async function saveDailyChallengeAction(challenge: any) {
+export async function saveDailyChallengeAction(challenge: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -549,10 +536,10 @@ export async function saveDailyChallengeAction(challenge: any) {
     .upsert(challenge)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data ? data[0] : null, error };
 }
 
-export async function saveCourseAction(course: any) {
+export async function saveCourseAction(course: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -567,7 +554,7 @@ export async function saveCourseAction(course: any) {
     .upsert(course)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data ? data[0] : null, error };
 }
 
 export async function deleteCourseAction(id: string) {
@@ -676,7 +663,7 @@ export async function uploadImageAction(formData: FormData) {
   // Since this is a server action, it's already slightly more secure than a public API.
 
   const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('curriculum-images')
     .upload(fileName, file);
 
@@ -703,7 +690,7 @@ export async function uploadVideoAction(formData: FormData) {
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('curriculum-videos')
     .upload(fileName, file);
 
@@ -716,7 +703,7 @@ export async function uploadVideoAction(formData: FormData) {
   return { success: true, url: publicUrl };
 }
 
-export async function saveSubModuleAction(subModule: any) {
+export async function saveSubModuleAction(subModule: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -731,7 +718,7 @@ export async function saveSubModuleAction(subModule: any) {
     .upsert(subModule)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data ? data[0] : null, error };
 }
 
 export async function deleteSubModuleAction(id: string) {
