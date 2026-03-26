@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import { RestScreen } from '@/components/rest-screen';
 import { AttendanceTracker } from '@/components/attendance-tracker';
 import { ActivityTracker } from '@/components/activity-tracker';
-import { FloatingChat } from '@/components/floating-chat';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const isWeekend = useMemo(() => {
@@ -24,7 +23,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <>
       <ActivityTracker />
       <AttendanceTracker />
-      <FloatingChat />
       {children}
     </>
   );
