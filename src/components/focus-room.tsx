@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Volume2, VolumeX, X, Play, Pause, RotateCcw,
-  CloudRain, Wind, TreePine, ShieldAlert, Sparkles,
-  Terminal, ChevronRight, CheckCircle2, AlertTriangle,
-  Maximize2, Eye, BrainCircuit
+  Volume2, VolumeX, X, ShieldAlert, Sparkles,
+  Terminal, CheckCircle2, Maximize2, Eye, BrainCircuit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeCompiler } from './code-compiler';
@@ -65,31 +63,46 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
   const sessionStartTimeRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Binaural Beats Logic
+  const startBinauralBeats = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioContextRef.current;
+    const oscL = ctx.createOscillator();
+    const panL = ctx.createStereoPanner();
+    oscL.frequency.value = 440;
+    panL.pan.value = -1;
+    const oscR = ctx.createOscillator();
+    const panR = ctx.createStereoPanner();
+    oscR.frequency.value = 444;
+    panR.pan.value = 1;
+    const gain = ctx.createGain();
+    gain.gain.value = volume;
+    oscL.connect(panL).connect(gain).connect(ctx.destination);
+    oscR.connect(panR).connect(gain).connect(ctx.destination);
+    oscL.start();
+    oscR.start();
+    oscillatorLRef.current = oscL;
+    oscillatorRRef.current = oscR;
+    gainNodeRef.current = gain;
+  }, [volume]);
+
+  const stopBinauralBeats = useCallback(() => {
+    oscillatorLRef.current?.stop();
+    oscillatorRRef.current?.stop();
+    oscillatorLRef.current = null;
+    oscillatorRRef.current = null;
+  }, []);
+
+  const stopAmbient = useCallback(() => {
+    noiseNodeRef.current?.disconnect();
+    noiseNodeRef.current = null;
+    setActiveAmbient(null);
+  }, []);
+
   // Fullscreen Detection
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isFull = !!document.fullscreenElement;
-      setIsFullscreen(isFull);
-      if (!isFull && isActive && isOpen) {
-        handleViolation('Exited Fullscreen');
-      }
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, [isActive, isOpen]);
-
-  // Tab Switch Detection
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && isActive && isOpen) {
-        handleViolation('Tab Switch Detected');
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isActive, isOpen]);
-
-  const handleViolation = async (type: string) => {
+  const handleViolation = useCallback(async (type: string) => {
     setIsActive(false);
     setLastViolationType(type);
     setIsViolationOpen(true);
@@ -106,7 +119,30 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
         toastError("MAX STRIKES REACHED. Focus session terminated.");
         onClose();
     }
-  };
+  }, [info, onClose, strikes, toastError]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFull = !!document.fullscreenElement;
+      setIsFullscreen(isFull);
+      if (!isFull && isActive && isOpen) {
+        handleViolation('Exited Fullscreen');
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isActive, isOpen, handleViolation]);
+
+  // Tab Switch Detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isActive && isOpen) {
+        handleViolation('Tab Switch Detected');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isActive, isOpen, handleViolation]);
 
   const startFocus = () => {
     if (!isFullscreen) {
@@ -131,14 +167,14 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
       });
       const data = await res.json();
       setTask(data);
-    } catch (err) {
+    } catch {
       toastError("Failed to fetch focus task.");
     } finally {
       setLoadingTask(false);
     }
   };
 
-  const handleGetReview = async () => {
+  const handleGetReview = useCallback(async () => {
     setReviewing(true);
     try {
         const res = await fetch('/api/focus/review-code', {
@@ -156,12 +192,12 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
             success("Task objectives met! Keep focusing until the timer ends.");
             setShowPseudoCodeRequest(true);
         }
-    } catch (err) {
+    } catch {
         toastError("Review failed. Please try again.");
     } finally {
         setReviewing(false);
     }
-  };
+  }, [codes, task, success, toastError]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -190,39 +226,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, isActive, onSaveSession, onClose, success]);
-
-  // Binaural Beats Logic
-  const startBinauralBeats = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioContextRef.current;
-    const oscL = ctx.createOscillator();
-    const panL = ctx.createStereoPanner();
-    oscL.frequency.value = 440;
-    panL.pan.value = -1;
-    const oscR = ctx.createOscillator();
-    const panR = ctx.createStereoPanner();
-    oscR.frequency.value = 444;
-    panR.pan.value = 1;
-    const gain = ctx.createGain();
-    gain.gain.value = volume;
-    oscL.connect(panL).connect(gain).connect(ctx.destination);
-    oscR.connect(panR).connect(gain).connect(ctx.destination);
-    oscL.start();
-    oscR.start();
-    oscillatorLRef.current = oscL;
-    oscillatorRRef.current = oscR;
-    gainNodeRef.current = gain;
-  };
-
-  const stopBinauralBeats = () => {
-    oscillatorLRef.current?.stop();
-    oscillatorRRef.current?.stop();
-    oscillatorLRef.current = null;
-    oscillatorRRef.current = null;
-  };
+  }, [isOpen, isActive, onSaveSession, onClose, success, timeLeft, stopAmbient, stopBinauralBeats]);
 
   useEffect(() => {
     if (gainNodeRef.current) {
@@ -259,13 +263,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     return noise;
   };
 
-  const stopAmbient = () => {
-    noiseNodeRef.current?.disconnect();
-    noiseNodeRef.current = null;
-    setActiveAmbient(null);
-  };
-
-  const toggleAmbient = (type: string) => {
+  const toggleAmbient = useCallback((type: string) => {
     if (activeAmbient === type) {
         stopAmbient();
         return;
@@ -290,13 +288,13 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
         noiseNodeRef.current = node;
         setActiveAmbient(type);
     }
-  };
+  }, [activeAmbient, stopAmbient, volume]);
 
-  const toggleAudio = () => {
+  const toggleAudio = useCallback(() => {
     if (isAudioEnabled) stopBinauralBeats();
     else startBinauralBeats();
     setIsAudioEnabled(!isAudioEnabled);
-  };
+  }, [isAudioEnabled, stopBinauralBeats, startBinauralBeats]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

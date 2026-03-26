@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { cn } from '@/lib/utils';
 
 interface RadarData {
   label: string;
@@ -11,11 +10,12 @@ interface RadarData {
 interface KnowledgeRadarProps {
   data: RadarData[];
   size?: number;
+  className?: string;
 }
 
-export function KnowledgeRadar({ data, size = 300 }: KnowledgeRadarProps) {
+export function KnowledgeRadar({ data, size = 300, className }: KnowledgeRadarProps) {
   const center = size / 2;
-  const radius = (size / 2) * 0.8;
+  const radius = (size / 2) * 0.75; // Slightly reduced radius to accommodate labels
   const angleStep = (Math.PI * 2) / data.length;
 
   const getPoint = (angle: number, value: number) => {
@@ -26,11 +26,13 @@ export function KnowledgeRadar({ data, size = 300 }: KnowledgeRadarProps) {
     };
   };
 
-  // Background circles
+  // Background levels
   const levels = [20, 40, 60, 80, 100];
-  const gridCircles = levels.map((level) => {
-    const points = data.map((_, i) => getPoint(i * angleStep, level));
-    return points.map((p) => `${p.x},${p.y}`).join(' ');
+  const gridPolygons = levels.map((level) => {
+    return data.map((_, i) => {
+      const p = getPoint(i * angleStep, level);
+      return `${p.x},${p.y}`;
+    }).join(' ');
   });
 
   // Data polygon
@@ -38,74 +40,81 @@ export function KnowledgeRadar({ data, size = 300 }: KnowledgeRadarProps) {
   const dataPath = dataPoints.map((p) => `${p.x},${p.y}`).join(' ');
 
   return (
-    <div className="flex flex-col items-center">
-      <svg width={size} height={size} className="overflow-visible">
-        {/* Grid lines */}
-        {gridCircles.map((points, i) => (
-          <polygon
-            key={i}
-            points={points}
-            fill="none"
-            stroke="currentColor"
-            className="text-muted/30"
-            strokeWidth="1"
-          />
-        ))}
-
-        {/* Axis lines */}
-        {data.map((_, i) => {
-          const point = getPoint(i * angleStep, 100);
-          return (
-            <line
+    <div className={className}>
+      <div className="relative flex items-center justify-center w-full max-w-[300px] aspect-square mx-auto">
+        <svg
+          viewBox={`0 0 ${size} ${size}`}
+          className="w-full h-full overflow-visible"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          {/* Grid Polygons */}
+          {gridPolygons.map((points, i) => (
+            <polygon
               key={i}
-              x1={center}
-              y1={center}
-              x2={point.x}
-              y2={point.y}
+              points={points}
+              fill="none"
               stroke="currentColor"
-              className="text-muted/30"
+              className="text-muted/20"
               strokeWidth="1"
             />
-          );
-        })}
+          ))}
 
-        {/* Data area */}
-        <polygon
-          points={dataPath}
-          fill="var(--primary)"
-          fillOpacity="0.2"
-          stroke="var(--primary)"
-          strokeWidth="2"
-          className="transition-all duration-1000"
-        />
+          {/* Axis lines */}
+          {data.map((_, i) => {
+            const point = getPoint(i * angleStep, 100);
+            return (
+              <line
+                key={i}
+                x1={center}
+                y1={center}
+                x2={point.x}
+                y2={point.y}
+                stroke="currentColor"
+                className="text-muted/20"
+                strokeWidth="1"
+              />
+            );
+          })}
 
-        {/* Labels */}
-        {data.map((d, i) => {
-          const point = getPoint(i * angleStep, 120); // Extra distance for labels
-          return (
-            <text
-              key={i}
-              x={point.x}
-              y={point.y}
-              textAnchor="middle"
-              className="text-[10px] font-black uppercase tracking-tighter fill-muted-foreground"
-            >
-              {d.label}
-            </text>
-          );
-        })}
-
-        {/* Points */}
-        {dataPoints.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r="3"
-            className="fill-primary shadow-xl"
+          {/* Data area */}
+          <polygon
+            points={dataPath}
+            fill="var(--primary)"
+            fillOpacity="0.2"
+            stroke="var(--primary)"
+            strokeWidth="2"
+            className="transition-all duration-1000 ease-in-out"
           />
-        ))}
-      </svg>
+
+          {/* Labels */}
+          {data.map((d, i) => {
+            const point = getPoint(i * angleStep, 115); // Label placement
+            return (
+              <text
+                key={i}
+                x={point.x}
+                y={point.y}
+                textAnchor="middle"
+                className="text-[12px] md:text-[14px] font-black uppercase tracking-tighter fill-muted-foreground"
+                style={{ dominantBaseline: 'middle' }}
+              >
+                {d.label}
+              </text>
+            );
+          })}
+
+          {/* Points */}
+          {dataPoints.map((p, i) => (
+            <circle
+              key={i}
+              cx={p.x}
+              cy={p.y}
+              r="4"
+              className="fill-primary shadow-lg"
+            />
+          ))}
+        </svg>
+      </div>
     </div>
   );
 }
