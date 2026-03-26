@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, User, Bell, Phone, Video, Calendar } from 'lucide-react';
+import { MessageCircle, X, Send, User, Phone, Video, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -39,6 +39,8 @@ export function FloatingChat() {
   const [videoSessions, setVideoSessions] = useState<VideoSession[]>([]);
   const [scheduledAt, setScheduledAt] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [isRequestingCall, setIsRequestingCall] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { success, error: toastError } = useToast();
 
@@ -132,28 +134,39 @@ export function FloatingChat() {
   }, [messages, isOpen]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !userId || !adminId) return;
+    if (!newMessage.trim() || !userId) return;
 
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert({
-        sender_id: userId,
-        receiver_id: adminId,
-        content: newMessage.trim()
-      });
+    if (!adminId) {
+      toastError('No admin available to receive your message.');
+      return;
+    }
 
-    // Also create a persistent notification for the admin
-    await supabase.from('notifications').insert({
-       student_id: adminId,
-       title: 'New Message',
-       message: `You received a new message from a student.`,
-       type: 'info'
-    });
+    setIsSending(true);
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .insert({
+          sender_id: userId,
+          receiver_id: adminId,
+          content: newMessage.trim()
+        });
 
-    if (error) {
-      toastError('Failed to send message');
-    } else {
-      setNewMessage('');
+      if (error) {
+        toastError('Failed to send message: ' + error.message);
+      } else {
+        // Also create a persistent notification for the admin
+        await supabase.from('notifications').insert({
+          student_id: adminId,
+          title: 'New Message',
+          message: `You received a new message from a student.`,
+          type: 'info'
+        });
+        setNewMessage('');
+      }
+    } catch (err: any) {
+      toastError('An unexpected error occurred while sending: ' + err.message);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -174,19 +187,26 @@ export function FloatingChat() {
 
   const requestVideoCall = async () => {
      if (!scheduledAt || !userId) return;
-     const endAt = new Date(new Date(scheduledAt).getTime() + 60 * 60 * 1000).toISOString();
-     const { error } = await supabase.from('video_sessions').insert({
-        student_id: userId,
-        scheduled_at: scheduledAt,
-        end_at: endAt,
-        status: 'requested'
-     });
+     setIsRequestingCall(true);
+     try {
+       const endAt = new Date(new Date(scheduledAt).getTime() + 60 * 60 * 1000).toISOString();
+       const { error } = await supabase.from('video_sessions').insert({
+          student_id: userId,
+          scheduled_at: scheduledAt,
+          end_at: endAt,
+          status: 'requested'
+       });
 
-     if (error) toastError('Failed to request video call');
-     else {
-        success('Video call requested!');
-        setScheduledAt('');
-        fetchVideoSessions(userId);
+       if (error) toastError('Failed to request video call: ' + error.message);
+       else {
+          success('Video call requested!');
+          setScheduledAt('');
+          fetchVideoSessions(userId);
+       }
+     } catch (err: any) {
+       toastError('An unexpected error occurred while requesting: ' + err.message);
+     } finally {
+       setIsRequestingCall(false);
      }
   };
 
@@ -299,8 +319,8 @@ export function FloatingChat() {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                       />
-                      <Button type="submit" size="icon" className="h-9 w-9 shrink-0">
-                        <Send className="h-4 w-4" />
+                      <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={isSending}>
+                        <Send className={cn("h-4 w-4", isSending && "animate-pulse")} />
                       </Button>
                     </form>
                   </CardFooter>
@@ -323,9 +343,9 @@ export function FloatingChat() {
                       <Button
                         className="w-full text-xs font-bold uppercase tracking-widest"
                         onClick={requestVideoCall}
-                        disabled={!scheduledAt}
+                        disabled={!scheduledAt || isRequestingCall}
                       >
-                         Request Approval
+                         {isRequestingCall ? 'Requesting...' : 'Request Approval'}
                       </Button>
                    </div>
 
