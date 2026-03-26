@@ -105,7 +105,7 @@ export default function GitHubTopicPage({ params }: { params: Promise<{ id: stri
   if (!topic) notFound();
 
   return (
-    <div className="p-4 lg:p-8">
+    <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-4xl mx-auto space-y-8">
           <Link href="/github-mastery">
             <Button variant="ghost" className="mb-4">
@@ -155,6 +155,6 @@ export default function GitHubTopicPage({ params }: { params: Promise<{ id: stri
             </Link>
           </Card>
         </div>
-    </div>
+    </main>
   );
 }

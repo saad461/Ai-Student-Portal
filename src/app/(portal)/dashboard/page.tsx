@@ -119,98 +119,100 @@ export default function DashboardPage() {
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (!profileData) return;
+      setProfile(profileData as unknown as Profile);
+
+      const today = new Date().toLocaleDateString('en-CA');
+      const { data: attendance } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', user.id)
+        .eq('date', today);
+
+      setHasPunchedInToday(!!(attendance && attendance.length > 0));
+
+      const { data: allAttendance } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('date', { ascending: false })
+        .limit(7);
+
+      setRecentAttendance(allAttendance || []);
+
+      const { data: rewards } = await supabase
+        .from('reward_log')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      setRewardHistory(rewards || []);
+
+      const { data: perks } = await supabase
+        .from('user_perks')
+        .select('*')
+        .eq('user_id', user.id);
+      setUserPerks(perks || []);
+
+      const { data: subs } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('student_id', user.id);
+
+      setSubmissions((subs as unknown as Submission[]) || []);
+
+      const { data: tasks } = await supabase
+        .from('extra_tasks')
+        .select('*')
+        .eq('student_id', user.id);
+
+      setExtraTasks((tasks as unknown as ExtraTask[]) || []);
+
+      const { data: modulesData } = await supabase
+        .from('modules')
+        .select('index')
+        .eq('course_id', profileData.current_course_id)
+        .order('index', { ascending: true });
+
+      const moduleIndices = (modulesData || []).map(m => m.index);
+
+      const { data: curriculumData } = await supabase
+        .from('curriculum')
+        .select('*')
+        .in('week', moduleIndices);
+
+      setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+
+      const { data: focusData } = await supabase
+        .from('focus_sessions')
+        .select('duration_seconds')
+        .eq('student_id', user.id);
+
+      if (focusData) {
+        const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+        setTotalFocusMinutes(Math.round(totalSeconds / 60));
+      }
+
+      if (profileData && !profileData.is_pro && subs && subs.length >= 5) {
+        await supabase.from('profiles').update({ is_pro: true }).eq('id', user.id);
+        setTheme('pro');
+        setProfile(prev => prev ? { ...prev, is_pro: true } : null);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    setProfile(profileData as unknown as Profile);
-
-    const today = new Date().toLocaleDateString('en-CA');
-    const { data: attendance } = await supabase
-      .from('attendance')
-      .select('*')
-      .eq('student_id', user.id)
-      .eq('date', today);
-
-    setHasPunchedInToday(!!(attendance && attendance.length > 0));
-
-    const { data: allAttendance } = await supabase
-      .from('attendance')
-      .select('*')
-      .eq('student_id', user.id)
-      .order('date', { ascending: false })
-      .limit(7);
-
-    setRecentAttendance(allAttendance || []);
-
-    const { data: rewards } = await supabase
-      .from('reward_log')
-      .select('*')
-      .eq('student_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    setRewardHistory(rewards || []);
-
-    const { data: perks } = await supabase
-      .from('user_perks')
-      .select('*')
-      .eq('user_id', user.id);
-    setUserPerks(perks || []);
-
-    const { data: subs } = await supabase
-      .from('submissions')
-      .select('*')
-      .eq('student_id', user.id);
-
-    setSubmissions((subs as unknown as Submission[]) || []);
-
-    const { data: tasks } = await supabase
-      .from('extra_tasks')
-      .select('*')
-      .eq('student_id', user.id);
-
-    setExtraTasks((tasks as unknown as ExtraTask[]) || []);
-
-    const { data: modulesData } = await supabase
-      .from('modules')
-      .select('index')
-      .eq('course_id', profileData.current_course_id)
-      .order('index', { ascending: true });
-
-    const moduleIndices = (modulesData || []).map(m => m.index);
-
-    const { data: curriculumData } = await supabase
-      .from('curriculum')
-      .select('*')
-      .in('week', moduleIndices);
-
-    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
-
-    const { data: focusData } = await supabase
-      .from('focus_sessions')
-      .select('duration_seconds')
-      .eq('student_id', user.id);
-
-    if (focusData) {
-      const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
-      setTotalFocusMinutes(Math.round(totalSeconds / 60));
-    }
-
-    if (profileData && !profileData.is_pro && subs && subs.length >= 5) {
-      await supabase.from('profiles').update({ is_pro: true }).eq('id', user.id);
-      setTheme('pro');
-      setProfile(prev => prev ? { ...prev, is_pro: true } : null);
-    }
-
-    setLoading(false);
   }, [setTheme]);
 
   useEffect(() => {
@@ -332,9 +334,9 @@ export default function DashboardPage() {
   };
 
   if (loading) return (
-    <div className="p-4 lg:p-8">
+    <main className="flex-1 p-4 lg:p-8">
       <DashboardSkeleton />
-    </div>
+    </main>
   );
 
   const handlePurchase = async (item: ShopItem) => {
@@ -350,7 +352,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 lg:p-8 w-full overflow-x-hidden">
+    <main className="flex-1 p-4 lg:p-8">
       <OnboardingTour />
       <SkillShop
         skillPoints={getSkillPoints(profile?.total_points || 0)}
@@ -756,6 +758,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

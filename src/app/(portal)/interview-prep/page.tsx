@@ -157,7 +157,7 @@ export default function InterviewPrepPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col w-full overflow-x-hidden">
+    <main className="flex-1 p-4 lg:p-8 max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col w-full overflow-x-hidden">
       <header className="mb-6 md:mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
         <div>
            <h1 className="text-4xl font-black tracking-tighter uppercase flex items-center gap-2">
@@ -289,6 +289,6 @@ export default function InterviewPrepPage() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

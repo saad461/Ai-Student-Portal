@@ -25,18 +25,23 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id || null);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUserId(user?.id || null);
 
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, full_name, total_points, current_streak, role')
-        .eq('role', 'student')
-        .order('total_points', { ascending: false })
-        .limit(50);
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, full_name, total_points, current_streak, role')
+          .eq('role', 'student')
+          .order('total_points', { ascending: false })
+          .limit(50);
 
-      setStudents(data as LeaderboardEntry[] || []);
-      setLoading(false);
+        setStudents(data as LeaderboardEntry[] || []);
+      } catch (err) {
+        console.error('Error fetching leaderboard:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchData();
   }, []);
@@ -44,10 +49,10 @@ export default function LeaderboardPage() {
   const topThree = students.slice(0, 3);
   const rest = students.slice(3);
 
-  if (loading) return <div className="p-8 text-center animate-pulse">Consulting the Oracle...</div>;
+  if (loading) return <main className="flex-1 p-8 text-center animate-pulse">Consulting the Oracle...</main>;
 
   return (
-    <div className="p-4 lg:p-8">
+    <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-12">
           <header className="text-center space-y-4">
              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-widest">
@@ -149,7 +154,7 @@ export default function LeaderboardPage() {
              </CardContent>
           </Card>
         </div>
-    </div>
+    </main>
   );
 }
 

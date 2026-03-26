@@ -45,30 +45,35 @@ export default function ChallengesPage() {
 
   const fetchChallenge = async () => {
     setLoading(true);
-    const today = new Date().toISOString().split('T')[0];
+    try {
+      const today = new Date().toISOString().split('T')[0];
 
-    const { data: challengeData } = await supabase
-      .from('daily_challenges')
-      .select('*')
-      .eq('active_date', today)
-      .single();
+      const { data: challengeData } = await supabase
+        .from('daily_challenges')
+        .select('*')
+        .eq('active_date', today)
+        .single();
 
-    if (challengeData) {
-      setChallenge(challengeData);
+      if (challengeData) {
+        setChallenge(challengeData);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: submission } = await supabase
-          .from('challenge_submissions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('challenge_id', challengeData.id)
-          .single();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: submission } = await supabase
+            .from('challenge_submissions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('challenge_id', challengeData.id)
+            .single();
 
-        if (submission) setCompletedToday(true);
+          if (submission) setCompletedToday(true);
+        }
       }
+    } catch (err) {
+      console.error('Error fetching challenge:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmit = async (code: string) => {
@@ -117,10 +122,10 @@ export default function ChallengesPage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center animate-pulse">Scanning for today's challenge...</div>;
+  if (loading) return <main className="flex-1 p-8 text-center animate-pulse">Scanning for today&apos;s challenge...</main>;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 w-full overflow-x-hidden">
+    <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-2">
            <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
@@ -260,6 +265,6 @@ export default function ChallengesPage() {
            </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

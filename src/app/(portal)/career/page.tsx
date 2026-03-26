@@ -51,29 +51,34 @@ export default function CareerPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     try {
-      const res = await fetch('/api/jobs');
-      if (!res.ok) {
-        throw new Error(`API Error: ${res.status}`);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      try {
+        const res = await fetch('/api/jobs');
+        if (!res.ok) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+        const jobsData = await res.json();
+        setJobs(jobsData);
+      } catch (err) {
+        console.error("Failed to fetch jobs", err);
+        toastError("AI Job Market is currently offline. Showing cached results.");
       }
-      const jobsData = await res.json();
-      setJobs(jobsData);
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      setProfile(profileData);
     } catch (err) {
-      console.error("Failed to fetch jobs", err);
-      toastError("AI Job Market is currently offline. Showing cached results.");
+      console.error('Error fetching career data:', err);
+    } finally {
+      setLoading(false);
     }
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    setProfile(profileData);
-    setLoading(false);
   };
 
   const currentLevel = Math.floor((profile?.total_points || 0) / 100) + 1;
@@ -83,10 +88,10 @@ export default function CareerPage() {
     j.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) return <div className="p-8 text-center">Opening the Career Portal...</div>;
+  if (loading) return <main className="flex-1 p-8 text-center">Opening the Career Portal...</main>;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-1000 w-full overflow-x-hidden">
+    <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-1000 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
@@ -241,6 +246,6 @@ export default function CareerPage() {
            </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

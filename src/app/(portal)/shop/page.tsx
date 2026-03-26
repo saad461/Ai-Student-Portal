@@ -63,23 +63,28 @@ export default function ShopPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const [profileData, resData, myResData, coursesData, myCoursesData] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('resources').select('*').eq('is_published', true),
-      supabase.from('user_resources').select('resource_id').eq('user_id', user.id),
-      supabase.from('courses').select('*').order('index', { ascending: true }),
-      supabase.from('user_courses').select('course_id').eq('user_id', user.id)
-    ]);
+      const [profileData, resData, myResData, coursesData, myCoursesData] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('resources').select('*').eq('is_published', true),
+        supabase.from('user_resources').select('resource_id').eq('user_id', user.id),
+        supabase.from('courses').select('*').order('index', { ascending: true }),
+        supabase.from('user_courses').select('course_id').eq('user_id', user.id)
+      ]);
 
-    setProfile(profileData.data);
-    setResources(resData.data || []);
-    setMyResources(myResData.data?.map(r => r.resource_id) || []);
-    setCourses(coursesData.data || []);
-    setMyCourses(myCoursesData.data?.map(c => c.course_id) || []);
-    setLoading(false);
+      setProfile(profileData.data);
+      setResources(resData.data || []);
+      setMyResources(myResData.data?.map(r => r.resource_id) || []);
+      setCourses(coursesData.data || []);
+      setMyCourses(myCoursesData.data?.map(c => c.course_id) || []);
+    } catch (err) {
+      console.error('Error fetching shop data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePurchase = async (id: string, type: 'resource' | 'course' | 'perk', price: number, name: string) => {
@@ -111,10 +116,10 @@ export default function ShopPage() {
     }
   };
 
-  if (loading && !profile) return <div className="p-12 text-center animate-pulse font-black text-2xl uppercase tracking-widest">Entering the Vault...</div>;
+  if (loading && !profile) return <main className="flex-1 p-12 text-center animate-pulse font-black text-2xl uppercase tracking-widest">Entering the Vault...</main>;
 
   return (
-    <div className="p-4 lg:p-8 w-full overflow-x-hidden space-y-8 md:space-y-12">
+    <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden space-y-8 md:space-y-12">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-slate-900 text-white p-6 md:p-12 rounded-3xl md:rounded-[3rem] shadow-2xl relative overflow-hidden">
          <div className="relative z-10 space-y-2">
             <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4">
@@ -272,6 +277,6 @@ export default function ShopPage() {
             </div>
          </TabsContent>
       </Tabs>
-    </div>
+    </main>
   );
 }
