@@ -1,34 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart,
   Zap,
   Book,
-  FileText,
-  Map,
-  Shield,
-  Clock,
   Sparkles,
-  Trophy,
   ArrowRight,
   CheckCircle2,
-  Lock,
-  ChevronRight,
-  LayoutGrid,
-  Tags,
   Search
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast-provider';
 import { cn } from '@/lib/utils';
 import { SHOP_ITEMS } from '@/lib/gamification';
+import Image from 'next/image';
 
 interface Resource {
   id: string;
@@ -49,17 +40,13 @@ interface Course {
 
 export default function ShopPage() {
   const { success, error: toastError } = useToast();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [myResources, setMyResources] = useState<string[]>([]);
   const [myCourses, setMyCourses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -82,8 +69,12 @@ export default function ShopPage() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const handlePurchase = async (id: string, type: 'resource' | 'course' | 'perk', price: number, name: string) => {
-    const currentSparks = Math.floor((profile?.total_points || 0) / 10);
+    const currentSparks = Math.floor((Number(profile?.total_points) || 0) / 10);
     if (currentSparks < price) {
       toastError(`Insufficient Sparks! You need ${price - currentSparks} more Sparks.`);
       return;
@@ -102,9 +93,9 @@ export default function ShopPage() {
         if (type === 'course') setMyCourses([...myCourses, id]);
         fetchData();
       } else {
-        toastError(res.error || 'Transaction failed.');
+        toastError((res.error as string) || 'Transaction failed.');
       }
-    } catch (err) {
+    } catch {
       toastError('Transaction failed. Please try again.');
     } finally {
       setLoading(false);
@@ -130,7 +121,7 @@ export default function ShopPage() {
             </div>
             <div>
                <div className="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400">Total Sparks</div>
-               <div className="text-2xl md:text-4xl font-black text-white tabular-nums">{Math.floor((profile?.total_points || 0) / 10)} <span className="text-xs md:text-sm opacity-50">SPARKS</span></div>
+               <div className="text-2xl md:text-4xl font-black text-white tabular-nums">{Math.floor((Number(profile?.total_points) || 0) / 10)} <span className="text-xs md:text-sm opacity-50">SPARKS</span></div>
             </div>
          </div>
 
@@ -168,7 +159,7 @@ export default function ShopPage() {
                    )}>
                       <div className="h-40 md:h-56 bg-slate-100 relative">
                          {res.thumbnail_url ? (
-                           <img src={res.thumbnail_url} alt={res.title} className="w-full h-full object-cover" />
+                           <Image src={res.thumbnail_url} alt={res.title} fill className="object-cover" />
                          ) : (
                            <div className="w-full h-full flex items-center justify-center text-slate-300">
                               <Book className="h-20 w-20" />

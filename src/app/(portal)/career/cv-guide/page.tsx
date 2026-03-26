@@ -2,8 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle2, ArrowLeft, Image as ImageIcon, Layout, ListChecks, Target } from 'lucide-react';
+import { FileText, ArrowLeft, Image as ImageIcon, Layout, ListChecks, Target } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CVGuidePage() {
@@ -83,7 +82,7 @@ export default function CVGuidePage() {
            <Card className="bg-slate-900 text-white p-6 rounded-3xl">
               <ListChecks className="h-8 w-8 text-primary mb-4" />
               <h3 className="font-bold mb-2">Quantify Results</h3>
-              <p className="text-sm text-slate-400">"Improved page load speed by 40%" is better than "Optimized website performance".</p>
+              <p className="text-sm text-slate-400">&quot;Improved page load speed by 40%&quot; is better than &quot;Optimized website performance&quot;.</p>
            </Card>
            <Card className="bg-slate-900 text-white p-6 rounded-3xl">
               <ImageIcon className="h-8 w-8 text-primary mb-4" />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Check, Info, AlertTriangle, Sparkles, Trash2 } from 'lucide-react';
+import { Bell, Check, Info, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +21,20 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const fetchNotifications = async () => {
+     const { data: { user } } = await supabase.auth.getUser();
+     if (!user) return;
+
+     const { data } = await supabase
+       .from('notifications')
+       .select('*')
+       .eq('student_id', user.id)
+       .order('created_at', { ascending: false })
+       .limit(20);
+
+     setNotifications(data || []);
+  };
+
   useEffect(() => {
     // Initial fetch
     fetchNotifications();
@@ -37,20 +51,6 @@ export function NotificationBell() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  const fetchNotifications = async () => {
-     const { data: { user } } = await supabase.auth.getUser();
-     if (!user) return;
-
-     const { data } = await supabase
-       .from('notifications')
-       .select('*')
-       .eq('student_id', user.id)
-       .order('created_at', { ascending: false })
-       .limit(20);
-
-     setNotifications(data || []);
-  };
 
   const markAllRead = async () => {
      const { data: { user } } = await supabase.auth.getUser();

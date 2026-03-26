@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, FileText, Layout, Github, Zap, Milestone, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { CurriculumItem } from '@/lib/curriculum';
 import {
   Dialog,
   DialogContent,
@@ -12,12 +11,31 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+
+interface SearchResult {
+  title: string;
+  href: string;
+  icon: React.ElementType;
+  category: 'Navigation' | 'Curriculum' | 'Roadmap';
+}
+
+const STATIC_LINKS: SearchResult[] = [
+  { title: 'Dashboard', href: '/dashboard', icon: Layout, category: 'Navigation' },
+  { title: 'Learning Path', href: '/roadmap', icon: Milestone, category: 'Navigation' },
+  { title: 'Attendance', href: '/attendance', icon: Clock, category: 'Navigation' },
+  { title: 'GitHub Mastery', href: '/github-mastery', icon: Github, category: 'Navigation' },
+  { title: 'Deep Work Timer', href: '/timer', icon: Zap, category: 'Navigation' },
+  { title: 'Phase 1: Foundations', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+  { title: 'Phase 2: Web Architecture', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+  { title: 'Phase 3: Data Intelligence', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+  { title: 'Phase 4: Cognitive AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+  { title: 'Phase 5: Agentic AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+];
 
 export function GlobalSearch() {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState<any[]>([]);
+  const [results, setResults] = React.useState<SearchResult[]>([]);
   const [loading, setLoading] = React.useState(false);
   const router = useRouter();
 
@@ -32,19 +50,6 @@ export function GlobalSearch() {
     return () => document.removeEventListener('keydown', down);
   }, []);
 
-  const staticLinks = [
-    { title: 'Dashboard', href: '/dashboard', icon: Layout, category: 'Navigation' },
-    { title: 'Learning Path', href: '/roadmap', icon: Milestone, category: 'Navigation' },
-    { title: 'Attendance', href: '/attendance', icon: Clock, category: 'Navigation' },
-    { title: 'GitHub Mastery', href: '/github-mastery', icon: Github, category: 'Navigation' },
-    { title: 'Deep Work Timer', href: '/timer', icon: Zap, category: 'Navigation' },
-    { title: 'Phase 1: Foundations', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 2: Web Architecture', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 3: Data Intelligence', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 4: Cognitive AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 5: Agentic AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-  ];
-
   const search = React.useCallback(async (q: string) => {
     if (!q) {
       setResults([]);
@@ -58,14 +63,14 @@ export function GlobalSearch() {
       .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
       .limit(5);
 
-    const formattedResults = (curriculum || []).map(item => ({
+    const formattedResults: SearchResult[] = (curriculum || []).map(item => ({
        title: item.title,
        href: item.type === 'lecture' ? `/lecture/${item.id}` : '/curriculum',
        icon: item.type === 'lecture' ? FileText : Zap,
        category: 'Curriculum'
     }));
 
-    const filteredStatic = staticLinks.filter(l =>
+    const filteredStatic = STATIC_LINKS.filter(l =>
         l.title.toLowerCase().includes(q.toLowerCase())
     );
 
@@ -100,6 +105,7 @@ export function GlobalSearch() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="p-0 max-w-2xl gap-0 overflow-hidden">
           <DialogHeader className="p-4 border-b">
+            <DialogTitle className="sr-only">Global Search</DialogTitle>
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-muted-foreground" />
               <Input
@@ -116,7 +122,7 @@ export function GlobalSearch() {
 
             {!loading && query && results.length === 0 && (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                No results found for "{query}".
+                No results found for &quot;{query}&quot;.
               </div>
             )}
 
@@ -124,7 +130,7 @@ export function GlobalSearch() {
               <div className="p-4">
                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2">Suggestions</p>
                  <div className="space-y-1">
-                    {staticLinks.map(link => (
+                    {STATIC_LINKS.map(link => (
                       <button
                         key={link.href}
                         onClick={() => onSelect(link.href)}
@@ -140,7 +146,7 @@ export function GlobalSearch() {
 
             {results.length > 0 && (
               <div className="space-y-4">
-                 {['Navigation', 'Curriculum', 'Roadmap'].map(cat => {
+                 {(['Navigation', 'Curriculum', 'Roadmap'] as const).map(cat => {
                     const catResults = results.filter(r => r.category === cat);
                     if (catResults.length === 0) return null;
                     return (

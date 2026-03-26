@@ -96,6 +96,7 @@ export default function EnrollPage() {
     });
 
     // Secret Pin Section
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const finalY = (doc as any).lastAutoTable.finalY + 20;
 
     doc.setFillColor(240, 240, 240);
@@ -131,7 +132,7 @@ export default function EnrollPage() {
       if (formData.passport) {
         const fileExt = formData.passport.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const { error: uploadError, data: uploadData } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('passports')
           .upload(fileName, formData.passport);
 
@@ -163,9 +164,10 @@ export default function EnrollPage() {
       setSubmitted(true);
       downloadPDF(formData, pin);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Enrollment error:', err);
-      setError(err.message || 'An unexpected error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Hash } from 'lucide-react';
@@ -11,17 +11,25 @@ export function GridLogic() {
   const [score, setScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const generatePuzzle = () => {
+    const newTarget: number[] = Array.from({ length: 16 }, () => Math.random() > 0.6 ? 1 : 0);
+    const guaranteedTarget = newTarget.every(v => v === 0) ? [1, ...newTarget.slice(1)] : newTarget;
+    setTarget(guaranteedTarget);
+    setGrid(Array(16).fill(0));
+  };
+
   const startGame = () => {
     setIsPlaying(true);
     setScore(0);
     generatePuzzle();
   };
 
-  const generatePuzzle = () => {
-    const newTarget = Array(16).fill(0).map(() => Math.random() > 0.6 ? 1 : 0);
-    if (newTarget.every(v => v === 0)) (newTarget as any)[0] = 1;
-    setTarget(newTarget as any);
-    setGrid(Array(16).fill(0));
+  const handleGameOver = async () => {
+    if (score >= 10) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Grid Logic: Score ${score}`, 'game', `grid-${today}`);
+    }
   };
 
   const toggle = (idx: number) => {
@@ -32,14 +40,6 @@ export function GridLogic() {
     if (JSON.stringify(newGrid) === JSON.stringify(target)) {
       setScore(prev => prev + 1);
       setTimeout(generatePuzzle, 500);
-    }
-  };
-
-  const handleGameOver = async () => {
-    if (score >= 10) {
-      const { rewardStudentAction } = await import('@/app/admin/actions');
-      const today = new Date().toLocaleDateString('en-CA');
-      await rewardStudentAction(5, `Grid Logic: Score ${score}`, 'game', `grid-${today}`);
     }
   };
 

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
 import { Shuffle } from 'lucide-react';
 
 const SHAPES = ['Square', 'Circle', 'Triangle', 'Star'];

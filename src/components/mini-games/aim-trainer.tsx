@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Target } from 'lucide-react';
@@ -11,6 +11,14 @@ export function AimTrainer() {
   const [timeLeft, setTimeLeft] = useState(20);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const handleGameOver = useCallback(async () => {
+    if (score >= 20) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Aim Trainer: Score ${score}`, 'game', `aim-${today}`);
+    }
+  }, [score]);
+
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
@@ -19,14 +27,13 @@ export function AimTrainer() {
       setIsPlaying(false);
       handleGameOver();
     }
-  }, [isPlaying, timeLeft]);
+  }, [isPlaying, timeLeft, handleGameOver]);
 
-  const handleGameOver = async () => {
-    if (score >= 20) {
-      const { rewardStudentAction } = await import('@/app/admin/actions');
-      const today = new Date().toLocaleDateString('en-CA');
-      await rewardStudentAction(5, `Aim Trainer: Score ${score}`, 'game', `aim-${today}`);
-    }
+  const moveTarget = () => {
+    setPos({
+      x: Math.random() * 80 + 10,
+      y: Math.random() * 80 + 10
+    });
   };
 
   const startGame = () => {
@@ -34,13 +41,6 @@ export function AimTrainer() {
     setTimeLeft(20);
     setIsPlaying(true);
     moveTarget();
-  };
-
-  const moveTarget = () => {
-    setPos({
-      x: Math.random() * 80 + 10,
-      y: Math.random() * 80 + 10
-    });
   };
 
   const handleHit = () => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, RotateCcw, Copy, Check, Terminal } from 'lucide-react';
+import { Play, Copy, Check, Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CodeCompilerProps {

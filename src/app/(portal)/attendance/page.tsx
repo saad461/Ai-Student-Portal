@@ -111,7 +111,7 @@ export default function StudentAttendancePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-xs opacity-90">Total days you've spent 15+ minutes in the portal.</p>
+                <p className="text-xs opacity-90">Total days you&apos;ve spent 15+ minutes in the portal.</p>
               </CardContent>
             </Card>
 
@@ -133,7 +133,7 @@ export default function StudentAttendancePage() {
             <Info className="h-4 w-4 text-blue-600" />
             <AlertTitle className="text-blue-800 dark:text-blue-400">How it works</AlertTitle>
             <AlertDescription className="text-blue-700 dark:text-blue-500">
-              Attendance is marked automatically once you spend a total of 15 minutes on the portal each day (Monday-Friday). You don't need to click anything!
+              Attendance is marked automatically once you spend a total of 15 minutes on the portal each day (Monday-Friday). You don&apos;t need to click anything!
             </AlertDescription>
           </Alert>
 

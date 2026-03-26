@@ -79,9 +79,10 @@ export async function approveApplication(applicationId: string) {
       }
     };
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Approve error:', err);
-    return { success: false, error: err.message };
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 }
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Send, X, Bot, Sparkles, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,18 @@ interface AIAssistantProps {
   lectureContent: string;
 }
 
+interface WindowWithAI extends Window {
+  ai?: {
+    assistant?: {
+      capabilities: () => Promise<{ available: string }>;
+      create: (options: { systemPrompt: string }) => Promise<{
+        prompt: (msg: string) => Promise<string>;
+        destroy: () => void;
+      }>;
+    };
+  };
+}
+
 export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -27,7 +39,6 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<'cloud' | 'native'>('cloud');
-  const [timeSinceLastActivity, setTimeSinceLastActivity] = useState(0);
   const [hasNudged, setHasNudged] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +48,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
     if (saved) {
       try {
         setMessages(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         setMessages([{ role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` }]);
       }
     } else {
@@ -62,17 +73,11 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
   useEffect(() => {
     if (isOpen || hasNudged) return;
 
-    const interval = setInterval(() => {
-      setTimeSinceLastActivity(prev => {
-        if (prev >= 1200) { // 20 minutes (1200 seconds)
-          triggerNudge();
-          return 0;
-        }
-        return prev + 1;
-      });
-    }, 1000);
+    const timer = setTimeout(() => {
+      triggerNudge();
+    }, 20 * 60 * 1000); // 20 minutes
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(timer);
   }, [isOpen, hasNudged]);
 
   const triggerNudge = () => {
@@ -87,9 +92,10 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
 
   useEffect(() => {
     const checkNativeAI = async () => {
-      if (typeof window !== 'undefined' && (window as any).ai?.assistant) {
+      const win = window as unknown as WindowWithAI;
+      if (typeof window !== 'undefined' && win.ai?.assistant) {
         try {
-          const capabilities = await (window as any).ai.assistant.capabilities();
+          const capabilities = await win.ai.assistant.capabilities();
           if (capabilities.available === 'readily') {
             setAiProvider('native');
           }
@@ -101,40 +107,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
     checkNativeAI();
   }, []);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-
-    const userMessage = input.trim();
-    setInput('');
-    setError(null);
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setLoading(true);
-
-    try {
-      if (aiProvider === 'native') {
-        try {
-          const session = await (window as any).ai.assistant.create({
-            systemPrompt: `You are an expert software engineering tutor. Context: ${lectureTitle}. Content: ${lectureContent}`
-          });
-          const response = await session.prompt(userMessage);
-          setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-          session.destroy();
-        } catch (nativeErr) {
-          console.error("Native AI Error, falling back:", nativeErr);
-          setAiProvider('cloud');
-          await callCloudAI(userMessage);
-        }
-      } else {
-        await callCloudAI(userMessage);
-      }
-    } catch (err) {
-      setError("AI is currently unavailable. Please try again in a moment.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const callCloudAI = async (question: string) => {
+  const callCloudAI = useCallback(async (question: string, history: Message[]) => {
     const res = await fetch('/api/ai-assistant', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,7 +115,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
         question,
         lectureTitle,
         lectureContent,
-        history: messages.slice(-5)
+        history: history.slice(-5)
       })
     });
 
@@ -153,6 +126,45 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
       setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
     } else {
       throw new Error("No answer from cloud AI");
+    }
+  }, [lectureTitle, lectureContent]);
+
+  const handleSend = async (retryMessage?: string) => {
+    const userMessage = typeof retryMessage === 'string' ? retryMessage : input.trim();
+    if (!userMessage || loading) return;
+
+    if (typeof retryMessage !== 'string') setInput('');
+    setError(null);
+    const currentMessages = [...messages, { role: 'user', content: userMessage } as Message];
+    setMessages(currentMessages);
+    setLoading(true);
+
+    try {
+      if (aiProvider === 'native') {
+        try {
+          const win = window as unknown as WindowWithAI;
+          if (win.ai?.assistant) {
+            const session = await win.ai.assistant.create({
+              systemPrompt: `You are an expert software engineering tutor. Context: ${lectureTitle}. Content: ${lectureContent}`
+            });
+            const response = await session.prompt(userMessage);
+            setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+            session.destroy();
+          } else {
+            await callCloudAI(userMessage, currentMessages);
+          }
+        } catch (nativeErr) {
+          console.error("Native AI Error, falling back:", nativeErr);
+          setAiProvider('cloud');
+          await callCloudAI(userMessage, currentMessages);
+        }
+      } else {
+        await callCloudAI(userMessage, currentMessages);
+      }
+    } catch {
+      setError("AI is currently unavailable. Please try again in a moment.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -245,7 +257,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive flex items-center gap-2">
                    <AlertTriangle className="h-3 w-3" />
                    {error}
-                   <Button variant="link" size="sm" className="h-auto p-0 text-xs font-bold" onClick={() => handleSend()}>Retry</Button>
+                   <Button variant="link" size="sm" className="h-auto p-0 text-xs font-bold" onClick={() => handleSend(messages[messages.length - 1]?.content)}>Retry</Button>
                 </div>
               )}
             </div>
@@ -260,7 +272,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     className="rounded-full h-10 border-muted"
                   />
-                  <Button size="icon" onClick={handleSend} disabled={!input.trim() || loading} className="rounded-full h-10 w-10 shrink-0">
+                  <Button size="icon" onClick={() => handleSend()} disabled={!input.trim() || loading} className="rounded-full h-10 w-10 shrink-0">
                     <Send className="h-4 w-4" />
                   </Button>
                </div>

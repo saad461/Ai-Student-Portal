@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Square, Volume2, Headphones } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Play, Pause, Square, Headphones } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface AudioReaderProps {
@@ -15,7 +14,6 @@ export function AudioReader({ content }: AudioReaderProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [supported, setSupported] = useState(true);
   const synthRef = useRef<SpeechSynthesis | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -70,7 +68,6 @@ export function AudioReader({ content }: AudioReaderProps) {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
-    utteranceRef.current = utterance;
     synthRef.current.speak(utterance);
     setIsSpeaking(true);
     setIsPaused(false);

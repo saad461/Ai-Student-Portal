@@ -9,7 +9,6 @@ import {
   Map,
   Lightbulb,
   Search,
-  Lock,
   Zap,
   ChevronRight,
   Download,
@@ -25,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast-provider';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface Resource {
   id: string;
@@ -41,14 +41,10 @@ export default function LibraryPage() {
   const { success, error: toastError } = useToast();
   const [resources, setResources] = useState<Resource[]>([]);
   const [myResources, setMyResources] = useState<string[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -61,14 +57,18 @@ export default function LibraryPage() {
       supabase.from('profiles').select('*').eq('id', user.id).single()
     ]);
 
-    setResources(resData.data || []);
+    setResources((resData.data as Resource[]) || []);
     setMyResources(myResData.data?.map(r => r.resource_id) || []);
     setProfile(profileData.data);
     setLoading(false);
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const handlePurchase = async (resource: Resource) => {
-    const skillPoints = Math.floor((profile?.total_points || 0) / 10);
+    const skillPoints = Math.floor((Number(profile?.total_points) || 0) / 10);
     if (skillPoints < resource.price_points) {
       toastError(`Insufficient points! You need ${resource.price_points - skillPoints} more Skill Points.`);
       return;
@@ -80,18 +80,17 @@ export default function LibraryPage() {
       const res = await purchaseShopItemAction(resource.id, resource.price_points);
 
       if (res.success) {
-        // Also need to ensure it's recorded in user_resources for the library view
         await supabase
           .from('user_resources')
-          .insert({ user_id: profile.id, resource_id: resource.id });
+          .insert({ user_id: String(profile?.id), resource_id: resource.id });
 
         success(`Successfully purchased ${resource.title}!`);
         setMyResources([...myResources, resource.id]);
         fetchData();
       } else {
-        toastError(res.error || 'Purchase failed.');
+        toastError((res.error as string) || 'Purchase failed.');
       }
-    } catch (err) {
+    } catch {
       toastError('Purchase failed. Please try again.');
     } finally {
       setLoading(false);
@@ -131,7 +130,7 @@ export default function LibraryPage() {
            </div>
            <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-primary/70 leading-none">Skill Points Available</div>
-              <div className="text-xl md:text-2xl font-black">{Math.floor((profile?.total_points || 0) / 10)}</div>
+              <div className="text-xl md:text-2xl font-black">{Math.floor((Number(profile?.total_points) || 0) / 10)}</div>
            </div>
         </div>
       </header>
@@ -163,7 +162,7 @@ export default function LibraryPage() {
                 )}>
                   <div className="h-40 md:h-48 bg-muted relative overflow-hidden">
                     {res.thumbnail_url ? (
-                      <img src={res.thumbnail_url} alt={res.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <Image src={res.thumbnail_url} alt={res.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground/20">
                          {getIcon(res.type)}

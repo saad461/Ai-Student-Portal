@@ -2,19 +2,16 @@
 
 import { useState, useEffect, useCallback, use, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CurriculumItem, QuizQuestion, getEstimatedReadTime, extractHeadings } from '@/lib/curriculum';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
+import { CurriculumItem, getEstimatedReadTime, extractHeadings } from '@/lib/curriculum';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
-  BookOpen,
   Video,
   CheckCircle2,
   Github,
   Send,
-  AlertCircle,
   FileText,
   HelpCircle,
   Lock,
@@ -37,9 +34,10 @@ import { CodeCompiler } from '@/components/code-compiler';
 import { AIAssistant } from '@/components/ai-assistant';
 import { AudioReader } from '@/components/audio-reader';
 import { logActivityAction } from '@/app/admin/actions';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import Image from 'next/image';
 
 interface Submission {
   id: string;
@@ -63,7 +61,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [githubUrl, setGithubUrl] = useState('');
 
   const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz'>('theory');
-  const [userPerks, setUserPerks] = useState<any[]>([]);
+  const [userPerks, setUserPerks] = useState<Record<string, unknown>[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [readTimeSeconds, setReadTimeSeconds] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -73,7 +71,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
   const effectiveReadMinutes = useMemo(() => {
     if (!lecture) return 0;
-    // Use manual override if provided, otherwise calculate automatically
     if (lecture.required_read_minutes && lecture.required_read_minutes > 0) {
       return lecture.required_read_minutes;
     }
@@ -127,7 +124,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     }
 
     const { data: perks } = await supabase.from('user_perks').select('*').eq('user_id', user.id);
-    setUserPerks(perks || []);
+    setUserPerks((perks as Record<string, unknown>[]) || []);
 
     setLoading(false);
   }, [resolvedParams.id]);
@@ -159,7 +156,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         setScrollProgress(scrolled);
       }
 
-      // Detect active heading
       const headingElements = headings.map(h => document.getElementById(h.id)).filter(Boolean);
       let currentActiveId = null;
       for (const el of headingElements) {
@@ -176,24 +172,22 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     };
 
     window.addEventListener('scroll', handleScroll);
-    // Initial check
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab, headings]);
 
-  const updateCompletion = async (newData: any) => {
+  const updateCompletion = async (newData: Record<string, unknown>) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     const currentData = submission?.completion_data || {};
     const updatedData = { ...currentData, ...newData };
 
-    // Check if everything is done
-    const isTheoryDone = updatedData.theory_read;
-    const isQuizDone = lecture?.attached_quiz ? updatedData.quiz_completed : true;
-    const isAssignmentDone = lecture?.attached_assignment ? (updatedData.assignment_submitted || !!githubUrl) : true;
+    const isTheoryDoneNow = updatedData.theory_read;
+    const isQuizDoneNow = lecture?.attached_quiz ? updatedData.quiz_completed : true;
+    const isAssignmentDoneNow = lecture?.attached_assignment ? (updatedData.assignment_submitted || !!githubUrl) : true;
 
-    const isFullyCompleted = isTheoryDone && isQuizDone && isAssignmentDone;
+    const isFullyCompleted = isTheoryDoneNow && isQuizDoneNow && isAssignmentDoneNow;
 
     const { error } = await supabase.from('submissions').upsert({
       student_id: user.id,
@@ -204,7 +198,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     }, { onConflict: 'student_id,curriculum_id' });
 
     if (!error) {
-      if (isFullyCompleted && !submission?.completion_data?.theory_read) { // Just finished
+      if (isFullyCompleted && !submission?.completion_data?.theory_read) {
          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
       }
       fetchData();
@@ -251,36 +245,35 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
   const isNextUnlocked = useMemo(() => {
     if (!nextItem) return false;
-    return isFullyDone; // Current must be done to unlock next
+    return isFullyDone;
   }, [nextItem, isFullyDone]);
 
   if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
   if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;
 
-  const MarkdownComponents = {
-    h1: ({ children }: any) => {
+  const MarkdownComponents: Components = {
+    h1: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h1 id={id} className="text-4xl font-black mt-12 mb-6 text-slate-900 dark:text-white pb-2 border-b-2 border-slate-100 dark:border-slate-800">{children}</h1>;
     },
-    h2: ({ children }: any) => {
+    h2: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-800 dark:text-slate-100 pb-1 border-b border-slate-100 dark:border-slate-800">{children}</h2>;
     },
-    h3: ({ children }: any) => {
+    h3: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h3 id={id} className="text-2xl font-bold mt-8 mb-4 text-slate-800 dark:text-slate-200">{children}</h3>;
     },
-    p: ({ children }: any) => <p className="text-lg leading-relaxed mb-6 text-slate-600 dark:text-slate-400 font-medium">{children}</p>,
-    ul: ({ children }: any) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
-    ol: ({ children }: any) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-600 dark:text-slate-400">{children}</ol>,
-    li: ({ children, ordered, node }: any) => {
-      // Check if it's a task list item
-      const isTask = node?.children?.some((c: any) => c.tagName === 'input');
-
+    p: ({ children }: { children?: React.ReactNode }) => <p className="text-lg leading-relaxed mb-6 text-slate-600 dark:text-slate-400 font-medium">{children}</p>,
+    ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
+    ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-600 dark:text-slate-400">{children}</ol>,
+    li: ({ children, ...props }) => {
+      const node = (props as Record<string, unknown>).node as { children?: { tagName: string }[] } | undefined;
+      const isTask = node?.children?.some((c) => c.tagName === 'input');
+      const ordered = (props as Record<string, unknown>).ordered;
       if (isTask) {
         return <li className="text-lg flex items-start gap-3 mb-2">{children}</li>;
       }
-
       return (
         <li className="text-lg flex items-start gap-3 mb-2">
           {!ordered && <div className="h-2 w-2 rounded-full bg-primary mt-2.5 shrink-0" />}
@@ -288,9 +281,9 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         </li>
       );
     },
-    strong: ({ children }: any) => <strong className="font-black text-slate-900 dark:text-white">{children}</strong>,
-    em: ({ children }: any) => <em className="italic text-primary/80 font-medium">{children}</em>,
-    a: ({ href, children }: any) => (
+    strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-black text-slate-900 dark:text-white">{children}</strong>,
+    em: ({ children }: { children?: React.ReactNode }) => <em className="italic text-primary/80 font-medium">{children}</em>,
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
       <a
         href={href}
         target="_blank"
@@ -300,8 +293,9 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         {children}
       </a>
     ),
-    code: ({ inline, children }: any) => (
-      inline
+    code: ({ ...props }) => {
+      const { inline, children } = props as { inline?: boolean; children?: React.ReactNode };
+      return inline
         ? <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">{children}</code>
         : <div className="relative my-8 group">
             <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
@@ -309,26 +303,29 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <code>{children}</code>
             </pre>
           </div>
-    ),
-    blockquote: ({ children }: any) => (
+    },
+    blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className="border-l-8 border-primary bg-primary/5 p-6 rounded-r-2xl italic my-8 text-xl text-slate-700 dark:text-slate-300 font-medium shadow-inner">
         {children}
       </blockquote>
     ),
-    img: ({ src, alt }: any) => (
+    img: (props) => {
+      const { src, alt } = props as { src?: string; alt?: string };
+      return (
       <div className="my-10 text-center">
-        <img src={src} alt={alt} className="rounded-3xl shadow-2xl mx-auto border-4 border-white dark:border-slate-800 max-w-full h-auto" />
+        {src && typeof src === 'string' && <Image src={src} alt={alt || ''} width={1200} height={675} className="rounded-3xl shadow-2xl mx-auto border-4 border-white dark:border-slate-800 max-w-full h-auto" />}
         {alt && <p className="mt-4 text-sm text-muted-foreground font-bold italic">Above: {alt}</p>}
       </div>
-    ),
-    table: ({ children }: any) => (
+      );
+    },
+    table: ({ children }: { children?: React.ReactNode }) => (
       <div className="my-8 overflow-x-auto border rounded-xl shadow-sm">
         <table className="w-full text-left border-collapse">{children}</table>
       </div>
     ),
-    thead: ({ children }: any) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
-    th: ({ children }: any) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
-    td: ({ children }: any) => <td className="p-4 border-b text-slate-600 dark:text-slate-400 text-sm md:text-base">{children}</td>,
+    thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
+    th: ({ children }: { children?: React.ReactNode }) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
+    td: ({ children }: { children?: React.ReactNode }) => <td className="p-4 border-b text-slate-600 dark:text-slate-400 text-sm md:text-base">{children}</td>,
   };
 
   const isDirectVideo = (url: string) => {
@@ -414,7 +411,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             </div>
             <div className="flex justify-between items-start gap-6">
               <p className="text-xl text-muted-foreground max-w-3xl leading-relaxed">{lecture.description}</p>
-              {userPerks.find(p => p.perk_id === 'lecture_hint') && (
+              {userPerks.find(p => (p as Record<string, unknown>).perk_id === 'lecture_hint') && (
                 <Button
                   variant="outline"
                   className="rounded-xl border-amber-200 bg-amber-50 text-amber-700 font-bold gap-2 hover:bg-amber-100"
@@ -560,7 +557,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypeRaw]}
-                            components={MarkdownComponents as any}
+                            components={MarkdownComponents}
                           >
                             {lecture.theory_content}
                           </ReactMarkdown>
@@ -736,7 +733,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                       src={lecture.video_url}
                       controls
                       className="w-full h-full"
-                      poster={lecture.video_url.replace(/\.[^/.]+$/, ".jpg")} // Fallback poster attempt
                     >
                       Your browser does not support the video tag.
                     </video>
@@ -823,7 +819,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                       key={submission?.completion_data?.quiz_completed ? 'done' : 'new'}
                       questions={lecture.attached_quiz}
                       onComplete={handleQuizComplete}
-                      canRetake={userPerks.some(p => p.perk_id === 'quiz_retake')}
+                      canRetake={userPerks.some(p => (p as Record<string, unknown>).perk_id === 'quiz_retake')}
                       onRetake={async () => {
                          const { data: { user } } = await supabase.auth.getUser();
                          if (user) {

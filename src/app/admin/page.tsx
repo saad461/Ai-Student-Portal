@@ -13,32 +13,27 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Users,
-  MessageCircle,
-  Check,
   Clock,
   Plus,
   Search,
   FileText,
-  AlertTriangle,
-  Database,
   BookOpen,
   Edit,
   Trash2,
   FilePlus,
   Layers,
   ChevronRight,
-  ChevronDown,
   Layout,
-  Video as VideoIcon
+  Video as VideoIcon,
+  Database,
+  Check
 } from 'lucide-react';
-import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -54,14 +49,13 @@ import {
   uploadVideoAction,
   saveCourseAction,
   deleteCourseAction,
-  unlockCourseForStudentAction,
   saveResourceAction,
   deleteResourceAction,
   saveDailyChallengeAction,
   reviewSubmissionAction,
   uploadResourceFileAction
 } from './actions';
-import { CurriculumItem, QuizQuestion, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
+import { CurriculumItem, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
   Table,
   TableBody,
@@ -73,7 +67,8 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff } from 'lucide-react';
+import Image from 'next/image';
 
 interface Resource {
   id?: string;
@@ -91,8 +86,8 @@ interface DailyChallenge {
   id?: string;
   title: string;
   description: string;
-  initial_code: any;
-  test_cases: any;
+  initial_code: Record<string, unknown>;
+  test_cases: unknown[];
   difficulty: 'easy' | 'medium' | 'hard';
   points_reward: number;
   active_date: string;
@@ -109,42 +104,44 @@ interface StudentSubmission {
   ai_status?: string;
 }
 
+interface StudentActivity {
+  id: string;
+  activity_type: string;
+  page_url?: string;
+  created_at: string;
+  details?: Record<string, unknown>;
+}
+
 interface StudentProfile {
   id: string;
   full_name: string;
   enrollment_date: string;
   is_pro: boolean;
   submissions: StudentSubmission[];
-  student_activity?: any[];
+  student_activity?: StudentActivity[];
 }
 
-interface SorryMessage {
+interface ToCEntry {
+  text: string;
   id: string;
-  student_id: string;
-  body: string;
-  status: string;
-  created_at: string;
-  profiles: { full_name: string };
+  level: number;
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<StudentProfile[]>([]);
-  const [messages, setMessages] = useState<SorryMessage[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [subModules, setSubModules] = useState<SubModule[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [attendance, setAttendance] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, unknown>[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges'>('students');
 
-  const [extraTaskText, setExtraTaskText] = useState('');
-  const [isAssigning, setIsAssigning] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
   const [studentTab, setStudentTab] = useState<'submissions' | 'activity'>('submissions');
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
@@ -167,13 +164,6 @@ export default function AdminDashboard() {
 
     setStudents((profiles as unknown as StudentProfile[]) || []);
 
-    const { data: msgs } = await supabase
-      .from('messages')
-      .select('*, profiles(full_name)')
-      .order('created_at', { ascending: false });
-
-    setMessages((msgs as unknown as SorryMessage[]) || []);
-
     const { data: coursesData } = await supabase
       .from('courses')
       .select('*')
@@ -181,7 +171,6 @@ export default function AdminDashboard() {
     const fetchedCourses = (coursesData as Course[]) || [];
     setCourses(fetchedCourses);
 
-    // Set default selected course if not set
     if (fetchedCourses.length > 0 && !selectedCourseId) {
        setSelectedCourseId(fetchedCourses[0].id);
     }
@@ -246,6 +235,7 @@ export default function AdminDashboard() {
         toastError('Error saving curriculum: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
       }
     } catch (err) {
+      console.error(err);
       toastError('An unexpected error occurred while saving.');
     } finally {
       setIsSaving(false);
@@ -253,7 +243,7 @@ export default function AdminDashboard() {
   };
 
   const handleSaveModule = async (mod: Partial<Module>) => {
-    const res = await saveModuleAction(mod);
+    const res = await saveModuleAction(mod as Record<string, unknown>);
     if (res.success) {
       success('Module saved successfully!');
       setEditingModule(null);
@@ -270,7 +260,7 @@ export default function AdminDashboard() {
   };
 
   const handleSaveSubModule = async (sub: Partial<SubModule>) => {
-    const res = await saveSubModuleAction(sub);
+    const res = await saveSubModuleAction(sub as Record<string, unknown>);
     if (res.success) {
       success('Sub-module saved successfully!');
       setEditingSubModule(null);
@@ -287,7 +277,7 @@ export default function AdminDashboard() {
   };
 
   const handleSaveCourse = async (course: Partial<Course>) => {
-    const res = await saveCourseAction(course);
+    const res = await saveCourseAction(course as Record<string, unknown>);
     if (res.success) {
       success('Course saved successfully!');
       setEditingCourse(null);
@@ -304,7 +294,7 @@ export default function AdminDashboard() {
   };
 
   const handleSaveResource = async (res: Partial<Resource>) => {
-    const result = await saveResourceAction(res);
+    const result = await saveResourceAction(res as Record<string, unknown>);
     if (result.success) {
       success('Resource saved successfully!');
       setEditingResource(null);
@@ -321,22 +311,13 @@ export default function AdminDashboard() {
   };
 
   const handleSaveChallenge = async (challenge: Partial<DailyChallenge>) => {
-    const result = await saveDailyChallengeAction(challenge);
+    const result = await saveDailyChallengeAction(challenge as Record<string, unknown>);
     if (result.success) {
       success('Challenge saved successfully!');
       setEditingChallenge(null);
       fetchAdminData();
     } else {
       toastError('Error saving challenge: ' + JSON.stringify(result.error));
-    }
-  };
-
-  const handleUnlockCourse = async (email: string, courseId: string) => {
-    const res = await unlockCourseForStudentAction(email, courseId);
-    if (res.success) {
-      success('Course unlocked successfully!');
-    } else {
-      toastError('Error unlocking course: ' + res.error);
     }
   };
 
@@ -356,7 +337,6 @@ export default function AdminDashboard() {
       const currentOrder = item.lecture_index || 0;
       const targetOrder = targetItem.lecture_index || 0;
 
-      // Swap orders
       await saveCurriculumItemAction({ ...item, lecture_index: targetOrder });
       await saveCurriculumItemAction({ ...targetItem, lecture_index: currentOrder });
       fetchAdminData();
@@ -415,7 +395,7 @@ export default function AdminDashboard() {
                 <Card key={course.id} className="overflow-hidden group">
                   <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
                      {course.thumbnail_url ? (
-                       <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
+                       <Image src={course.thumbnail_url} alt={course.name} fill className="object-cover" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center text-slate-400">
                           <BookOpen className="h-12 w-12" />
@@ -602,7 +582,7 @@ export default function AdminDashboard() {
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'up')}><Clock className="h-4 w-4 rotate-180" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'down')}><Clock className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id!)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                   </div>
                                   <CardTitle className="text-lg leading-tight mt-2">{item.title}</CardTitle>
@@ -647,7 +627,7 @@ export default function AdminDashboard() {
                                     <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id!)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                   </div>
                                   <CardTitle className="text-lg leading-tight mt-2">{item.title}</CardTitle>
@@ -663,7 +643,7 @@ export default function AdminDashboard() {
             }) : (
               <div className="p-12 text-center border-2 border-dashed rounded-xl">
                  <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                 <p className="text-slate-500">Create some Modules first in the "Course Structure" tab.</p>
+                 <p className="text-slate-500">Create some Modules first in the &quot;Course Structure&quot; tab.</p>
                  <Button variant="outline" className="mt-4" onClick={() => setActiveTab('structure')}>Go to Course Structure</Button>
               </div>
             )}
@@ -676,7 +656,7 @@ export default function AdminDashboard() {
                 <TableHeader><TableRow><TableHead>Student</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {attendance.map((record) => (
-                    <TableRow key={record.id}><TableCell>{record.profiles?.full_name}</TableCell><TableCell>{new Date(record.date).toLocaleDateString()}</TableCell><TableCell><Badge className="bg-green-600">PRESENT</Badge></TableCell></TableRow>
+                          <TableRow key={String(record.id)}><TableCell>{(record.profiles as Record<string, unknown>)?.full_name as string}</TableCell><TableCell>{new Date(String(record.date)).toLocaleDateString()}</TableCell><TableCell><Badge className="bg-green-600">PRESENT</Badge></TableCell></TableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -760,10 +740,10 @@ export default function AdminDashboard() {
                 <Card className="bg-emerald-500 text-white border-none shadow-xl">
                    <CardHeader className="pb-2">
                       <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
-                        <Check className="h-4 w-4" /> Avg Completion
+                         <Check className="h-4 w-4" /> Avg Completion
                       </CardTitle>
                       <div className="text-3xl font-black">
-                         {students.length > 0 ? Math.round(students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0) / (students.length * curriculum.length || 1) * 100) : 0}%
+                         {students.length > 0 ? Math.round(students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0) / (students.length * (curriculum.length || 1)) * 100) : 0}%
                       </div>
                    </CardHeader>
                    <CardContent className="text-xs opacity-90">Average progress per student.</CardContent>
@@ -914,7 +894,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 pl-8 space-y-8">
-                       {viewingStudent?.student_activity?.sort((a:any, b:any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((act: any) => (
+                       {viewingStudent?.student_activity?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((act) => (
                          <div key={act.id} className="relative">
                             <div className={cn(
                                "absolute -left-[41px] top-0 h-6 w-6 rounded-full border-4 border-background flex items-center justify-center",
@@ -996,7 +976,7 @@ export default function AdminDashboard() {
 
                 <div className="space-y-2">
                   <Label>Item Type</Label>
-                  <select className="w-full p-2 rounded border bg-background" value={editingItem?.type || 'lecture'} onChange={(e) => setEditingItem(prev => ({ ...prev!, type: e.target.value as any }))}>
+                  <select className="w-full p-2 rounded border bg-background" value={editingItem?.type || 'lecture'} onChange={(e) => setEditingItem(prev => ({ ...prev!, type: e.target.value as CurriculumItem['type'] }))}>
                     <option value="lecture">Lecture</option>
                     <option value="assignment">Assignment</option>
                     <option value="quiz">Quiz</option>
@@ -1048,12 +1028,12 @@ export default function AdminDashboard() {
                       fd.append('file', file);
                       try {
                         const res = await uploadVideoAction(fd);
-                        if (res.success) {
+                        if (res.success && res.url) {
                           success('Video uploaded successfully!');
                           setEditingItem(prev => ({ ...prev!, video_url: res.url }));
                         }
-                        else toastError('Upload failed: ' + res.error);
-                      } catch (err) { toastError('Upload error'); }
+                        else toastError('Upload failed: ' + (res.error || 'Unknown error'));
+                      } catch (err) { console.error(err); toastError('Upload error'); }
                       finally {
                         setIsVideoUploading(false);
                         if (videoInputRef.current) videoInputRef.current.value = '';
@@ -1078,7 +1058,7 @@ export default function AdminDashboard() {
                        <Textarea
                          className="font-mono text-xs h-24"
                          value={editingItem?.compiler_initial_code?.html || ''}
-                         onChange={(e) => setEditingItem(prev => ({ ...prev!, compiler_initial_code: { ...prev!.compiler_initial_code!, html: e.target.value } }))}
+                         onChange={(e) => setEditingItem(prev => ({ ...prev!, compiler_initial_code: { ...(prev!.compiler_initial_code || { html: '', css: '', js: '' }), html: e.target.value } }))}
                        />
                     </div>
                   )}
@@ -1159,7 +1139,7 @@ export default function AdminDashboard() {
                            variant="outline"
                            size="sm"
                            onClick={() => {
-                             const auto = extractHeadings(editingItem.theory_content);
+                             const auto = extractHeadings(editingItem.theory_content || '');
                              setEditingItem(prev => ({ ...prev!, content: auto }));
                            }}
                          >
@@ -1168,13 +1148,13 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-3">
-                        {((Array.isArray(editingItem.content) ? editingItem.content : null) || extractHeadings(editingItem.theory_content)).map((entry: any, idx: number) => (
+                        {((Array.isArray(editingItem.content) ? editingItem.content : null) || extractHeadings(editingItem.theory_content || '')).map((entry: ToCEntry, idx: number) => (
                           <div key={idx} className="flex gap-2 items-center group">
                             <select
                               className="h-8 text-[10px] font-bold border rounded bg-transparent px-1 outline-none w-14 shrink-0"
                               value={entry.level}
                               onChange={(e) => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content || '')) as ToCEntry[];
                                 const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], level: parseInt(e.target.value) };
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
@@ -1192,7 +1172,7 @@ export default function AdminDashboard() {
                               )}
                               value={entry.text}
                               onChange={(e) => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content || '')) as ToCEntry[];
                                 const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], text: e.target.value };
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
@@ -1202,7 +1182,7 @@ export default function AdminDashboard() {
                               className="h-8 text-xs font-mono w-40"
                               value={entry.id}
                               onChange={(e) => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content || '')) as ToCEntry[];
                                 const newToc = [...currentToc];
                                 newToc[idx] = { ...newToc[idx], id: e.target.value };
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
@@ -1213,8 +1193,8 @@ export default function AdminDashboard() {
                               size="icon"
                               className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100"
                               onClick={() => {
-                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
-                                const newToc = currentToc.filter((_: any, i: number) => i !== idx);
+                                const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content || '')) as ToCEntry[];
+                                const newToc = currentToc.filter((_, i: number) => i !== idx);
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
                               }}
                             >
@@ -1227,7 +1207,7 @@ export default function AdminDashboard() {
                           size="sm"
                           className="w-full border-2 border-dashed h-10 mt-2"
                           onClick={() => {
-                            const current = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
+                            const current = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content || '')) as ToCEntry[];
                             setEditingItem(prev => ({
                               ...prev!,
                               content: [...current, { text: 'New Link', id: 'new-link', level: 2 }]
@@ -1274,7 +1254,7 @@ export default function AdminDashboard() {
                         try {
                           const quiz = JSON.parse(e.target.value);
                           setEditingItem(prev => ({ ...prev!, attached_quiz: quiz }));
-                        } catch (err) {}
+                        } catch (err) { console.error(err); }
                       }}
                     />
                   </div>
@@ -1335,7 +1315,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Type</Label>
-                  <select className="w-full p-2 border rounded" value={editingResource?.type} onChange={(e) => setEditingResource(prev => ({ ...prev!, type: e.target.value as any }))}>
+                  <select className="w-full p-2 border rounded" value={editingResource?.type} onChange={(e) => setEditingResource(prev => ({ ...prev!, type: e.target.value as Resource['type'] }))}>
                     <option value="book">Book</option>
                     <option value="cheat_sheet">Cheat Sheet</option>
                     <option value="roadmap">Roadmap</option>
@@ -1378,12 +1358,12 @@ export default function AdminDashboard() {
                     fd.append('file', file);
                     try {
                       const res = await uploadResourceFileAction(fd);
-                      if (res.success) {
+                      if (res.success && res.url) {
                         success('Resource uploaded successfully!');
                         setEditingResource(prev => ({ ...prev!, external_url: res.url }));
                       }
-                      else toastError('Upload failed: ' + res.error);
-                    } catch (err) { toastError('Upload error'); }
+                      else toastError('Upload failed: ' + (res.error || 'Unknown error'));
+                    } catch (err) { console.error(err); toastError('Upload error'); }
                     finally {
                       setIsResourceUploading(false);
                       if (resourceFileRef.current) resourceFileRef.current.value = '';
@@ -1408,7 +1388,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>Active Date</Label><Input type="date" value={editingChallenge?.active_date} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, active_date: e.target.value }))} /></div>
                 <div className="space-y-2"><Label>Difficulty</Label>
-                  <select className="w-full p-2 border rounded" value={editingChallenge?.difficulty} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, difficulty: e.target.value as any }))}>
+                  <select className="w-full p-2 border rounded" value={editingChallenge?.difficulty} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, difficulty: e.target.value as DailyChallenge['difficulty'] }))}>
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
                     <option value="hard">Hard</option>

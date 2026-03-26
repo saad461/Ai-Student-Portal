@@ -18,6 +18,21 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Extension } from '@tiptap/core';
 
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    fontSize: {
+      /**
+       * Set the font size
+       */
+      setFontSize: (size: string) => ReturnType,
+      /**
+       * Unset the font size
+       */
+      unsetFontSize: () => ReturnType,
+    }
+  }
+}
+
 // Custom FontSize extension as it's not in the official package
 const FontSize = Extension.create({
   name: 'fontSize',
@@ -43,12 +58,12 @@ const FontSize = Extension.create({
       },
     ]
   },
-  addCommands(): any {
+  addCommands() {
     return {
-      setFontSize: (fontSize: string) => ({ chain }: any) => {
+      setFontSize: (fontSize: string) => ({ chain }) => {
         return chain().setMark('textStyle', { fontSize }).run()
       },
-      unsetFontSize: () => ({ chain }: any) => {
+      unsetFontSize: () => ({ chain }) => {
         return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run()
       },
     }
@@ -71,7 +86,6 @@ import {
   Highlighter,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
-  Type,
   List,
   ListOrdered,
   CheckSquare,
@@ -187,7 +201,7 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBa
             <Baseline className="h-4 w-4" />
             <div
               className="absolute bottom-1 w-3 h-1 bg-black"
-              style={{ backgroundColor: editor.getAttributes('textStyle').color || 'black' }}
+              style={{ backgroundColor: (editor.getAttributes('textStyle').color as string) || 'black' }}
             />
           </div>
         </div>
@@ -203,7 +217,7 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBa
             <Highlighter className="h-4 w-4" />
             <div
               className="absolute bottom-1 w-3 h-1 bg-yellow-400"
-              style={{ backgroundColor: editor.getAttributes('highlight').color || '#facc15' }}
+              style={{ backgroundColor: (editor.getAttributes('highlight').color as string) || '#facc15' }}
             />
           </div>
         </div>
@@ -237,6 +251,7 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBa
             }
           }}
           title="Font Size"
+          value={(editor.getAttributes('textStyle').fontSize as string) || 'default'}
         >
           <option value="default">Size</option>
           <option value="12px">12px</option>
@@ -494,9 +509,10 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
         success('Image uploaded successfully!');
         editor?.chain().focus().setImage({ src: res.url }).run();
       } else {
-        toastError('Upload failed: ' + res.error);
+        toastError('Upload failed: ' + (res.error as string));
       }
     } catch (err) {
+      console.error(err);
       toastError('Upload error');
     } finally {
       setIsUploading(false);
@@ -551,6 +567,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
     content: content,
     onUpdate: ({ editor }) => {
       // Get the markdown content from Tiptap
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const markdown = (editor.storage as any).markdown.getMarkdown();
       onChange(markdown);
     },
@@ -662,7 +679,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
             <select
               className="h-7 text-[10px] border rounded bg-transparent px-1 outline-none"
               onChange={(e) => editor.chain().focus().setFontSize(e.target.value).run()}
-              value={editor.getAttributes('textStyle').fontSize || ''}
+              value={(editor.getAttributes('textStyle').fontSize as string) || ''}
             >
               <option value="">Size</option>
               {['12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px'].map(size => (

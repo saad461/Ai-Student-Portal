@@ -13,7 +13,6 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,13 +21,11 @@ import {
   DialogTrigger,
   DialogContent,
   DialogHeader,
-  DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
 import {
   CheckCircle2,
   Clock,
-  AlertCircle,
   Github,
   Lock,
   ArrowRight,
@@ -43,7 +40,6 @@ import {
   FileUser
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AICodeReview } from '@/components/code-review';
 import { QuizModule } from '@/components/quiz';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
@@ -73,6 +69,7 @@ interface Profile {
   phone_number?: string;
   city?: string;
   github_link?: string;
+  current_course_id?: string;
 }
 
 interface Submission {
@@ -104,16 +101,14 @@ export default function DashboardPage() {
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
-  const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
-  const [rewardHistory, setRewardHistory] = useState<any[]>([]);
-  const [userPerks, setUserPerks] = useState<any[]>([]);
+  const [recentAttendance, setRecentAttendance] = useState<Record<string, unknown>[]>([]);
+  const [rewardHistory, setRewardHistory] = useState<Record<string, unknown>[]>([]);
+  const [userPerks, setUserPerks] = useState<Record<string, unknown>[]>([]);
 
   const [githubUrl, setGithubUrl] = useState('');
-  const [lastSubmittedUrl, setLastSubmittedUrl] = useState('');
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [skippingId, setSkippingId] = useState<string | null>(null);
   const [skipPin, setSkipPin] = useState('');
-  const [showReviewFor, setShowReviewFor] = useState<string | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<CurriculumItem | null>(null);
 
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
@@ -131,6 +126,11 @@ export default function DashboardPage() {
       .eq('id', user.id)
       .single();
 
+    if (!profileData) {
+        setLoading(false);
+        return;
+    }
+
     setProfile(profileData as unknown as Profile);
 
     const today = new Date().toLocaleDateString('en-CA');
@@ -140,7 +140,7 @@ export default function DashboardPage() {
       .eq('student_id', user.id)
       .eq('date', today);
 
-    setHasPunchedInToday(!!(attendance && attendance.length > 0));
+    setHasPunchedInToday(!!(attendance && (attendance as unknown[]).length > 0));
 
     const { data: allAttendance } = await supabase
       .from('attendance')
@@ -149,7 +149,7 @@ export default function DashboardPage() {
       .order('date', { ascending: false })
       .limit(7);
 
-    setRecentAttendance(allAttendance || []);
+    setRecentAttendance((allAttendance as Record<string, unknown>[]) || []);
 
     const { data: rewards } = await supabase
       .from('reward_log')
@@ -157,13 +157,13 @@ export default function DashboardPage() {
       .eq('student_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10);
-    setRewardHistory(rewards || []);
+    setRewardHistory((rewards as Record<string, unknown>[]) || []);
 
     const { data: perks } = await supabase
       .from('user_perks')
       .select('*')
       .eq('user_id', user.id);
-    setUserPerks(perks || []);
+    setUserPerks((perks as Record<string, unknown>[]) || []);
 
     const { data: subs } = await supabase
       .from('submissions')
@@ -185,7 +185,7 @@ export default function DashboardPage() {
       .eq('course_id', profileData.current_course_id)
       .order('index', { ascending: true });
 
-    const moduleIndices = (modulesData || []).map(m => m.index);
+    const moduleIndices = (modulesData as { index: number }[] || []).map((m: { index: number }) => m.index);
 
     const { data: curriculumData } = await supabase
       .from('curriculum')
@@ -200,7 +200,7 @@ export default function DashboardPage() {
       .eq('student_id', user.id);
 
     if (focusData) {
-      const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+      const totalSeconds = focusData.reduce((acc: number, curr: { duration_seconds: number }) => acc + curr.duration_seconds, 0);
       setTotalFocusMinutes(Math.round(totalSeconds / 60));
     }
 
@@ -273,9 +273,7 @@ export default function DashboardPage() {
         toastError('Failed to submit: ' + error.message);
       } else {
         success('Assignment submitted successfully!');
-        setLastSubmittedUrl(githubUrl);
         setGithubUrl('');
-        setShowReviewFor(curriculumId);
         fetchData();
       }
     } finally {
@@ -414,13 +412,13 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-primary/5 border-primary/10">
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total XP</CardTitle>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total XP</div>
                 <div className="text-xl font-black text-primary">{profile?.total_points || 0}</div>
               </CardHeader>
             </Card>
             <Card className="bg-amber-500/5 border-amber-500/10">
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Student Sparks</CardTitle>
+                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Student Sparks</div>
                 <div className="text-xl font-black text-amber-600 flex items-center gap-1">
                    <Zap className="h-4 w-4 fill-amber-500" />
                    {getSkillPoints(profile?.total_points || 0)}
@@ -429,13 +427,13 @@ export default function DashboardPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Progress</CardTitle>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Progress</div>
                 <div className="text-xl font-black">{Math.round((submissions.length / (curriculum.length || 1)) * 100)}%</div>
               </CardHeader>
             </Card>
             <Card className={cn(profile?.is_pro ? "bg-purple-500/5 border-purple-500/10" : "opacity-50")}>
               <CardHeader className="pb-1 p-4">
-                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Level {getLevel(profile?.total_points || 0)}</CardTitle>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Level {getLevel(profile?.total_points || 0)}</div>
                 <div className="mt-2 space-y-1">
                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                       <div
@@ -518,7 +516,7 @@ export default function DashboardPage() {
                              city: profile?.city || '',
                              github: profile?.github_link || '',
                              skills: ['HTML5', 'CSS3', 'JavaScript', 'Tailwind CSS', 'React'],
-                             projects: curriculum.slice(0, 5).map(c => ({ title: c.title, status: submissions.find(s => s.curriculum_id === c.id)?.status || 'In Progress' })),
+                             projects: curriculum.slice(0, 5).map((c) => ({ title: c.title, status: submissions.find(s => s.curriculum_id === c.id)?.status || 'In Progress' })),
                              totalPoints: profile?.total_points || 0,
                              level: getLevel(profile?.total_points || 0),
                              streak: profile?.current_streak || 0
@@ -631,7 +629,9 @@ export default function DashboardPage() {
                                         </Button>
                                       </DialogTrigger>
                                       <DialogContent>
-                                        <DialogHeader><DialogTitle>Skip Lecture</DialogTitle></DialogHeader>
+                                        <DialogHeader>
+                                           <h2 className="text-lg font-bold">Skip Lecture</h2>
+                                        </DialogHeader>
                                         <div className="py-4">
                                           <Label htmlFor="skip-pin-dash">Enter Skip PIN</Label>
                                           <Input id="skip-pin-dash" type="password" placeholder="Enter PIN to skip" value={skipPin} onChange={(e) => setSkipPin(e.target.value)} />
@@ -660,7 +660,7 @@ export default function DashboardPage() {
                 <Card className="bg-muted/10 border-dashed">
                   <CardContent className="p-8 text-center">
                     <p className="text-muted-foreground text-sm italic">
-                      "The secret of getting ahead is getting started."
+                      &quot;The secret of getting ahead is getting started.&quot;
                     </p>
                   </CardContent>
                 </Card>
@@ -688,7 +688,7 @@ export default function DashboardPage() {
                 </section>
               )}
 
-              <DailyBounty onComplete={async (reward) => {
+              <DailyBounty onComplete={async (reward: number) => {
                 const { rewardStudentAction } = await import('@/app/admin/actions');
                 const today = new Date().toLocaleDateString('en-CA');
                 await rewardStudentAction(reward, 'Daily Bounty Completed', 'daily_bounty', today);
@@ -696,17 +696,17 @@ export default function DashboardPage() {
               }} />
 
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Reward History</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><div className="text-sm font-bold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Reward History</div></CardHeader>
                 <CardContent className="p-0">
                   {rewardHistory.length === 0 ? <p className="text-xs text-muted-foreground italic p-4">No points earned yet.</p> : (
                     <div className="divide-y">
-                      {rewardHistory.map((reward) => (
-                        <div key={reward.id} className="flex justify-between items-center text-[10px] p-3">
+                        {rewardHistory.map((reward) => (
+                          <div key={String(reward.id)} className="flex justify-between items-center text-[10px] p-3">
                           <div className="flex flex-col">
-                            <span className="font-bold">{reward.reason}</span>
-                            <span className="text-[8px] text-muted-foreground opacity-70">{new Date(reward.created_at).toLocaleString()}</span>
+                              <span className="font-bold">{String(reward.reason)}</span>
+                              <span className="text-[8px] text-muted-foreground opacity-70">{new Date(String(reward.created_at)).toLocaleString()}</span>
                           </div>
-                          <Badge variant="secondary" className="text-[9px] bg-primary/10 text-primary font-black">+{reward.amount} XP</Badge>
+                            <Badge variant="secondary" className="text-[9px] bg-primary/10 text-primary font-black">+{String(reward.amount)} XP</Badge>
                         </div>
                       ))}
                     </div>
@@ -715,13 +715,13 @@ export default function DashboardPage() {
               </Card>
 
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4" /> Attendance Log</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><div className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4" /> Attendance Log</div></CardHeader>
                 <CardContent className="p-0">
                   {recentAttendance.length === 0 ? <p className="text-xs text-muted-foreground italic p-4">No records yet.</p> : (
                     <div className="divide-y">
-                      {recentAttendance.map((record) => (
-                        <div key={record.id} className="flex justify-between items-center text-[10px] p-3">
-                          <span className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        {recentAttendance.map((record) => (
+                          <div key={String(record.id)} className="flex justify-between items-center text-[10px] p-3">
+                            <span className="font-medium">{new Date(String(record.date)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-700">PRESENT</Badge>
                         </div>
                       ))}
@@ -738,7 +738,7 @@ export default function DashboardPage() {
           <div className="w-full max-w-2xl">
              <QuizModule
                questions={activeQuiz.content as unknown as QuizQuestion[]}
-               onComplete={async (score) => {
+               onComplete={async (score: number) => {
                  const { data: { user } } = await supabase.auth.getUser();
                  if (user) {
                    await supabase.from('submissions').upsert({

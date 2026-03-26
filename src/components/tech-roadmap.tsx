@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -25,10 +25,10 @@ interface RoadmapPhase {
   tagline: string;
   goal: string;
   skills: string[];
-  toolbox: { name: string; icon: any }[];
+  toolbox: { name: string; icon: React.ElementType }[];
   color: string;
   glowColor: string;
-  icon: any;
+  icon: React.ElementType;
 }
 
 const PHASES: RoadmapPhase[] = [
@@ -138,10 +138,7 @@ export function TechRoadmap() {
        const { data: modules } = await supabase.from('modules').select('index').eq('course_id', profile?.current_course_id).order('index', { ascending: true });
 
        if (modules && modules.length > 0) {
-          // Simplified: match roadmap phase (1-5) to module groups (approx 5 modules per phase)
-          // Total modules usually around 24.
           const completedCount = submissions?.length || 0;
-          // Roadmap has 5 phases. Let's say phase 1 is modules 1-4, phase 2 is 5-9, etc.
           const phase = Math.min(5, Math.floor(completedCount / 5) + 1);
           setCurrentModuleIndex(phase);
        }

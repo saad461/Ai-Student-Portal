@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { CURRICULUM } from '@/lib/curriculum';
+import { CURRICULUM, CurriculumItem } from '@/lib/curriculum';
 
 export async function verifyAdminPassword(password: string) {
   const correctPassword = process.env.ADMIN_PASSWORD || 'admin123';
@@ -55,7 +55,7 @@ export async function seedCurriculumAction() {
   // Delete all existing curriculum items before seeding new ones
   await supabaseAdmin.from('curriculum').delete().neq('id', 'placeholder-to-delete-all');
 
-  const { data, error } = await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('curriculum')
     .upsert(CURRICULUM.map(item => ({ ...item, module_index: 1 })));
 
@@ -64,23 +64,11 @@ export async function seedCurriculumAction() {
     return { success: false, error };
   }
 
-  return { success: true, data };
+  return { success: true };
 }
 
-async function checkIsAdmin(supabase: any) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  return profile?.role === 'admin';
-}
-
-export async function saveCurriculumItemAction(item: any) {
+export async function saveCurriculumItemAction(item: Partial<CurriculumItem>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -94,16 +82,12 @@ export async function saveCurriculumItemAction(item: any) {
     // Sanitize item: ensure numbers are numbers and sub_module_id is a valid UUID or null
     const sanitized = {
       ...item,
-      week: parseInt(item.week) || 1,
-      lecture_index: parseInt(item.lecture_index) || 1,
-      required_focus_hours: parseFloat(item.required_focus_hours) || 0,
-      required_read_minutes: parseInt(item.required_read_minutes) || 0,
+      week: typeof item.week === 'string' ? parseInt(item.week) : (item.week || 1),
+      lecture_index: typeof item.lecture_index === 'string' ? parseInt(item.lecture_index) : (item.lecture_index || 1),
+      required_focus_hours: typeof item.required_focus_hours === 'string' ? parseFloat(item.required_focus_hours) : (item.required_focus_hours || 0),
+      required_read_minutes: typeof item.required_read_minutes === 'string' ? parseInt(item.required_read_minutes) : (item.required_read_minutes || 0),
       sub_module_id: (item.sub_module_id && item.sub_module_id !== '') ? item.sub_module_id : null
     };
-
-    // If it's a new item or index changed, we might need to shift
-    // For simplicity in this update, we'll just upsert.
-    // Index shifting logic can be complex without a transaction, so we'll do a simple upsert first.
 
     const { data, error } = await supabaseAdmin
       .from('curriculum')
@@ -113,13 +97,14 @@ export async function saveCurriculumItemAction(item: any) {
     if (error) throw error;
 
     return { success: true, data: data?.[0] };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Save Curriculum Error:', err);
-    return { success: false, error: err.message || 'Unknown error' };
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveModuleAction(module: any) {
+export async function saveModuleAction(module: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -134,7 +119,7 @@ export async function saveModuleAction(module: any) {
     .upsert(module)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data?.[0] as Record<string, unknown>, error };
 }
 
 export async function reviewSubmissionAction(submissionId: string, feedback: string, score: number, status: string) {
@@ -167,7 +152,7 @@ export async function reviewSubmissionAction(submissionId: string, feedback: str
     );
   }
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data?.[0] as Record<string, unknown>, error };
 }
 
 export async function deleteModuleAction(id: string) {
@@ -186,7 +171,7 @@ export async function deleteModuleAction(id: string) {
   return { success: !error, error };
 }
 
-export async function logActivityAction(type: string, details: any = {}, url?: string) {
+export async function logActivityAction(type: string, details: Record<string, unknown> = {}, url?: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) return { success: false };
@@ -250,7 +235,7 @@ export async function uploadResourceFileAction(formData: FormData) {
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('library-resources')
     .upload(fileName, file);
 
@@ -263,11 +248,6 @@ export async function uploadResourceFileAction(formData: FormData) {
   return { success: true, url: publicUrl, fileName: file.name };
 }
 
-/**
- * Internal reward logic to prevent client-side manipulation of amounts.
- * This should NOT be exported if it were a real production app with sensitive points,
- * but for this training portal, we'll keep it here and validate the source.
- */
 export async function rewardStudentAction(amount: number, reason: string, sourceType: string, sourceId: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -290,21 +270,18 @@ export async function rewardStudentAction(amount: number, reason: string, source
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
-  // Validate allowed reward amounts per source type to prevent console hacking
   let validatedAmount = amount;
 
   if (sourceType === 'attendance') validatedAmount = 10;
-  if (sourceType === 'daily_bounty') validatedAmount = Math.min(amount, 50); // Sanity check
-  if (sourceType === 'game') validatedAmount = Math.min(amount, 10); // Games only give small rewards
+  if (sourceType === 'daily_bounty') validatedAmount = Math.min(amount, 50);
+  if (sourceType === 'game') validatedAmount = Math.min(amount, 10);
 
-  // XP Booster check
   const { data: profileData } = await supabaseAdmin.from('profiles').select('total_points, xp_booster_until').eq('id', user.id).single();
   if (profileData?.xp_booster_until && new Date(profileData.xp_booster_until) > new Date()) {
     validatedAmount *= 2;
     reason += " (2x Booster Active)";
   }
 
-  // 1. Check if already rewarded
   const { data: existing } = await supabaseAdmin
     .from('reward_log')
     .select('id')
@@ -315,7 +292,6 @@ export async function rewardStudentAction(amount: number, reason: string, source
 
   if (existing) return { success: true, alreadyRewarded: true };
 
-  // 2. Log reward
   const { error: logError } = await supabaseAdmin.from('reward_log').insert({
     student_id: user.id,
     amount: validatedAmount,
@@ -326,13 +302,11 @@ export async function rewardStudentAction(amount: number, reason: string, source
 
   if (logError) return { success: false, error: logError.message };
 
-  // 3. Update profile using SQL increment to prevent race conditions
   const { error: profileError } = await supabaseAdmin.rpc('increment_points', {
     user_id: user.id,
     amount: validatedAmount
   });
 
-  // Fallback if RPC is not defined
   if (profileError) {
     console.warn('increment_points RPC failed, falling back to manual update', profileError);
     await supabaseAdmin
@@ -340,8 +314,6 @@ export async function rewardStudentAction(amount: number, reason: string, source
       .update({ total_points: (profileData?.total_points || 0) + validatedAmount })
       .eq('id', user.id);
   }
-
-  if (profileError) return { success: false, error: profileError.message };
 
   return { success: true, alreadyRewarded: false };
 }
@@ -368,7 +340,6 @@ export async function purchaseShopItemAction(itemId: string, priceInSkillPoints:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: 'Unauthorized' };
 
-  // 1. Get profile and validate points
   const { data: profile } = await supabaseAdmin.from('profiles').select('total_points').eq('id', user.id).single();
   const costInXp = priceInSkillPoints * 10;
 
@@ -376,7 +347,6 @@ export async function purchaseShopItemAction(itemId: string, priceInSkillPoints:
     return { success: false, error: 'Insufficient points' };
   }
 
-  // 2. Deduct points
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
     .update({ total_points: profile.total_points - costInXp })
@@ -384,7 +354,6 @@ export async function purchaseShopItemAction(itemId: string, priceInSkillPoints:
 
   if (profileError) return { success: false, error: profileError.message };
 
-  // 3. Add to user_perks
   const { data: existingPerk } = await supabaseAdmin
     .from('user_perks')
     .select('*')
@@ -404,7 +373,6 @@ export async function purchaseShopItemAction(itemId: string, priceInSkillPoints:
     });
   }
 
-  // 4. Special immediate effects
   if (itemId === 'xp_booster') {
      const boosterEnd = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
      await supabaseAdmin.from('profiles').update({ xp_booster_until: boosterEnd }).eq('id', user.id);
@@ -417,7 +385,7 @@ export async function purchaseShopItemAction(itemId: string, priceInSkillPoints:
   return { success: true };
 }
 
-export async function saveResourceAction(resource: any) {
+export async function saveResourceAction(resource: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -431,12 +399,11 @@ export async function saveResourceAction(resource: any) {
     .from('resources')
     .upsert({
       ...resource,
-      // Ensure file_path is updated if the URL comes from our storage
-      file_path: resource.external_url?.includes('library-resources') ? resource.external_url : resource.file_path
+      file_path: (resource.external_url as string)?.includes('library-resources') ? resource.external_url : resource.file_path
     })
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data?.[0] as Record<string, unknown>, error };
 }
 
 export async function deleteResourceAction(id: string) {
@@ -455,7 +422,7 @@ export async function deleteResourceAction(id: string) {
   return { success: !error, error };
 }
 
-export async function saveDailyChallengeAction(challenge: any) {
+export async function saveDailyChallengeAction(challenge: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -470,10 +437,10 @@ export async function saveDailyChallengeAction(challenge: any) {
     .upsert(challenge)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data?.[0] as Record<string, unknown>, error };
 }
 
-export async function saveCourseAction(course: any) {
+export async function saveCourseAction(course: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -488,7 +455,7 @@ export async function saveCourseAction(course: any) {
     .upsert(course)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data?.[0] as Record<string, unknown>, error };
 }
 
 export async function deleteCourseAction(id: string) {
@@ -517,21 +484,13 @@ export async function unlockCourseForStudentAction(email: string, courseId: stri
   if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  // Find user by email
   const { data: userData, error: userError } = await supabaseAdmin
     .from('profiles')
     .select('id')
     .eq('email', email)
     .single();
 
-  // If email is not in profiles (legacy or different structure), try auth.users
-  // But profiles is our source of truth for students.
-
   if (userError || !userData) {
-    // If profiles doesn't have email, we might need to join or assume ID for now.
-    // Based on schema, profiles doesn't have email. It's in auth.users.
-    // Let's assume the admin provides the student name or we search differently.
-    // Usually we have student_id available from the students list.
     return { success: false, error: 'Student not found. Please use the student ID.' };
   }
 
@@ -559,7 +518,6 @@ async function authorizeAdmin() {
             cookieStore.set(name, value, options)
           )
         } catch {
-          // Handle cookie setting errors
         }
       },
     },
@@ -590,11 +548,8 @@ export async function uploadImageAction(formData: FormData) {
   if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  // Simple check for now. Ideally, we would verify a session token or use Supabase Auth middleware.
-  // Since this is a server action, it's already slightly more secure than a public API.
-
   const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('curriculum-images')
     .upload(fileName, file);
 
@@ -621,7 +576,7 @@ export async function uploadVideoAction(formData: FormData) {
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from('curriculum-videos')
     .upload(fileName, file);
 
@@ -634,7 +589,7 @@ export async function uploadVideoAction(formData: FormData) {
   return { success: true, url: publicUrl };
 }
 
-export async function saveSubModuleAction(subModule: any) {
+export async function saveSubModuleAction(subModule: Record<string, unknown>) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -649,7 +604,7 @@ export async function saveSubModuleAction(subModule: any) {
     .upsert(subModule)
     .select();
 
-  return { success: !error, data: data?.[0], error };
+  return { success: !error, data: data?.[0] as Record<string, unknown>, error };
 }
 
 export async function deleteSubModuleAction(id: string) {

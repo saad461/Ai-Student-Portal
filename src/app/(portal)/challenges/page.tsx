@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Trophy,
   Zap,
@@ -10,25 +9,24 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  ChevronRight,
   Flame,
   Brain
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast-provider';
 import { CodeCompiler } from '@/components/code-compiler';
-import { cn } from '@/lib/utils';
 
 interface DailyChallenge {
   id: string;
   title: string;
   description: string;
-  initial_code: any;
+  initial_code: Record<string, unknown>;
   difficulty: 'easy' | 'medium' | 'hard';
   points_reward: number;
+  test_cases?: unknown[];
 }
 
 export default function ChallengesPage() {
@@ -38,14 +36,10 @@ export default function ChallengesPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentCode, setCurrentCode] = useState('');
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [rank, setRank] = useState<number>(0);
 
-  useEffect(() => {
-    fetchChallenge();
-  }, []);
-
-  const fetchChallenge = async () => {
+  const fetchChallenge = useCallback(async () => {
     setLoading(true);
     const today = new Date().toISOString().split('T')[0];
 
@@ -56,7 +50,7 @@ export default function ChallengesPage() {
       .single();
 
     if (challengeData) {
-      setChallenge(challengeData);
+      setChallenge(challengeData as unknown as DailyChallenge);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -76,7 +70,6 @@ export default function ChallengesPage() {
           .single();
         setProfile(profileData);
 
-        // Basic rank calculation
         const { count } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
@@ -85,7 +78,11 @@ export default function ChallengesPage() {
       }
     }
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchChallenge();
+  }, [fetchChallenge]);
 
   const handleSubmit = async (code: string) => {
     setIsSubmitting(true);
@@ -100,7 +97,7 @@ export default function ChallengesPage() {
           code,
           title: challenge.title,
           description: challenge.description,
-          testCases: (challenge as any).test_cases
+          testCases: challenge.test_cases
         })
       });
       const data = await res.json();
@@ -126,14 +123,14 @@ export default function ChallengesPage() {
       } else {
         toastError(data.feedback || "Your solution is incorrect. Check requirements.");
       }
-    } catch (err) {
+    } catch {
       toastError('Verification service unavailable.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-center animate-pulse">Scanning for today's challenge...</div>;
+  if (loading) return <div className="p-8 text-center animate-pulse font-black uppercase tracking-widest">Scanning for today&apos;s challenge...</div>;
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8">
@@ -153,7 +150,7 @@ export default function ChallengesPage() {
               <Flame className="h-5 w-5 md:h-6 md:w-6 text-orange-500 fill-orange-500" />
               <div>
                  <div className="text-[10px] font-black uppercase text-orange-600/70 tracking-widest leading-none">Streak</div>
-                 <div className="text-lg md:text-xl font-black text-orange-600">{profile?.current_streak || 0} DAYS</div>
+                 <div className="text-lg md:text-xl font-black text-orange-600">{Number(profile?.current_streak) || 0} DAYS</div>
               </div>
            </Card>
            <Card className="bg-primary/10 border-primary/20 px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4 flex-1 md:flex-none">
@@ -181,7 +178,7 @@ export default function ChallengesPage() {
                  </div>
                  <div className="space-y-1 md:space-y-2">
                     <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">Mission Accomplished!</h2>
-                    <p className="text-sm md:text-lg text-emerald-700/70 font-bold">You've solved today's logic puzzle: <span className="text-emerald-900">"{challenge.title}"</span></p>
+                    <p className="text-sm md:text-lg text-emerald-700/70 font-bold">You&apos;ve solved today&apos;s logic puzzle: <span className="text-emerald-900">&quot;{challenge.title}&quot;</span></p>
                  </div>
                  <div className="flex gap-3 md:gap-4 pt-2 md:pt-4">
                     <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 px-4 md:px-6 py-1 md:py-2 rounded-full font-black text-[10px] md:text-xs">+50 XP</Badge>
@@ -192,7 +189,7 @@ export default function ChallengesPage() {
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               <Card className="rounded-3xl border-2">
-                 <CardHeader><CardTitle className="uppercase tracking-tighter">Community Stats</CardTitle></CardHeader>
+                 <CardHeader><h3 className="text-lg font-bold uppercase tracking-tighter">Community Stats</h3></CardHeader>
                  <CardContent className="space-y-4">
                     <div className="flex justify-between items-center font-bold">
                        <span className="text-muted-foreground">Solved by:</span>
@@ -205,7 +202,7 @@ export default function ChallengesPage() {
                  </CardContent>
               </Card>
               <Card className="rounded-3xl border-2">
-                 <CardHeader><CardTitle className="uppercase tracking-tighter">Next Arena</CardTitle></CardHeader>
+                 <CardHeader><h3 className="text-lg font-bold uppercase tracking-tighter">Next Arena</h3></CardHeader>
                  <CardContent className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                        <Clock className="h-8 w-8 text-primary" />
@@ -222,11 +219,10 @@ export default function ChallengesPage() {
               <Card className="rounded-2xl md:rounded-3xl border-2 overflow-hidden shrink-0">
                  <CardHeader className="p-5 md:p-6 bg-primary/5">
                     <div className="flex justify-between items-center mb-2">
-                       <Badge className={cn(
-                         "text-[8px] md:text-[10px] font-black uppercase tracking-widest",
+                       <Badge className={
                          challenge.difficulty === 'easy' ? 'bg-green-600' :
                          challenge.difficulty === 'medium' ? 'bg-amber-500' : 'bg-red-600'
-                       )}>
+                       }>
                           {challenge.difficulty}
                        </Badge>
                        <span className="text-[10px] md:text-xs font-bold text-muted-foreground flex items-center gap-1">
@@ -260,14 +256,14 @@ export default function ChallengesPage() {
            <div className="lg:col-span-2 flex flex-col gap-4 md:gap-6">
               <div className="flex-1 bg-background rounded-2xl md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl min-h-[400px]">
                  <CodeCompiler
-                   initialJs={challenge.initial_code?.js || '// Write your solution here...'}
+                   initialJs={String(challenge.initial_code?.js || '// Write your solution here...')}
                    onChange={(codes) => setCurrentCode(codes.js || '')}
                  />
               </div>
               <Button
                 size="lg"
                 className="h-16 md:h-20 rounded-2xl md:rounded-3xl font-black uppercase text-lg md:text-xl tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all"
-                onClick={() => handleSubmit(currentCode || challenge.initial_code?.js || '')}
+                onClick={() => handleSubmit(currentCode || String(challenge.initial_code?.js || ''))}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Evaluating Algorithm...' : 'Submit Solution'}

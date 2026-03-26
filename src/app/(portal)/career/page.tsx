@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Briefcase,
   Target,
@@ -9,10 +8,8 @@ import {
   TrendingUp,
   MapPin,
   Building2,
-  ExternalLink,
   ChevronRight,
   Zap,
-  CheckCircle2,
   ShieldCheck,
   Search,
   Filter,
@@ -22,12 +19,12 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast-provider';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface Job {
   id: string;
@@ -42,17 +39,13 @@ interface Job {
 }
 
 export default function CareerPage() {
-  const { success, error: toastError } = useToast();
+  const { error: toastError } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -64,8 +57,7 @@ export default function CareerPage() {
       }
       const jobsData = await res.json();
       setJobs(jobsData);
-    } catch (err) {
-      console.error("Failed to fetch jobs", err);
+    } catch {
       toastError("AI Job Market is currently offline. Showing cached results.");
     }
 
@@ -77,13 +69,17 @@ export default function CareerPage() {
 
     setProfile(profileData);
     setLoading(false);
-  };
+  }, [toastError]);
 
-  const currentLevel = Math.floor((profile?.total_points || 0) / 100) + 1;
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const currentLevel = profile ? Math.floor((Number(profile.total_points) || 0) / 100) + 1 : 1;
 
   const calculateMatch = (jobSkills: string[]) => {
     if (!profile) return 0;
-    const studentSkills = ['HTML5', 'CSS3', 'JavaScript', 'Tailwind CSS', 'React', 'Next.js', 'Supabase']; // Mock for now, ideally from profile.skills
+    const studentSkills = ['HTML5', 'CSS3', 'JavaScript', 'Tailwind CSS', 'React', 'Next.js', 'Supabase'];
     const matches = jobSkills.filter(s => studentSkills.some(ss => ss.toLowerCase().includes(s.toLowerCase())));
     return Math.round((matches.length / jobSkills.length) * 100);
   };
@@ -96,7 +92,7 @@ export default function CareerPage() {
     matchScore: calculateMatch(job.required_skills)
   }));
 
-  if (loading) return <div className="p-8 text-center">Opening the Career Portal...</div>;
+  if (loading) return <div className="p-8 text-center font-black uppercase tracking-widest animate-pulse">Opening the Career Portal...</div>;
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-1000">
@@ -152,18 +148,18 @@ export default function CareerPage() {
                     <Button
                       className="w-full h-10 md:h-12 rounded-xl font-black uppercase tracking-tighter text-[10px] md:text-xs gap-2"
                       variant="outline"
-                      onClick={() => {
-                        const { generateCV } = require('@/lib/cv-generator');
+                      onClick={async () => {
+                        const { generateCV } = await import('@/lib/cv-generator');
                         generateCV({
-                          fullName: profile?.full_name || 'Student',
-                          email: profile?.email || '',
-                          phone: profile?.phone_number || '',
-                          city: profile?.city || '',
-                          github: profile?.github_link || '',
+                          fullName: String(profile?.full_name || 'Student'),
+                          email: String(profile?.email || ''),
+                          phone: String(profile?.phone_number || ''),
+                          city: String(profile?.city || ''),
+                          github: String(profile?.github_link || ''),
                           skills: ['HTML5', 'CSS3', 'JavaScript', 'Tailwind CSS', 'React'],
-                          totalPoints: profile?.total_points || 0,
+                          totalPoints: Number(profile?.total_points || 0),
                           level: currentLevel,
-                          streak: profile?.current_streak || 0,
+                          streak: Number(profile?.current_streak || 0),
                           projects: []
                         });
                       }}
@@ -173,11 +169,11 @@ export default function CareerPage() {
                     <Button className="w-full h-10 md:h-12 rounded-xl font-black uppercase tracking-tighter text-[10px] md:text-xs gap-2" variant="outline">
                        <Upload className="h-4 w-4" /> Upload Custom CV
                     </Button>
-                    <Link href="/career/cv-guide" className="block">
-                      <Button className="w-full h-10 md:h-12 rounded-xl font-black uppercase tracking-tighter text-[10px] md:text-xs gap-2 text-primary" variant="ghost">
+                    <Button asChild className="w-full h-10 md:h-12 rounded-xl font-black uppercase tracking-tighter text-[10px] md:text-xs gap-2 text-primary" variant="ghost">
+                      <Link href="/career/cv-guide">
                         <Info className="h-4 w-4" /> How to build a Pro CV
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                  </div>
               </CardContent>
            </Card>
@@ -220,7 +216,7 @@ export default function CareerPage() {
                           if (!res.ok) throw new Error("Search failed");
                           const data = await res.json();
                           setJobs(data);
-                        } catch (err) {
+                        } catch {
                           toastError("AI Search unavailable. Please try again later.");
                         } finally {
                           setLoading(false);

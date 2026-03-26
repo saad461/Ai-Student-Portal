@@ -1,24 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
-  BookOpen,
   Code,
   ShieldCheck,
   Timer,
-  Trophy,
-  Users,
   Zap,
   CheckCircle2,
   ArrowRight
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -127,7 +122,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold uppercase">Hacker Theme</h3>
                 <p className="text-muted-foreground">
-                  Unlock the immersive "Pro" theme as you progress, transforming your workspace into a terminal-inspired environment.
+                  Unlock the immersive &quot;Pro&quot; theme as you progress, transforming your workspace into a terminal-inspired environment.
                 </p>
               </div>
             </div>

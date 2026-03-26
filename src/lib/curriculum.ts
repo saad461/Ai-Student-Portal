@@ -39,7 +39,7 @@ export interface CurriculumItem {
   requirements?: string[];
   required_focus_hours?: number;
   required_read_minutes?: number;
-  content?: any;
+  content?: unknown;
   theory_content?: string;
   video_url?: string;
   enable_compiler?: boolean;

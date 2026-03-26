@@ -18,21 +18,16 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
   const doc = new jsPDF();
 
   if (isPremium) {
-     // Premium Background Gradient Effect
      doc.setFillColor(240, 240, 255);
      doc.rect(0, 0, 210, 297, 'F');
 
-     // Decorative accent for premium
      doc.setFillColor(60, 80, 255);
      doc.rect(0, 0, 10, 297, 'F');
   }
-  const primaryColor = [0, 0, 0]; // Black for professional look
 
-  // Header Background
   doc.setFillColor(245, 245, 245);
   doc.rect(0, 0, 210, 50, 'F');
 
-  // Name & Contact
   doc.setFontSize(26);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
@@ -45,7 +40,6 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
   doc.setTextColor(0, 102, 204);
   doc.text(data.github, 20, 42);
 
-  // Stats / Badges Section
   doc.setFillColor(0, 0, 0);
   doc.rect(20, 55, 170, 15, 'F');
   doc.setTextColor(255, 255, 255);
@@ -55,7 +49,6 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
   doc.text(`TOTAL XP: ${data.totalPoints}`, 80, 65);
   doc.text(`CONSISTENCY STREAK: ${data.streak} DAYS`, 130, 65);
 
-  // Summary
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(14);
   doc.text('PROFESSIONAL SUMMARY', 20, 85);
@@ -67,7 +60,6 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
   const summary = `Dedicated software engineering student at Pro Dev Portal, specializing in modern web technologies. Highly consistent learner with a strong focus on practical implementation and problem-solving. Currently mastering a full-stack curriculum with intensive deep work focus.`;
   doc.text(doc.splitTextToSize(summary, 170), 20, 95);
 
-  // Skills
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('TECHNICAL SKILLS & PROFICIENCY', 20, 115);
@@ -88,7 +80,6 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
 
   const nextY = 125 + Math.ceil(data.skills.length / skillsPerRow) * 8 + 10;
 
-  // Projects / Progress
   doc.setFontSize(14);
   doc.setTextColor(0,0,0);
   doc.setFont('helvetica', 'bold');
@@ -104,7 +95,7 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
     styles: { fontSize: 9 },
   });
 
-  // Footer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const finalY = (doc as any).lastAutoTable.finalY + 20;
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);

@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Trophy, Medal, Star, Zap, Users } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { getRank, getLevel } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';

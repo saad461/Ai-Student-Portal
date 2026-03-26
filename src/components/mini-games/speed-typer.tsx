@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Keyboard } from 'lucide-react';
@@ -14,6 +14,14 @@ export function SpeedTyper() {
   const [timeLeft, setTimeLeft] = useState(30);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const handleGameOver = useCallback(async () => {
+    if (score >= 15) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Speed Typer: Score ${score}`, 'game', `typer-${today}`);
+    }
+  }, [score]);
+
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
@@ -22,26 +30,18 @@ export function SpeedTyper() {
       setIsPlaying(false);
       handleGameOver();
     }
-  }, [isPlaying, timeLeft]);
+  }, [isPlaying, timeLeft, handleGameOver]);
 
-  const handleGameOver = async () => {
-    if (score >= 15) {
-      const { rewardStudentAction } = await import('@/app/admin/actions');
-      const today = new Date().toLocaleDateString('en-CA');
-      await rewardStudentAction(5, `Speed Typer: Score ${score}`, 'game', `typer-${today}`);
-    }
-  };
+  const spawnWord = useCallback(() => {
+    setTarget(WORDS[Math.floor(Math.random() * WORDS.length)]);
+    setInput('');
+  }, []);
 
   const startGame = () => {
     setScore(0);
     setTimeLeft(30);
     setIsPlaying(true);
     spawnWord();
-  };
-
-  const spawnWord = () => {
-    setTarget(WORDS[Math.floor(Math.random() * WORDS.length)]);
-    setInput('');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

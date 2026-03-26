@@ -2,7 +2,7 @@
 
 import { TechRoadmap } from '@/components/tech-roadmap';
 import { motion } from 'framer-motion';
-import { Zap, ArrowRight, Shield, Cpu, Code } from 'lucide-react';
+import { Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RoadmapPage() {
@@ -23,7 +23,7 @@ export default function RoadmapPage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest text-blue-400"
             >
               <Zap className="h-4 w-4 fill-current" />
-              Zohan Ali &bull; Professional Roadmap
+              Professional Roadmap
             </motion.div>
 
             <motion.h1
@@ -78,7 +78,7 @@ export default function RoadmapPage() {
         </section>
 
         <footer className="relative z-10 py-12 text-center border-t border-white/5 text-slate-500 text-sm font-medium tracking-wide">
-          &copy; {new Date().getFullYear()} Zohan Ali Portal &bull; Designed for Professional Growth
+          &copy; {new Date().getFullYear()} Pro Dev Portal &bull; Designed for Professional Growth
         </footer>
     </div>
   );

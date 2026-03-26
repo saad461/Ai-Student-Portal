@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getApplications, approveApplication, rejectApplication } from '../application-actions';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -25,19 +25,40 @@ import { Loader2, Check, X, Eye, Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/toast-provider';
 import { cn } from '@/lib/utils';
 
+interface Application {
+  id: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  city: string;
+  status: string;
+  gender: string;
+  age: number;
+  cnic: string;
+  phone_number: string;
+  github_link?: string;
+  education: string;
+  skills_level: string;
+  objective: string;
+  course_pin: string;
+}
+
+interface Credentials {
+  email: string;
+  password: string;
+  loginPin: string;
+}
+
 export default function AdminApplicationsPage() {
   const { success, error: toastError } = useToast();
-  const [applications, setApplications] = useState<any[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
-  const [credentials, setCredentials] = useState<any>(null);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
-
-  useEffect(() => {
-    loadApplications();
-  }, []);
 
   const loadApplications = async () => {
     try {
@@ -51,10 +72,14 @@ export default function AdminApplicationsPage() {
     }
   };
 
+  useEffect(() => {
+    loadApplications();
+  }, []);
+
   const handleApprove = async (id: string) => {
     setProcessingId(id);
     const result = await approveApplication(id);
-    if (result.success) {
+    if (result.success && result.credentials) {
       success('Application approved!');
       setCredentials(result.credentials);
       loadApplications();
@@ -65,7 +90,7 @@ export default function AdminApplicationsPage() {
   };
 
   const handleReject = async (id: string) => {
-    if (!confirm('Are you sure you want to reject this application?')) return;
+    if (!confirm('Are you sure?')) return;
     setProcessingId(id);
     const result = await rejectApplication(id);
     if (result.success) {
@@ -75,7 +100,7 @@ export default function AdminApplicationsPage() {
   };
 
   const handleBulkApprove = async () => {
-    if (!confirm(`Are you sure you want to approve ${selectedIds.length} applications?`)) return;
+    if (!confirm(`Are you sure?`)) return;
     setIsBulkProcessing(true);
     let successCount = 0;
     for (const id of selectedIds) {
@@ -88,7 +113,7 @@ export default function AdminApplicationsPage() {
   };
 
   const handleBulkReject = async () => {
-    if (!confirm(`Are you sure you want to reject ${selectedIds.length} applications?`)) return;
+    if (!confirm(`Are you sure?`)) return;
     setIsBulkProcessing(true);
     let successCount = 0;
     for (const id of selectedIds) {

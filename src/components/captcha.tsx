@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw as RefreshIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 interface CaptchaProps {
@@ -19,19 +19,7 @@ export const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify }, re
   const [userInput, setUserInput] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const generateCaptcha = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setCaptchaText(result);
-    drawCaptcha(result);
-    setUserInput('');
-    onVerify(false);
-  };
-
-  const drawCaptcha = (text: string) => {
+  const drawCaptcha = useCallback((text: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -78,11 +66,23 @@ export const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify }, re
 
     // Reset filter
     ctx.filter = 'none';
-  };
+  }, []);
+
+  const generateCaptcha = useCallback(() => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaText(result);
+    drawCaptcha(result);
+    setUserInput('');
+    onVerify(false);
+  }, [drawCaptcha, onVerify]);
 
   useEffect(() => {
     generateCaptcha();
-  }, []);
+  }, [generateCaptcha]);
 
   useImperativeHandle(ref, () => ({
     reset: generateCaptcha,
@@ -109,7 +109,7 @@ export const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify }, re
           onClick={generateCaptcha}
           className="h-10 w-10 shrink-0"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshIcon className="h-4 w-4" />
         </Button>
       </div>
       <Input

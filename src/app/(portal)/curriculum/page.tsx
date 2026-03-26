@@ -138,12 +138,12 @@ function CurriculumContent() {
       .eq('student_id', user.id);
 
     if (focusData) {
-      const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+      const totalSeconds = focusData.reduce((acc: number, curr: { duration_seconds: number }) => acc + curr.duration_seconds, 0);
       setTotalFocusMinutes(Math.round(totalSeconds / 60));
     }
 
     setLoading(false);
-  }, []);
+  }, [courseIdParam]);
 
   useEffect(() => {
     fetchData();
@@ -179,7 +179,7 @@ function CurriculumContent() {
     }
   };
 
-  const displayModules = modules.length > 0 ? modules : Array.from({ length: 24 }, (_, i) => ({ id: (i + 1).toString(), index: i + 1, name: `Module ${i + 1}` }));
+  const displayModules = modules.length > 0 ? modules : Array.from({ length: 24 }, (_, i) => ({ id: (i + 1).toString(), index: i + 1, name: `Module ${i + 1}`, course_id: '' }));
 
   if (loading) return (
     <div className="p-4 lg:p-8">

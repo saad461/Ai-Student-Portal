@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Heart,
   Wind,
@@ -9,11 +9,8 @@ import {
   Zap,
   Gamepad2,
   Sparkles,
-  RefreshCw,
   Quote,
-  Smile,
   Moon,
-  Sun,
   Play,
   Shuffle,
   Fingerprint,
@@ -26,9 +23,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { ReflexMaster } from '@/components/mini-games/reflex-master';
 import { MemorySequence } from '@/components/mini-games/memory-sequence';
 import { SpeedTyper } from '@/components/mini-games/speed-typer';
@@ -218,7 +214,7 @@ export default function WellnessPage() {
                      <CardTitle className="text-lg md:text-2xl font-black tracking-tighter uppercase">{story.title}</CardTitle>
                   </CardHeader>
                   <CardContent className="p-5 md:p-6 pt-0">
-                     <p className="text-xs md:text-sm text-muted-foreground font-medium leading-relaxed italic">"{story.body}"</p>
+                     <p className="text-xs md:text-sm text-muted-foreground font-medium leading-relaxed italic">&quot;{story.body}&quot;</p>
                   </CardContent>
                </Card>
              ))}

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       Student Question: ${question}
 
       Conversation History:
-      ${(history || []).map((h: any) => `${h.role === 'user' ? 'Student' : 'Tutor'}: ${h.content}`).join('\n')}
+      ${(history || []).map((h: { role: string; content: string }) => `${h.role === 'user' ? 'Student' : 'Tutor'}: ${h.content}`).join('\n')}
 
       Provide a clear, encouraging, and technically accurate explanation.
       If the question is about code, provide high-quality code snippets using markdown.

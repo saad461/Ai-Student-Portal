@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Maximize2, Minimize2, Volume2, VolumeX, X, Play, Pause, RotateCcw, CloudRain, Music, Wind, TreePine } from 'lucide-react';
+import { X, Play, Pause, RotateCcw, CloudRain, Wind, TreePine, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FocusRoomProps {
@@ -25,6 +25,13 @@ export function FocusRoom({ isOpen, onClose, onSaveSession }: FocusRoomProps) {
   const noiseNodeRef = useRef<AudioNode | null>(null);
   const sessionStartTimeRef = useRef<number | null>(null);
 
+  const stopBinauralBeats = useCallback(() => {
+    oscillatorLRef.current?.stop();
+    oscillatorRRef.current?.stop();
+    oscillatorLRef.current = null;
+    oscillatorRRef.current = null;
+  }, []);
+
   useEffect(() => {
     if (!isOpen) {
       if (isActive && sessionStartTimeRef.current !== null) {
@@ -42,10 +49,11 @@ export function FocusRoom({ isOpen, onClose, onSaveSession }: FocusRoomProps) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, isActive, timeLeft, onSaveSession]);
+  }, [isOpen, isActive, timeLeft, onSaveSession, stopBinauralBeats]);
 
   const startBinauralBeats = () => {
     if (!audioContextRef.current) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
@@ -75,13 +83,6 @@ export function FocusRoom({ isOpen, onClose, onSaveSession }: FocusRoomProps) {
     oscillatorLRef.current = oscL;
     oscillatorRRef.current = oscR;
     gainNodeRef.current = gain;
-  };
-
-  const stopBinauralBeats = () => {
-    oscillatorLRef.current?.stop();
-    oscillatorRRef.current?.stop();
-    oscillatorLRef.current = null;
-    oscillatorRRef.current = null;
   };
 
   const createNoiseNode = (type: 'white' | 'pink' | 'brown') => {
@@ -123,15 +124,16 @@ export function FocusRoom({ isOpen, onClose, onSaveSession }: FocusRoomProps) {
     }
 
     if (!audioContextRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
     noiseNodeRef.current?.disconnect();
 
     let node: AudioBufferSourceNode | null = null;
-    if (type === 'rain') node = createNoiseNode('pink') as any;
-    if (type === 'wind') node = createNoiseNode('brown') as any;
-    if (type === 'white') node = createNoiseNode('white') as any;
+    if (type === 'rain') node = createNoiseNode('pink');
+    if (type === 'wind') node = createNoiseNode('brown');
+    if (type === 'white') node = createNoiseNode('white');
 
     if (node) {
         const ambientGain = audioContextRef.current.createGain();
