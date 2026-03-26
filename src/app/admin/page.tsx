@@ -1792,10 +1792,6 @@ export default function AdminDashboard() {
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">Upload PDF, Image, Word, etc.</p>
               </div>
-              <div className="space-y-2">
-                <Label>Content (Markdown/HTML)</Label>
-                <RichTextEditor content={editingResource?.content || ''} onChange={(c) => setEditingResource(prev => ({ ...prev!, content: c }))} />
-              </div>
             </div>
             <DialogFooter><Button onClick={() => handleSaveResource(editingResource!)}>Save Resource</Button></DialogFooter>
           </DialogContent>
