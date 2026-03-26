@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { VideoCallRoom } from '@/components/video-call-room';
 import {
   Card,
   CardHeader,
@@ -29,7 +30,11 @@ import {
   ChevronRight,
   ChevronDown,
   Layout,
-  Video as VideoIcon
+  Video as VideoIcon,
+  PhoneCall,
+  Calendar,
+  SendHorizontal,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
@@ -133,7 +138,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<StudentProfile[]>([]);
-  const [messages, setMessages] = useState<SorryMessage[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [subModules, setSubModules] = useState<SubModule[]>([]);
@@ -144,7 +149,17 @@ export default function AdminDashboard() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support'>('students');
+
+  const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [newChatInput, setNewChatInput] = useState('');
+  const [adminId, setAdminId] = useState<string | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const [studentVideoSessions, setStudentVideoSessions] = useState<any[]>([]);
+  const [ringingSession, setRingingSession] = useState<any | null>(null);
+  const [activeCallSessionId, setActiveCallSessionId] = useState<string | null>(null);
 
   const [extraTaskText, setExtraTaskText] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
@@ -166,10 +181,12 @@ export default function AdminDashboard() {
     setLoading(true);
     const res = await getAdminDataAction();
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) setAdminId(user.id);
+
     if (res.success && res.data) {
       const {
         profiles,
-        messages,
         courses: coursesData,
         curriculum: curriculumData,
         modules: modulesData,
@@ -180,7 +197,6 @@ export default function AdminDashboard() {
       } = res.data;
 
       setStudents(profiles as StudentProfile[]);
-      setMessages(messages as SorryMessage[]);
 
       const fetchedCourses = (coursesData as Course[]) || [];
       setCourses(fetchedCourses);
@@ -206,8 +222,84 @@ export default function AdminDashboard() {
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
     if (auth !== 'true') router.push('/admin/login');
-    else fetchAdminData();
-  }, [router, fetchAdminData]);
+    else {
+      fetchAdminData();
+
+      const chatChannel = supabase
+        .channel('admin_realtime_chat')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
+          if (selectedChatStudent) fetchChat(selectedChatStudent);
+        })
+        .subscribe();
+
+      const videoChannel = supabase
+        .channel('admin_video_calls')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'video_sessions' }, (payload: any) => {
+          if (payload.new && payload.new.is_ringing && !payload.old?.is_ringing) {
+             setRingingSession(payload.new);
+          }
+          if (selectedChatStudent) fetchVideoSessions(selectedChatStudent);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(chatChannel);
+        supabase.removeChannel(videoChannel);
+      };
+    }
+  }, [router, fetchAdminData, selectedChatStudent]);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const fetchChat = async (studentId: string) => {
+    const { data: msgs } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .or(`and(sender_id.eq.${adminId},receiver_id.eq.${studentId}),and(sender_id.eq.${studentId},receiver_id.eq.${adminId})`)
+      .order('created_at', { ascending: true });
+
+    if (msgs) setChatMessages(msgs);
+    fetchVideoSessions(studentId);
+  };
+
+  const fetchVideoSessions = async (studentId: string) => {
+    const { data } = await supabase
+      .from('video_sessions')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('scheduled_at', { ascending: false });
+    if (data) setStudentVideoSessions(data);
+  };
+
+  const updateVideoStatus = async (sessionId: string, status: string) => {
+    await supabase.from('video_sessions').update({ status, admin_id: adminId }).eq('id', sessionId);
+    if (selectedChatStudent) fetchVideoSessions(selectedChatStudent);
+  };
+
+  const handleSendChat = async () => {
+    if (!newChatInput.trim() || !selectedChatStudent || !adminId) return;
+
+    await supabase.from('chat_messages').insert({
+      sender_id: adminId,
+      receiver_id: selectedChatStudent,
+      content: newChatInput.trim()
+    });
+
+    // Notify Student
+    await supabase.from('notifications').insert({
+       student_id: selectedChatStudent,
+       title: 'New Message from Admin',
+       message: 'An instructor has replied to your query.',
+       type: 'info'
+    });
+
+    setNewChatInput('');
+    fetchChat(selectedChatStudent);
+  };
 
   const handleSaveCurriculum = async (item: Partial<CurriculumItem>) => {
     if (!item.id) return;
@@ -351,6 +443,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8">
+      {activeCallSessionId && adminId && (
+         <VideoCallRoom
+           sessionId={activeCallSessionId}
+           userId={adminId}
+           onClose={() => setActiveCallSessionId(null)}
+         />
+      )}
       <div className="max-w-7xl mx-auto space-y-8">
         <header className="flex justify-between items-start">
           <div>
@@ -383,10 +482,197 @@ export default function AdminDashboard() {
           <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-2" /> Attendance</Button>
           <Button variant={activeTab === 'library' ? 'default' : 'ghost'} onClick={() => setActiveTab('library')}><Library className="h-4 w-4 mr-2" /> Library</Button>
           <Button variant={activeTab === 'challenges' ? 'default' : 'ghost'} onClick={() => setActiveTab('challenges')}><Trophy className="h-4 w-4 mr-2" /> Challenges</Button>
+          <Button variant={activeTab === 'support' ? 'default' : 'ghost'} onClick={() => setActiveTab('support')}><MessageCircle className="h-4 w-4 mr-2" /> Support</Button>
           <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-2" /> Insights</Button>
         </div>
 
-        {activeTab === 'courses' ? (
+        <Dialog open={!!ringingSession} onOpenChange={(o) => !o && setRingingSession(null)}>
+          <DialogContent className="sm:max-w-[425px] bg-emerald-600 text-white border-none shadow-2xl">
+             <div className="flex flex-col items-center py-12 space-y-8">
+                <div className="h-24 w-24 rounded-full bg-white/20 flex items-center justify-center animate-bounce">
+                   <PhoneCall className="h-12 w-12" />
+                </div>
+                <div className="text-center">
+                   <h2 className="text-2xl font-black uppercase tracking-tighter">Incoming Call</h2>
+                   <p className="opacity-80 font-bold">{students.find(s => s.id === ringingSession?.student_id)?.full_name} is ringing...</p>
+                </div>
+                <div className="flex gap-4 w-full px-4">
+                   <Button
+                    className="flex-1 h-14 bg-white text-emerald-600 hover:bg-slate-100 font-black uppercase tracking-widest text-xs"
+                    onClick={() => {
+                        setActiveCallSessionId(ringingSession.id);
+                        setRingingSession(null);
+                    }}
+                   >
+                     Accept Call
+                   </Button>
+                   <Button
+                    variant="ghost"
+                    className="flex-1 h-14 bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest text-xs border-none"
+                    onClick={async () => {
+                       await updateVideoStatus(ringingSession.id, 'missed');
+                       await supabase.from('video_sessions').update({ is_ringing: false }).eq('id', ringingSession.id);
+                       setRingingSession(null);
+                    }}
+                   >
+                     Decline
+                   </Button>
+                </div>
+             </div>
+          </DialogContent>
+        </Dialog>
+
+        {activeTab === 'support' ? (
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 h-[700px]">
+              <div className="md:col-span-1 bg-white dark:bg-slate-900 rounded-2xl border flex flex-col overflow-hidden">
+                 <div className="p-4 border-b">
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Students</h3>
+                 </div>
+                 <div className="flex-1 overflow-y-auto">
+                    {students.map(s => (
+                       <button
+                         key={s.id}
+                         onClick={() => {
+                            setSelectedChatStudent(s.id);
+                            fetchChat(s.id);
+                         }}
+                         className={cn(
+                            "w-full p-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0 text-left",
+                            selectedChatStudent === s.id && "bg-primary/5 border-r-4 border-r-primary"
+                         )}
+                       >
+                          <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold">{s.full_name[0]}</div>
+                          <div className="flex-1 min-w-0">
+                             <div className="font-bold text-sm truncate">{s.full_name}</div>
+                             <div className="text-[10px] text-muted-foreground truncate italic">Real-time Chat</div>
+                          </div>
+                       </button>
+                    ))}
+                 </div>
+              </div>
+
+              <div className="md:col-span-3 bg-white dark:bg-slate-900 rounded-2xl border flex flex-col overflow-hidden">
+                 {selectedChatStudent ? (
+                    <>
+                       <div className="p-4 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                          <div className="flex items-center gap-3">
+                             <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">{students.find(s => s.id === selectedChatStudent)?.full_name[0]}</div>
+                             <h3 className="font-bold">{students.find(s => s.id === selectedChatStudent)?.full_name}</h3>
+                          </div>
+                          <div className="flex gap-2">
+                             <Dialog>
+                                <DialogTrigger asChild>
+                                   <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-tighter"><Calendar className="h-3 w-3 mr-2" /> Sessions</Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-md">
+                                   <DialogHeader><DialogTitle>Video Sessions: {students.find(s => s.id === selectedChatStudent)?.full_name}</DialogTitle></DialogHeader>
+                                   <div className="space-y-4 py-4">
+                                      {studentVideoSessions.length === 0 ? (
+                                         <p className="text-center text-sm text-muted-foreground py-8">No session requests found.</p>
+                                      ) : studentVideoSessions.map(session => (
+                                         <div key={session.id} className="p-4 border rounded-xl flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+                                            <div>
+                                               <p className="font-bold text-sm">{new Date(session.scheduled_at).toLocaleString()}</p>
+                                               <Badge variant={session.status === 'approved' ? 'default' : session.status === 'rejected' ? 'destructive' : 'secondary'}>
+                                                  {session.status.toUpperCase()}
+                                               </Badge>
+                                            </div>
+                                            {session.status === 'requested' && (
+                                               <div className="flex gap-1">
+                                                  <Button size="sm" variant="outline" className="h-8 text-[10px]" onClick={() => updateVideoStatus(session.id, 'approved')}><Check className="h-3 w-3 mr-1" /> Approve</Button>
+                                                  <Button size="sm" variant="ghost" className="h-8 text-[10px] text-destructive" onClick={() => updateVideoStatus(session.id, 'rejected')}><X className="h-3 w-3 mr-1" /> Reject</Button>
+                                               </div>
+                                            )}
+                                         </div>
+                                      ))}
+                                   </div>
+                                </DialogContent>
+                             </Dialog>
+                             <Button
+                              variant="default"
+                              size="sm"
+                              className="h-8 text-[10px] font-black uppercase tracking-tighter bg-emerald-600 hover:bg-emerald-700"
+                              onClick={async () => {
+                                 if (!selectedChatStudent) return;
+                                 // Check if there's an active session first, or just create an ad-hoc one
+                                 let session = studentVideoSessions.find(s => {
+                                    const now = new Date();
+                                    const start = new Date(s.scheduled_at);
+                                    const end = s.scheduled_at ? new Date(new Date(s.scheduled_at).getTime() + 60 * 60 * 1000) : null;
+                                    return s.status === 'approved' && now >= start && end && now <= end;
+                                 });
+
+                                 if (!session) {
+                                    const now = new Date();
+                                    const { data, error } = await supabase.from('video_sessions').insert({
+                                       student_id: selectedChatStudent,
+                                       admin_id: adminId,
+                                       scheduled_at: now.toISOString(),
+                                       end_at: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+                                       status: 'approved',
+                                       is_ringing: true
+                                    }).select().single();
+                                    if (data) session = data;
+                                 } else {
+                                    await supabase.from('video_sessions').update({ is_ringing: true }).eq('id', session.id);
+                                 }
+
+                                 if (session) setActiveCallSessionId(session.id);
+                              }}
+                             >
+                                <PhoneCall className="h-3 w-3 mr-2" /> Start Call
+                             </Button>
+                          </div>
+                       </div>
+                       <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={chatScrollRef}>
+                          {chatMessages.length === 0 ? (
+                             <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                                <MessageCircle className="h-12 w-12 mb-2" />
+                                <p className="text-sm font-bold">No messages yet with this student.</p>
+                             </div>
+                          ) : (
+                             chatMessages.map(msg => (
+                                <div key={msg.id} className={cn(
+                                   "flex flex-col max-w-[70%]",
+                                   msg.sender_id === adminId ? "ml-auto items-end" : "items-start"
+                                )}>
+                                   <div className={cn(
+                                      "p-3 rounded-2xl text-sm font-medium shadow-sm",
+                                      msg.sender_id === adminId ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-slate-100 dark:bg-slate-800 text-foreground rounded-tl-none border"
+                                   )}>
+                                      {msg.content}
+                                   </div>
+                                   <span className="text-[9px] text-muted-foreground mt-1 px-1">
+                                      {new Date(msg.created_at).toLocaleString()}
+                                   </span>
+                                </div>
+                             ))
+                          )}
+                       </div>
+                       <div className="p-4 border-t bg-slate-50/30 dark:bg-slate-800/10">
+                          <form onSubmit={(e) => { e.preventDefault(); handleSendChat(); }} className="flex gap-2">
+                             <Input
+                                placeholder="Type your response..."
+                                className="h-12 text-sm focus-visible:ring-primary"
+                                value={newChatInput}
+                                onChange={(e) => setNewChatInput(e.target.value)}
+                             />
+                             <Button type="submit" size="icon" className="h-12 w-12 shrink-0">
+                                <SendHorizontal className="h-5 w-5" />
+                             </Button>
+                          </form>
+                       </div>
+                    </>
+                 ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 p-12 text-center">
+                       <MessageCircle className="h-20 w-20 mb-6" />
+                       <h2 className="text-2xl font-black uppercase tracking-tighter">Support Command Center</h2>
+                       <p className="max-w-md mt-2 text-sm">Select a student from the sidebar to start a real-time 1-on-1 conversation or manage their video call requests.</p>
+                    </div>
+                 )}
+              </div>
+           </div>
+        ) : activeTab === 'courses' ? (
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <div>

@@ -219,7 +219,6 @@ export async function getAdminDataAction() {
   try {
     const [
       { data: profiles },
-      { data: messages },
       { data: courses },
       { data: curriculum },
       { data: modules },
@@ -229,7 +228,6 @@ export async function getAdminDataAction() {
       { data: challenges }
     ] = await Promise.all([
       supabaseAdmin.from('profiles').select('*, submissions (*), student_activity (*)').eq('role', 'student'),
-      supabaseAdmin.from('messages').select('*, profiles(full_name)').order('created_at', { ascending: false }),
       supabaseAdmin.from('courses').select('*').order('index', { ascending: true }),
       supabaseAdmin.from('curriculum').select('*').order('week', { ascending: true }),
       supabaseAdmin.from('modules').select('*').order('index', { ascending: true }),
@@ -243,7 +241,6 @@ export async function getAdminDataAction() {
       success: true,
       data: {
         profiles: profiles || [],
-        messages: messages || [],
         courses: courses || [],
         curriculum: curriculum || [],
         modules: modules || [],
