@@ -10,7 +10,7 @@ export default function TimerPage() {
   const { theme } = useTheme();
 
   return (
-    <div className="p-4 lg:p-8">
+    <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-4xl mx-auto space-y-8">
           <header>
             <h1 className="text-3xl font-bold">Deep Work Chamber</h1>
@@ -52,6 +52,6 @@ export default function TimerPage() {
             </div>
           </div>
         </div>
-    </div>
+    </main>
   );
 }

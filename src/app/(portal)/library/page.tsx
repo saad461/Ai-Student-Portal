@@ -52,19 +52,24 @@ export default function LibraryPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const [resData, myResData, profileData] = await Promise.all([
-      supabase.from('resources').select('*').eq('is_published', true),
-      supabase.from('user_resources').select('resource_id').eq('user_id', user.id),
-      supabase.from('profiles').select('*').eq('id', user.id).single()
-    ]);
+      const [resData, myResData, profileData] = await Promise.all([
+        supabase.from('resources').select('*').eq('is_published', true),
+        supabase.from('user_resources').select('resource_id').eq('user_id', user.id),
+        supabase.from('profiles').select('*').eq('id', user.id).single()
+      ]);
 
-    setResources(resData.data || []);
-    setMyResources(myResData.data?.map(r => r.resource_id) || []);
-    setProfile(profileData.data);
-    setLoading(false);
+      setResources(resData.data || []);
+      setMyResources(myResData.data?.map(r => r.resource_id) || []);
+      setProfile(profileData.data);
+    } catch (err) {
+      console.error('Error fetching library data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePurchase = async (resource: Resource) => {
@@ -102,10 +107,14 @@ export default function LibraryPage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading Knowledge Base...</div>;
+  if (loading) return (
+    <main className="flex-1 p-8 text-center">
+      <div className="animate-pulse">Loading Knowledge Base...</div>
+    </main>
+  );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+    <main className="flex-1 p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
@@ -276,6 +285,6 @@ export default function LibraryPage() {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </main>
   );
 }

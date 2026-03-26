@@ -47,27 +47,32 @@ export default function StudentAttendancePage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    // Fetch Profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('full_name, current_streak, total_points')
-      .eq('id', user.id)
-      .single();
+      // Fetch Profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name, current_streak, total_points')
+        .eq('id', user.id)
+        .single();
 
-    setProfile(profileData as Profile);
+      if (profileData) setProfile(profileData as Profile);
 
-    // Fetch Attendance
-    const { data: attendanceData } = await supabase
-      .from('attendance')
-      .select('*')
-      .eq('student_id', user.id)
-      .order('date', { ascending: false });
+      // Fetch Attendance
+      const { data: attendanceData } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('date', { ascending: false });
 
-    setAttendance((attendanceData as AttendanceRecord[]) || []);
-    setLoading(false);
+      setAttendance((attendanceData as AttendanceRecord[]) || []);
+    } catch (err) {
+      console.error('Error fetching attendance data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -75,13 +80,13 @@ export default function StudentAttendancePage() {
   }, [fetchData]);
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
+    <main className="flex-1 p-4 lg:p-8 flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-    </div>
+    </main>
   );
 
   return (
-    <div className="p-4 lg:p-8 w-full overflow-x-hidden">
+    <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8 w-full">
           <header>
             <h1 className="text-3xl font-bold">My Attendance</h1>
@@ -204,6 +209,6 @@ export default function StudentAttendancePage() {
             </CardContent>
           </Card>
         </div>
-    </div>
+    </main>
   );
 }

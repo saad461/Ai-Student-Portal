@@ -93,45 +93,49 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   }, [activeTab, isTheoryDone, effectiveReadMinutes]);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const { data: allCurr } = await supabase.from('curriculum').select('*');
-    const sorted = (allCurr || []).sort((a, b) => {
-      if (a.week !== b.week) return a.week - b.week;
-      return (a.lecture_index || 0) - (b.lecture_index || 0);
-    });
-    setAllCurriculum(sorted as CurriculumItem[]);
+      const { data: allCurr } = await supabase.from('curriculum').select('*');
+      const sorted = (allCurr || []).sort((a, b) => {
+        if (a.week !== b.week) return a.week - b.week;
+        return (a.lecture_index || 0) - (b.lecture_index || 0);
+      });
+      setAllCurriculum(sorted as CurriculumItem[]);
 
-    const { data: lectureData } = await supabase
-      .from('curriculum')
-      .select('*')
-      .eq('id', resolvedParams.id)
-      .single();
+      const { data: lectureData } = await supabase
+        .from('curriculum')
+        .select('*')
+        .eq('id', resolvedParams.id)
+        .single();
 
-    if (lectureData) {
-      setLecture(lectureData as unknown as CurriculumItem);
-      if (!lectureData.theory_content && lectureData.video_url) {
-        setActiveTab('video');
+      if (lectureData) {
+        setLecture(lectureData as unknown as CurriculumItem);
+        if (!lectureData.theory_content && lectureData.video_url) {
+          setActiveTab('video');
+        }
       }
+
+      const { data: subData } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('student_id', user.id)
+        .eq('curriculum_id', resolvedParams.id)
+        .single();
+
+      if (subData) {
+        setSubmission(subData as unknown as Submission);
+        setGithubUrl(subData.github_url || '');
+      }
+
+      const { data: perks } = await supabase.from('user_perks').select('*').eq('user_id', user.id);
+      setUserPerks(perks || []);
+    } catch (err) {
+      console.error('Error fetching lecture data:', err);
+    } finally {
+      setLoading(false);
     }
-
-    const { data: subData } = await supabase
-      .from('submissions')
-      .select('*')
-      .eq('student_id', user.id)
-      .eq('curriculum_id', resolvedParams.id)
-      .single();
-
-    if (subData) {
-      setSubmission(subData as unknown as Submission);
-      setGithubUrl(subData.github_url || '');
-    }
-
-    const { data: perks } = await supabase.from('user_perks').select('*').eq('user_id', user.id);
-    setUserPerks(perks || []);
-
-    setLoading(false);
   }, [resolvedParams.id]);
 
   useEffect(() => {
@@ -256,8 +260,16 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     return isFullyDone; // Current must be done to unlock next
   }, [nextItem, isFullyDone]);
 
-  if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
-  if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;
+  if (loading) return (
+    <main className="flex-1 p-4 md:p-12 lg:p-16 flex items-center justify-center animate-pulse text-muted-foreground">
+      Loading Lecture Content...
+    </main>
+  );
+  if (!lecture) return (
+    <main className="flex-1 p-8 text-center text-red-500">
+      Lecture not found.
+    </main>
+  );
 
   const MarkdownComponents = {
     h1: ({ children }: any) => {
@@ -351,7 +363,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   };
 
   return (
-    <div className="p-4 md:p-12 lg:p-16 w-full overflow-x-hidden">
+    <main className="flex-1 p-4 md:p-12 lg:p-16 w-full overflow-x-hidden">
       <div className="fixed top-0 left-0 right-0 h-1 bg-primary/20 z-[60] lg:hidden">
         <motion.div
           className="h-full bg-primary"
@@ -884,6 +896,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         lectureTitle={lecture.title}
         lectureContent={lecture.theory_content || ''}
       />
-    </div>
+    </main>
   );
 }
