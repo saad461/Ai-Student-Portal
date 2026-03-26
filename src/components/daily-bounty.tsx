@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Zap, CheckCircle2, Loader2, Sparkles, Code2, AlertTriangle } from 'lucide-react';
+import { Target, Zap, CheckCircle2, Loader2, Code2, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +63,7 @@ export function DailyBounty({ onComplete }: { onComplete: (reward: number) => vo
       } else {
         setVerifyError(data.feedback || "Requirement not met. Please check your code.");
       }
-    } catch (err) {
+    } catch {
       setVerifyError("Verification service unavailable.");
     } finally {
       setLoading(false);
@@ -120,7 +119,7 @@ export function DailyBounty({ onComplete }: { onComplete: (reward: number) => vo
               </DialogTitle>
               <DialogDescription>
                  To claim your <strong>{bounty.reward} XP</strong>, paste the code snippet you wrote for:
-                 <span className="block mt-2 p-2 bg-muted rounded italic font-medium">"{bounty.task}"</span>
+                 <span className="block mt-2 p-2 bg-muted rounded italic font-medium">&quot;{bounty.task}&quot;</span>
               </DialogDescription>
            </DialogHeader>
 

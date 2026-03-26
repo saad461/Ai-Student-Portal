@@ -285,7 +285,7 @@ export default function AdminApplicationsPage() {
                   <label className="text-xs font-bold uppercase text-muted-foreground">GitHub</label>
                   <p className="text-sm">
                     {selectedApp.github_link ? (
-                      <a href={selectedApp.github_link} target="_blank" className="text-primary hover:underline flex items-center">
+                      <a href={selectedApp.github_link} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
                         {selectedApp.github_link} <ExternalLink className="h-3 w-3 ml-1" />
                       </a>
                     ) : 'Not provided'}
@@ -294,7 +294,7 @@ export default function AdminApplicationsPage() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold uppercase text-muted-foreground">Education & Skills</label>
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Education &amp; Skills</label>
                   <p className="text-sm font-medium">{selectedApp.education}</p>
                   <p className="text-sm italic">Level: {selectedApp.skills_level}</p>
                 </div>
