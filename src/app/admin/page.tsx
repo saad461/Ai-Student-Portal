@@ -58,6 +58,9 @@ import {
   deleteSubModuleAction,
   uploadVideoAction,
   saveCourseAction,
+  sendChatMessageAction,
+  fetchChatMessagesAction,
+  createNotificationAction,
   deleteCourseAction,
   getAdminDataAction,
   adminLogoutAction,
@@ -186,7 +189,7 @@ export default function AdminDashboard() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) setAdminId(user.id);
-    else setAdminId('00000000-0000-0000-0000-000000000000'); // Default to System Support ID
+    else setAdminId('00000000-0000-0000-0000-000000000000'); // Fixed System Admin ID
 
     if (res.success && res.data) {
       const {
@@ -261,13 +264,8 @@ export default function AdminDashboard() {
 
   const fetchChat = async (studentId: string) => {
     if (!adminId) return;
-    const { data: msgs } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .or(`and(sender_id.eq.${adminId},receiver_id.eq.${studentId}),and(sender_id.eq.${studentId},receiver_id.eq.${adminId})`)
-      .order('created_at', { ascending: true });
-
-    if (msgs) setChatMessages(msgs);
+    const res = await fetchChatMessagesAction(studentId, adminId);
+    if (res.success && res.data) setChatMessages(res.data);
     fetchVideoSessions(studentId);
   };
 
@@ -288,19 +286,20 @@ export default function AdminDashboard() {
   const handleSendChat = async () => {
     if (!newChatInput.trim() || !selectedChatStudent || !adminId) return;
 
-    await supabase.from('chat_messages').insert({
-      sender_id: adminId,
-      receiver_id: selectedChatStudent,
-      content: newChatInput.trim()
-    });
+    const res = await sendChatMessageAction(adminId, selectedChatStudent, newChatInput.trim());
 
-    // Notify Student
-    await supabase.from('notifications').insert({
-       student_id: selectedChatStudent,
-       title: 'New Message from Admin',
-       message: 'An instructor has replied to your query.',
-       type: 'info'
-    });
+    if (!res.success) {
+       toastError('Failed to send message: ' + (res.error as any)?.message);
+       return;
+    }
+
+    // Notify Student via Server Action (bypasses RLS)
+    await createNotificationAction(
+       selectedChatStudent,
+       'New Message from Admin',
+       'An instructor has replied to your query.',
+       'info'
+    );
 
     setNewChatInput('');
     fetchChat(selectedChatStudent);
@@ -531,10 +530,10 @@ export default function AdminDashboard() {
            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 h-[700px]">
               <div className="md:col-span-1 bg-white dark:bg-slate-900 rounded-2xl border flex flex-col overflow-hidden">
                  <div className="p-4 border-b">
-                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Students</h3>
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Chat History</h3>
                  </div>
                  <div className="flex-1 overflow-y-auto">
-                    {students.map(s => (
+                    {students.map((s: any) => (
                        <button
                          key={s.id}
                          onClick={() => {
@@ -720,14 +719,14 @@ export default function AdminDashboard() {
         ) : activeTab === 'students' ? (
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> Enrolled Students</h2>
+                <h2 className="text-xl font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> All Profiles</h2>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                   <Input placeholder="Search students..." className="pl-9" />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4">
-                {students.map((student) => (
+                {students.map((student: any) => (
                   <Card key={student.id}>
                     <CardContent className="p-6 flex items-center justify-between">
                       <div className="flex items-center gap-4">

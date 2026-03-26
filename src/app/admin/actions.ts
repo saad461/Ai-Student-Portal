@@ -227,7 +227,7 @@ export async function getAdminDataAction() {
       { data: resources },
       { data: challenges }
     ] = await Promise.all([
-      supabaseAdmin.from('profiles').select('*, submissions (*), student_activity (*)').eq('role', 'student'),
+      supabaseAdmin.from('profiles').select('*, submissions (*), student_activity (*)'),
       supabaseAdmin.from('courses').select('*').order('index', { ascending: true }),
       supabaseAdmin.from('curriculum').select('*').order('week', { ascending: true }),
       supabaseAdmin.from('modules').select('*').order('index', { ascending: true }),
@@ -748,6 +748,47 @@ export async function deleteSubModuleAction(id: string) {
     .from('sub_modules').delete().eq('id', id);
 
   return { success: !error, error };
+}
+
+export async function fetchChatMessagesAction(studentId: string, adminId: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('chat_messages')
+    .select('*')
+    .or(`and(sender_id.eq.${adminId},receiver_id.eq.${studentId}),and(sender_id.eq.${studentId},receiver_id.eq.${adminId})`)
+    .order('created_at', { ascending: true });
+
+  return { success: !error, data: data || [], error };
+}
+
+export async function sendChatMessageAction(senderId: string, receiverId: string, content: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('chat_messages')
+    .insert({
+      sender_id: senderId,
+      receiver_id: receiverId,
+      content: content.trim()
+    })
+    .select();
+
+  return { success: !error, data: data?.[0], error };
 }
 
 export async function deleteCurriculumItemAction(id: string) {

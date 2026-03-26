@@ -67,7 +67,6 @@ export function FloatingChat() {
       setIsLoadingAdmin(false);
 
       if (user.id) {
-
         // Fetch messages
         const { data: msgs } = await supabase
           .from('chat_messages')
