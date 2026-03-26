@@ -18,7 +18,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
         <RestScreen />
-        <FloatingChat /> {/* Optionally add here if you want support available on weekends */}
+        <FloatingChat /> 
       </div>
     );
   }
@@ -32,7 +32,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 w-full relative">
         {children}
       </main>
-      <FloatingChat /> {/* 2. Add the FloatingChat component here */}
+      <FloatingChat />
     </div>
   );
 }
