@@ -6,6 +6,7 @@ import { AttendanceTracker } from '@/components/attendance-tracker';
 import { ActivityTracker } from '@/components/activity-tracker';
 import { Sidebar } from '@/components/sidebar';
 import { PortalNavbar } from '@/components/portal-navbar';
+import { FloatingChat } from '@/components/floating-chat'; // 1. Add this import
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const isWeekend = useMemo(() => {
