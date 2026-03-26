@@ -157,8 +157,8 @@ export default function InterviewPrepPage() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col">
-      <header className="mb-8 flex justify-between items-center shrink-0">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col w-full overflow-x-hidden">
+      <header className="mb-6 md:mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
         <div>
            <h1 className="text-4xl font-black tracking-tighter uppercase flex items-center gap-2">
              <Star className="h-8 w-8 text-amber-500 fill-amber-500" />
@@ -168,7 +168,7 @@ export default function InterviewPrepPage() {
              Targeting Skills: <Badge variant="secondary" className="font-black uppercase">{currentModule}</Badge>
            </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto">
           {interviewStarted && !isEnding && (
             <Button
               variant={isVoiceEnabled ? "default" : "outline"}
@@ -203,7 +203,7 @@ export default function InterviewPrepPage() {
             </Button>
           )}
           {!interviewStarted && (
-            <Button size="lg" className="h-14 px-8 font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-105 transition-all" onClick={startInterview}>
+            <Button size="lg" className="w-full md:w-auto h-14 px-8 font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-105 transition-all" onClick={startInterview}>
               Start Mock Interview <Play className="h-5 w-5 ml-2 fill-current" />
             </Button>
           )}

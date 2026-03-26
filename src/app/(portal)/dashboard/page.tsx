@@ -350,13 +350,13 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 lg:p-8">
+    <div className="p-4 lg:p-8 w-full overflow-x-hidden">
       <OnboardingTour />
       <SkillShop
         skillPoints={getSkillPoints(profile?.total_points || 0)}
         onPurchase={handlePurchase}
       />
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8 w-full">
           <header id="dashboard-header" className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3">

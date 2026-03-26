@@ -22,12 +22,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30 overflow-x-hidden">
       <ActivityTracker />
       <AttendanceTracker />
       <Sidebar />
       <PortalNavbar />
-      <main className="flex-1 w-full relative">
+      <main className="flex-1 w-full relative min-w-0">
         {children}
       </main>
     </div>

@@ -86,7 +86,7 @@ export default function CareerPage() {
   if (loading) return <div className="p-8 text-center">Opening the Career Portal...</div>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-1000">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-1000 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">

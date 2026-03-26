@@ -351,7 +351,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   };
 
   return (
-    <div className="p-4 md:p-12 lg:p-16">
+    <div className="p-4 md:p-12 lg:p-16 w-full overflow-x-hidden">
       <div className="fixed top-0 left-0 right-0 h-1 bg-primary/20 z-[60] lg:hidden">
         <motion.div
           className="h-full bg-primary"
