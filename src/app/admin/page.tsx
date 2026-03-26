@@ -66,7 +66,8 @@ import {
   deleteResourceAction,
   saveDailyChallengeAction,
   reviewSubmissionAction,
-  uploadResourceFileAction
+  uploadResourceFileAction,
+  uploadImageAction
 } from './actions';
 import { CurriculumItem, QuizQuestion, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
@@ -173,8 +174,10 @@ export default function AdminDashboard() {
   const [editingChallenge, setEditingChallenge] = useState<Partial<DailyChallenge> | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const resourceFileRef = useRef<HTMLInputElement>(null);
+  const thumbnailFileRef = useRef<HTMLInputElement>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [isResourceUploading, setIsResourceUploading] = useState(false);
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchAdminData = useCallback(async () => {
@@ -1691,6 +1694,56 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2"><Label>Title</Label><Input value={editingResource?.title} onChange={(e) => setEditingResource(prev => ({ ...prev!, title: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingResource?.description} onChange={(e) => setEditingResource(prev => ({ ...prev!, description: e.target.value }))} /></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Thumbnail Image</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Image URL..."
+                      className="flex-1"
+                      value={editingResource?.thumbnail_url || ''}
+                      onChange={(e) => setEditingResource(prev => ({ ...prev!, thumbnail_url: e.target.value }))}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={isThumbnailUploading}
+                      onClick={() => thumbnailFileRef.current?.click()}
+                    >
+                      <Plus className={cn("h-4 w-4", isThumbnailUploading && "animate-pulse")} />
+                    </Button>
+                  </div>
+                  <input
+                    type="file"
+                    ref={thumbnailFileRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsThumbnailUploading(true);
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      try {
+                        const res = await uploadImageAction(fd);
+                        if (res.success) {
+                          success('Thumbnail uploaded!');
+                          setEditingResource(prev => ({ ...prev!, thumbnail_url: res.url }));
+                        } else toastError('Upload failed: ' + res.error);
+                      } catch (err) { toastError('Upload error'); }
+                      finally {
+                        setIsThumbnailUploading(false);
+                        if (thumbnailFileRef.current) thumbnailFileRef.current.value = '';
+                      }
+                    }}
+                  />
+                </div>
+                {editingResource?.thumbnail_url && (
+                  <div className="h-20 w-20 rounded-lg overflow-hidden border">
+                    <img src={editingResource.thumbnail_url} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label>Resource URL or Upload</Label>
                 <div className="flex gap-2">
