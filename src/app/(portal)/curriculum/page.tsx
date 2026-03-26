@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, isItemUnlocked, Module, SubModule, Course } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -192,8 +190,6 @@ function CurriculumContent() {
 
   if (loading) return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
       <main className="flex-1 p-4 lg:p-8">
         <CurriculumSkeleton />
       </main>
@@ -202,8 +198,6 @@ function CurriculumContent() {
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
       <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
           <header className="flex justify-between items-end">

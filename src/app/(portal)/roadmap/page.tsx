@@ -1,8 +1,6 @@
 'use client';
 
 import { TechRoadmap } from '@/components/tech-roadmap';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { motion } from 'framer-motion';
 import { Zap, ArrowRight, Shield, Cpu, Code } from 'lucide-react';
 import Link from 'next/link';
@@ -10,8 +8,6 @@ import Link from 'next/link';
 export default function RoadmapPage() {
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
-      <Sidebar />
-      <PortalNavbar />
       <main className="flex-1 overflow-x-hidden relative">
         {/* Animated Background Mesh */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">

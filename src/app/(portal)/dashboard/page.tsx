@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, QuizQuestion, isItemUnlocked } from '@/lib/curriculum';
 import { useTheme } from '@/components/theme-provider';
 import {
@@ -334,13 +332,9 @@ export default function DashboardPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
-        <DashboardSkeleton />
-      </main>
-    </div>
+    <main className="flex-1 p-4 lg:p-8">
+      <DashboardSkeleton />
+    </main>
   );
 
   const handlePurchase = async (item: ShopItem) => {
@@ -356,14 +350,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
+    <div className="w-full">
       <OnboardingTour />
       <SkillShop
         skillPoints={getSkillPoints(profile?.total_points || 0)}
         onPurchase={handlePurchase}
       />
-      <Sidebar />
-      <PortalNavbar />
       <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
           <header id="dashboard-header" className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">

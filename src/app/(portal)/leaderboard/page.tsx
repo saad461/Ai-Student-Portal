@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { Trophy, Medal, Star, Zap, Users } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,8 +48,6 @@ export default function LeaderboardPage() {
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
       <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-12">
           <header className="text-center space-y-4">
