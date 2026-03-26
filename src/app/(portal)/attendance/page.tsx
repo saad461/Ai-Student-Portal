@@ -81,8 +81,8 @@ export default function StudentAttendancePage() {
   );
 
   return (
-    <div className="p-4 lg:p-8">
-        <div className="max-w-5xl mx-auto space-y-8">
+    <div className="p-4 lg:p-8 w-full overflow-x-hidden">
+        <div className="max-w-5xl mx-auto space-y-8 w-full">
           <header>
             <h1 className="text-3xl font-bold">My Attendance</h1>
             <p className="text-muted-foreground">Track your daily portal activity and streaks.</p>

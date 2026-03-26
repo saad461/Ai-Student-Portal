@@ -120,7 +120,7 @@ export default function ChallengesPage() {
   if (loading) return <div className="p-8 text-center animate-pulse">Scanning for today's challenge...</div>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-2">
            <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
@@ -201,8 +201,8 @@ export default function ChallengesPage() {
            </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-250px)]">
-           <div className="lg:col-span-1 space-y-6 flex flex-col overflow-y-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-[calc(100vh-250px)]">
+           <div className="lg:col-span-1 space-y-6 flex flex-col">
               <Card className="rounded-3xl border-2 overflow-hidden shrink-0">
                  <CardHeader className="bg-primary/5">
                     <div className="flex justify-between items-center mb-2">
@@ -242,7 +242,7 @@ export default function ChallengesPage() {
            </div>
 
            <div className="lg:col-span-2 flex flex-col gap-6">
-              <div className="flex-1 bg-background rounded-[2rem] overflow-hidden flex flex-col shadow-2xl">
+              <div className="flex-1 bg-background rounded-[2rem] overflow-hidden flex flex-col shadow-2xl min-h-[400px]">
                  <CodeCompiler
                    initialJs={challenge.initial_code?.js || '// Write your solution here...'}
                    onChange={(codes) => setCurrentCode(codes.js || '')}
