@@ -176,18 +176,21 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
 
     const interval = setInterval(() => {
       if (isActive && timeLeft > 0) {
-        setTimeLeft((prev) => prev - 1);
-        if (prev <= 1) {
-            // Success
+        setTimeLeft((prev) => {
+          const next = prev - 1;
+          if (next <= 0) {
             onSaveSession(sessionStartTimeRef.current! - 0);
             success("Focus Session Complete! 60 minutes logged.");
             onClose();
-        }
+            return 0;
+          }
+          return next;
+        });
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, isActive, timeLeft, onSaveSession, onClose, success]);
+  }, [isOpen, isActive, onSaveSession, onClose, success]);
 
   // Binaural Beats Logic
   const startBinauralBeats = () => {
