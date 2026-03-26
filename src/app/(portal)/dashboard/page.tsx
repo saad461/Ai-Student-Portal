@@ -53,7 +53,6 @@ import { KnowledgeRadar } from '@/components/knowledge-radar';
 import { generateCV } from '@/lib/cv-generator';
 import { OnboardingTour } from '@/components/onboarding-tour';
 import { getRank, getLevel, getXpProgress, getSkillPoints, ShopItem } from '@/lib/gamification';
-import { SkillShop } from '@/components/skill-shop';
 import { DailyBounty } from '@/components/daily-bounty';
 import { Skull } from 'lucide-react';
 
@@ -339,25 +338,9 @@ export default function DashboardPage() {
     </main>
   );
 
-  const handlePurchase = async (item: ShopItem) => {
-    const { purchaseShopItemAction } = await import('@/app/admin/actions');
-    const res = await purchaseShopItemAction(item.id, item.price);
-
-    if (res.success) {
-      success(`Purchased ${item.name}! Check your profile for active perks.`);
-      fetchData();
-    } else {
-      toastError('Failed to complete purchase: ' + res.error);
-    }
-  };
-
   return (
     <main className="flex-1 p-4 lg:p-8">
       <OnboardingTour />
-      <SkillShop
-        skillPoints={getSkillPoints(profile?.total_points || 0)}
-        onPurchase={handlePurchase}
-      />
       <div className="max-w-5xl mx-auto space-y-8 w-full">
           <header id="dashboard-header" className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div className="space-y-2">
