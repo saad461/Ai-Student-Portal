@@ -1,6 +1,6 @@
 -- Cleanup old messages table if it exists and is only for assignments
 -- (Based on user confirmation that it's no longer needed)
-DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS messages CASCADE;
 
 -- 1-on-1 Chat Messages Table
 CREATE TABLE IF NOT EXISTS chat_messages (
@@ -95,3 +95,8 @@ WITH CHECK (
 
 -- Ensure profiles table has role
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'student';
+
+-- Allow authenticated users to view admin profiles (required for finding an admin to chat with)
+CREATE POLICY "Everyone can view admin profiles"
+ON profiles FOR SELECT
+USING (role = 'admin');
