@@ -47,30 +47,45 @@ ALTER TABLE video_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE webrtc_signals ENABLE ROW LEVEL SECURITY;
 
 -- 6. RLS POLICIES FOR CHAT_MESSAGES
--- Students can see their own messages
+-- Students can see their own messages, Admins can see all
 CREATE POLICY "Users can view their own messages" ON chat_messages FOR SELECT USING (
-  auth.uid() = sender_id OR auth.uid() = receiver_id
+  auth.uid() = sender_id OR auth.uid() = receiver_id OR (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))
 );
 
--- Students can insert their own messages
-CREATE POLICY "Students can insert messages" ON chat_messages FOR INSERT WITH CHECK (
-  auth.uid() = sender_id
+-- Students can insert their own messages, Admins can insert as well
+CREATE POLICY "Users can insert messages" ON chat_messages FOR INSERT WITH CHECK (
+  auth.uid() = sender_id OR (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))
+);
+
+-- Admins can update messages (mark as read)
+CREATE POLICY "Admins can update messages" ON chat_messages FOR UPDATE USING (
+  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 
 -- 7. RLS POLICIES FOR VIDEO_SESSIONS
 CREATE POLICY "Users can view their own video sessions" ON video_sessions FOR SELECT USING (
-  auth.uid() = student_id OR auth.uid() = admin_id
+  auth.uid() = student_id OR auth.uid() = admin_id OR (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))
 );
 
-CREATE POLICY "Students can request video sessions" ON video_sessions FOR INSERT WITH CHECK (
-  auth.uid() = student_id
+CREATE POLICY "Users can request/manage video sessions" ON video_sessions FOR INSERT WITH CHECK (
+  auth.uid() = student_id OR (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))
 );
 
--- 8. PROFILES ENHANCEMENT
--- This is still needed for role tracking, but we reset everyone to 'student'
+CREATE POLICY "Admins can update video sessions" ON video_sessions FOR UPDATE USING (
+  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+);
+
+-- 8. RLS POLICIES FOR WEBRTC_SIGNALS
+CREATE POLICY "Users can view their own signals" ON webrtc_signals FOR SELECT USING (
+  auth.uid() = sender_id OR (exists (select 1 from video_sessions where id = session_id and (student_id = auth.uid() or admin_id = auth.uid()))) OR (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))
+);
+
+CREATE POLICY "Users can insert signals" ON webrtc_signals FOR INSERT WITH CHECK (
+  auth.uid() = sender_id OR (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))
+);
+
+-- 9. PROFILES ENHANCEMENT
+-- This is still needed for role tracking
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'student';
-
--- Reset any lingering admin roles back to student
-UPDATE profiles SET role = 'student' WHERE role = 'admin';
 
 -- NOTE: NO fake IDs inserted into profiles here to avoid 23503 errors.
