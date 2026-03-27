@@ -6,8 +6,9 @@ import { AttendanceTracker } from '@/components/attendance-tracker';
 import { ActivityTracker } from '@/components/activity-tracker';
 import { Sidebar } from '@/components/sidebar';
 import { PortalNavbar } from '@/components/portal-navbar';
-import { FloatingChat } from '@/components/floating-chat';
+import { ChatManager } from '@/components/chat-manager';
 import { SkillShop } from '@/components/skill-shop';
+import { ChatProvider } from '@/components/chat-context';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const isWeekend = useMemo(() => {
@@ -17,25 +18,29 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   if (isWeekend) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-8">
-        <RestScreen />
-        <SkillShop />
-        <FloatingChat />
-      </div>
+      <ChatProvider>
+        <div className="min-h-screen bg-background flex items-center justify-center p-8">
+          <RestScreen />
+          <SkillShop />
+          <ChatManager />
+        </div>
+      </ChatProvider>
     );
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30 overflow-x-hidden">
-      <ActivityTracker />
-      <AttendanceTracker />
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 w-full relative min-w-0">
-        {children}
-      </main>
-      <SkillShop />
-      <FloatingChat />
-    </div>
+    <ChatProvider>
+      <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30 overflow-x-hidden">
+        <ActivityTracker />
+        <AttendanceTracker />
+        <Sidebar />
+        <PortalNavbar />
+        <main className="flex-1 w-full relative min-w-0">
+          {children}
+        </main>
+        <SkillShop />
+        <ChatManager />
+      </div>
+    </ChatProvider>
   );
 }

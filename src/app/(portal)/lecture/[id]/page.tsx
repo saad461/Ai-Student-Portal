@@ -32,7 +32,7 @@ import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CodeCompiler } from '@/components/code-compiler';
-import { AIAssistant } from '@/components/ai-assistant';
+import { useChat } from '@/components/chat-context';
 import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
 import { logActivityAction } from '@/app/admin/actions';
@@ -54,6 +54,7 @@ interface Submission {
 
 export default function LecturePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
+  const { setLectureData } = useChat();
   const [lecture, setLecture] = useState<CurriculumItem | null>(null);
   const [allCurriculum, setAllCurriculum] = useState<CurriculumItem[]>([]);
   const [submission, setSubmission] = useState<Submission | null>(null);
@@ -141,6 +142,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
        logActivityAction('lecture_view', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
     }
   }, [fetchData, resolvedParams.id]);
+
+  useEffect(() => {
+    if (lecture) {
+      setLectureData({
+        id: lecture.id,
+        title: lecture.title,
+        content: lecture.theory_content || ''
+      });
+    }
+    return () => setLectureData(null);
+  }, [lecture, setLectureData]);
 
   const headings = useMemo(() => {
     if (Array.isArray(lecture?.content) && lecture.content.length > 0) {
@@ -889,11 +901,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
           )}
         </div>
 
-      <AIAssistant
-        lectureId={lecture.id}
-        lectureTitle={lecture.title}
-        lectureContent={lecture.theory_content || ''}
-      />
     </main>
   );
 }

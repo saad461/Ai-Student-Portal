@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { VideoCallRoom } from '@/components/video-call-room';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
+import { useChat } from '@/components/chat-context';
 
 interface Message {
   id: string;
@@ -29,7 +30,7 @@ interface VideoSession {
 }
 
 export function FloatingChat() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isSupportOpen: isOpen, toggleSupport: toggleChat } = useChat();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
@@ -172,10 +173,9 @@ export function FloatingChat() {
     setUnreadCount(0);
   };
 
-  const toggleChat = () => {
-    if (!isOpen) markAsRead();
-    setIsOpen(!isOpen);
-  };
+  useEffect(() => {
+    if (isOpen) markAsRead();
+  }, [isOpen]);
 
   const requestVideoCall = async () => {
      if (!scheduledAt || !userId) return;
@@ -216,7 +216,7 @@ export function FloatingChat() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <>
       {activeSessionId && userId && (
          <VideoCallRoom
            sessionId={activeSessionId}
@@ -230,9 +230,9 @@ export function FloatingChat() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="mb-4"
+            className="fixed bottom-24 right-6 z-50"
           >
-            <Card className="w-80 md:w-96 shadow-2xl border-primary/20 overflow-hidden flex flex-col h-[500px]">
+            <Card className="w-[calc(100vw-3rem)] md:w-96 shadow-2xl border-primary/20 overflow-hidden flex flex-col h-[500px]">
               <CardHeader className="p-4 bg-primary text-primary-foreground flex flex-row justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
                    <div className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
@@ -256,7 +256,7 @@ export function FloatingChat() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/10"
-                    onClick={toggleChat}
+                    onClick={() => toggleChat(false)}
                    >
                      <X className="h-4 w-4" />
                    </Button>
@@ -382,22 +382,6 @@ export function FloatingChat() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <Button
-        size="icon"
-        className={cn(
-          "h-14 w-14 rounded-full shadow-2xl transition-all duration-300 relative",
-          isOpen ? "bg-background text-foreground border-2 border-primary rotate-0" : "bg-primary text-primary-foreground hover:scale-110 active:scale-95"
-        )}
-        onClick={toggleChat}
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
-        {!isOpen && unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold h-6 w-6 rounded-full flex items-center justify-center border-2 border-background animate-bounce">
-            {unreadCount}
-          </span>
-        )}
-      </Button>
-    </div>
+    </>
   );
 }
