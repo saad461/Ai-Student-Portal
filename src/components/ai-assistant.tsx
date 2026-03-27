@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Send, X, Bot, Sparkles, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +27,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<'cloud' | 'native'>('cloud');
-  const [timeSinceLastActivity, setTimeSinceLastActivity] = useState(0);
+  const [, setTimeSinceLastActivity] = useState(0);
   const [hasNudged, setHasNudged] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +37,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
     if (saved) {
       try {
         setMessages(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         setMessages([{ role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` }]);
       }
     } else {
@@ -87,9 +87,11 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
 
   useEffect(() => {
     const checkNativeAI = async () => {
-      if (typeof window !== 'undefined' && (window as any).ai?.assistant) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const win = window as any;
+      if (typeof window !== 'undefined' && win.ai?.assistant) {
         try {
-          const capabilities = await (window as any).ai.assistant.capabilities();
+          const capabilities = await win.ai.assistant.capabilities();
           if (capabilities.available === 'readily') {
             setAiProvider('native');
           }
@@ -113,7 +115,9 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
     try {
       if (aiProvider === 'native') {
         try {
-          const session = await (window as any).ai.assistant.create({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const win = window as any;
+          const session = await win.ai.assistant.create({
             systemPrompt: `You are an expert software engineering tutor. Context: ${lectureTitle}. Content: ${lectureContent}`
           });
           const response = await session.prompt(userMessage);
@@ -127,7 +131,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
       } else {
         await callCloudAI(userMessage);
       }
-    } catch (err) {
+    } catch {
       setError("AI is currently unavailable. Please try again in a moment.");
     } finally {
       setLoading(false);

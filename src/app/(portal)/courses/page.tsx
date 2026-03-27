@@ -36,7 +36,7 @@ export default function CoursesPage() {
           const access = userCourses?.find(uc => uc.course_id === course.id);
           return {
             ...course,
-            status: access ? (access.status as any) : 'locked'
+            status: (access ? access.status : 'locked') as 'locked' | 'unlocked' | 'completed'
           };
         });
 

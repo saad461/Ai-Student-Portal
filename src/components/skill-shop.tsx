@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Zap, X, Check, Lock, Sparkles } from 'lucide-react';
+import { ShoppingCart, Zap, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { SHOP_ITEMS, ShopItem, getSkillPoints } from '@/lib/gamification';
 import { useToast } from '@/components/ui/toast-provider';
 import { cn } from '@/lib/utils';
@@ -70,7 +70,7 @@ export function SkillShop() {
       } else {
         error(res.error || 'Failed to complete purchase.');
       }
-    } catch (err) {
+    } catch {
       error('Transaction failed. Please try again.');
     } finally {
       setLoading(false);

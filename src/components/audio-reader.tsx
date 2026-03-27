@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Square, Volume2, Headphones } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Play, Pause, Square, Headphones } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface AudioReaderProps {

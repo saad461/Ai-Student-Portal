@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Library,
   Book,
@@ -34,10 +35,11 @@ interface Resource {
 }
 
 export default function LibraryPage() {
+  const router = useRouter();
   const { success, error: toastError } = useToast();
   const [resources, setResources] = useState<Resource[]>([]);
   const [myResources, setMyResources] = useState<string[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -86,7 +88,7 @@ export default function LibraryPage() {
 
       setResources(resData.data || []);
       setMyResources(myResData.data?.map(r => r.resource_id) || []);
-      setProfile(profileData.data);
+      setProfile(profileData.data as Record<string, unknown>);
     } catch (err) {
       console.error('Error fetching library data:', err);
     } finally {
@@ -95,7 +97,9 @@ export default function LibraryPage() {
   };
 
   const handlePurchase = async (resource: Resource) => {
-    const skillPoints = Math.floor((profile?.total_points || 0) / 10);
+    if (!profile) return;
+    const totalPoints = (profile?.total_points as number) || 0;
+    const skillPoints = Math.floor(totalPoints / 10);
     if (skillPoints < resource.price_points) {
       toastError(`Insufficient points! You need ${resource.price_points - skillPoints} more Skill Points.`);
       return;
@@ -167,7 +171,7 @@ export default function LibraryPage() {
            </div>
            <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-primary/70">Skill Points Available</div>
-              <div className="text-2xl font-black">{Math.floor((profile?.total_points || 0) / 10)}</div>
+               <div className="text-2xl font-black">{Math.floor(((profile?.total_points as number) || 0) / 10)}</div>
            </div>
         </div>
       </header>

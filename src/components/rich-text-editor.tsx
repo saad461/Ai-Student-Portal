@@ -43,15 +43,17 @@ const FontSize = Extension.create({
       },
     ]
   },
-  addCommands(): any {
+  addCommands() {
     return {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setFontSize: (fontSize: string) => ({ chain }: any) => {
         return chain().setMark('textStyle', { fontSize }).run()
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       unsetFontSize: () => ({ chain }: any) => {
         return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run()
       },
-    }
+    } as unknown as Record<string, unknown>;
   },
 });
 import { Highlight } from '@tiptap/extension-highlight';
@@ -71,7 +73,6 @@ import {
   Highlighter,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
-  Type,
   List,
   ListOrdered,
   CheckSquare,
@@ -494,9 +495,9 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
         success('Image uploaded successfully!');
         editor?.chain().focus().setImage({ src: res.url }).run();
       } else {
-        toastError('Upload failed: ' + res.error);
+        toastError('Upload failed: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
       }
-    } catch (err) {
+    } catch {
       toastError('Upload error');
     } finally {
       setIsUploading(false);
@@ -551,7 +552,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
     content: content,
     onUpdate: ({ editor }) => {
       // Get the markdown content from Tiptap
-      const markdown = (editor.storage as any).markdown.getMarkdown();
+      const markdown = (editor.storage as unknown as Record<string, { getMarkdown: () => string }>).markdown.getMarkdown();
       onChange(markdown);
     },
     editorProps: {

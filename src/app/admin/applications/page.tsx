@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getApplications, approveApplication, rejectApplication } from '../application-actions';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -27,11 +27,11 @@ import { cn } from '@/lib/utils';
 
 export default function AdminApplicationsPage() {
   const { success, error: toastError } = useToast();
-  const [applications, setApplications] = useState<any[]>([]);
+  const [applications, setApplications] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
-  const [credentials, setCredentials] = useState<any>(null);
+  const [selectedApp, setSelectedApp] = useState<Record<string, unknown> | null>(null);
+  const [credentials, setCredentials] = useState<{ email: string; password: string; loginPin: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
@@ -56,7 +56,7 @@ export default function AdminApplicationsPage() {
     const result = await approveApplication(id);
     if (result.success) {
       success('Application approved!');
-      setCredentials(result.credentials);
+      setCredentials(result.credentials || null);
       loadApplications();
     } else {
       toastError('Error: ' + result.error);
@@ -102,8 +102,8 @@ export default function AdminApplicationsPage() {
 
   const handleBulkEmail = () => {
     const emails = applications
-        .filter(app => selectedIds.includes(app.id))
-        .map(app => app.email)
+        .filter(app => selectedIds.includes(app.id as string))
+        .map(app => app.email as string)
         .join(',');
 
     if (emails) {
@@ -116,7 +116,7 @@ export default function AdminApplicationsPage() {
     if (selectedIds.length === applications.length) {
         setSelectedIds([]);
     } else {
-        setSelectedIds(applications.map(app => app.id));
+        setSelectedIds(applications.map(app => app.id as string));
     }
   };
 
@@ -152,7 +152,7 @@ export default function AdminApplicationsPage() {
             </Badge>
             {selectedIds.length > 0 && (
                 <div className="flex gap-2 animate-in fade-in slide-in-from-right-2">
-                    <Button variant="outline" size="sm" onClick={() => copyToClipboard(applications.filter(app => selectedIds.includes(app.id)).map(app => app.email).join(', '))}>
+                    <Button variant="outline" size="sm" onClick={() => copyToClipboard(applications.filter(app => selectedIds.includes(app.id as string)).map(app => app.email as string).join(', '))}>
                       Copy Emails
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleBulkEmail}>Email ({selectedIds.length})</Button>
@@ -195,23 +195,23 @@ export default function AdminApplicationsPage() {
                 </TableRow>
               ) : (
                 applications.map((app) => (
-                  <TableRow key={app.id} className={cn(selectedIds.includes(app.id) && "bg-muted/50")}>
+                  <TableRow key={app.id as string} className={cn(selectedIds.includes(app.id as string) && "bg-muted/50")}>
                     <TableCell>
                        <input
                          type="checkbox"
                          className="h-4 w-4 rounded border-gray-300"
-                         checked={selectedIds.includes(app.id)}
-                         onChange={() => toggleSelect(app.id)}
+                         checked={selectedIds.includes(app.id as string)}
+                         onChange={() => toggleSelect(app.id as string)}
                        />
                     </TableCell>
                     <TableCell className="text-sm">
-                      {new Date(app.created_at).toLocaleDateString()}
+                      {new Date(app.created_at as string).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {app.first_name} {app.last_name}
+                      {app.first_name as string} {app.last_name as string}
                     </TableCell>
-                    <TableCell>{app.email}</TableCell>
-                    <TableCell>{app.city}</TableCell>
+                    <TableCell>{app.email as string}</TableCell>
+                    <TableCell>{app.city as string}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -221,7 +221,7 @@ export default function AdminApplicationsPage() {
                         }
                         className="capitalize"
                       >
-                        {app.status}
+                        {app.status as string}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
@@ -235,7 +235,7 @@ export default function AdminApplicationsPage() {
                             size="sm"
                             className="bg-green-600 hover:bg-green-700"
                             disabled={processingId === app.id}
-                            onClick={() => handleApprove(app.id)}
+                            onClick={() => handleApprove(app.id as string)}
                           >
                             {processingId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                           </Button>
@@ -243,7 +243,7 @@ export default function AdminApplicationsPage() {
                             variant="destructive"
                             size="sm"
                             disabled={processingId === app.id}
-                            onClick={() => handleReject(app.id)}
+                            onClick={() => handleReject(app.id as string)}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -264,7 +264,7 @@ export default function AdminApplicationsPage() {
           <DialogHeader>
             <DialogTitle>Application Details</DialogTitle>
             <DialogDescription>
-              Submitted on {selectedApp && new Date(selectedApp.created_at).toLocaleString()}
+              Submitted on {selectedApp && new Date(selectedApp.created_at as string).toLocaleString()}
             </DialogDescription>
           </DialogHeader>
           {selectedApp && (
@@ -272,21 +272,21 @@ export default function AdminApplicationsPage() {
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-bold uppercase text-muted-foreground">Personal Info</label>
-                  <p className="font-medium">{selectedApp.first_name} {selectedApp.last_name} ({selectedApp.gender}, {selectedApp.age}y)</p>
-                  <p className="text-sm">CNIC: {selectedApp.cnic}</p>
+                  <p className="font-medium">{selectedApp.first_name as string} {selectedApp.last_name as string} ({selectedApp.gender as string}, {selectedApp.age as string}y)</p>
+                  <p className="text-sm">CNIC: {selectedApp.cnic as string}</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase text-muted-foreground">Contact</label>
-                  <p className="text-sm">{selectedApp.email}</p>
-                  <p className="text-sm">{selectedApp.phone_number}</p>
-                  <p className="text-sm">{selectedApp.city}</p>
+                  <p className="text-sm">{selectedApp.email as string}</p>
+                  <p className="text-sm">{selectedApp.phone_number as string}</p>
+                  <p className="text-sm">{selectedApp.city as string}</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase text-muted-foreground">GitHub</label>
                   <p className="text-sm">
                     {selectedApp.github_link ? (
-                      <a href={selectedApp.github_link} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
-                        {selectedApp.github_link} <ExternalLink className="h-3 w-3 ml-1" />
+                      <a href={selectedApp.github_link as string} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
+                        {selectedApp.github_link as string} <ExternalLink className="h-3 w-3 ml-1" />
                       </a>
                     ) : 'Not provided'}
                   </p>
@@ -295,16 +295,16 @@ export default function AdminApplicationsPage() {
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-bold uppercase text-muted-foreground">Education &amp; Skills</label>
-                  <p className="text-sm font-medium">{selectedApp.education}</p>
-                  <p className="text-sm italic">Level: {selectedApp.skills_level}</p>
+                  <p className="text-sm font-medium">{selectedApp.education as string}</p>
+                  <p className="text-sm italic">Level: {selectedApp.skills_level as string}</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase text-muted-foreground">Objective</label>
-                  <p className="text-sm">{selectedApp.objective}</p>
+                  <p className="text-sm">{selectedApp.objective as string}</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold uppercase text-muted-foreground">Course Pin (Secret)</label>
-                  <p className="text-lg font-mono font-bold text-primary">{selectedApp.course_pin}</p>
+                  <p className="text-lg font-mono font-bold text-primary">{selectedApp.course_pin as string}</p>
                 </div>
               </div>
             </div>

@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { X, ChevronRight, Sparkles, Target, Zap, Rocket } from 'lucide-react';
+
+import { LucideIcon } from 'lucide-react';
 
 interface Step {
   title: string;
   description: string;
   target?: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 const TOUR_STEPS: Step[] = [

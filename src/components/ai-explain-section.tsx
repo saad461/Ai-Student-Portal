@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +13,8 @@ import {
   ChevronRight,
   Type,
   Layers,
-  CheckCircle2,
-  Languages,
-  Info,
   Search
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 
@@ -34,7 +30,7 @@ interface ParagraphExplanation {
   loading: boolean;
 }
 
-export function AIExplainSection({ lectureId, lectureTitle, lectureContent }: AIExplainSectionProps) {
+export function AIExplainSection({ lectureTitle, lectureContent }: AIExplainSectionProps) {
   const [language, setLanguage] = useState<'english' | 'roman-urdu'>('roman-urdu');
   const [paragraphExplanations, setParagraphExplanations] = useState<ParagraphExplanation[]>([]);
   const [summary, setSummary] = useState<string | null>(null);
@@ -55,7 +51,7 @@ export function AIExplainSection({ lectureId, lectureTitle, lectureContent }: AI
       .filter(p => p.length > 30); // Ignore very short lines (headings/meta)
   }, [lectureContent]);
 
-  const generateParagraphExplanations = async () => {
+  const generateParagraphExplanations = useCallback(async () => {
     if (hasGeneratedParagraphs || paragraphs.length === 0) return;
     setHasGeneratedParagraphs(true);
 
@@ -82,7 +78,7 @@ export function AIExplainSection({ lectureId, lectureTitle, lectureContent }: AI
           updated[i] = { ...updated[i], explanation: data.answer, loading: false };
           return updated;
         });
-      } catch (err) {
+      } catch {
         setParagraphExplanations(prev => {
           const updated = [...prev];
           updated[i] = { ...updated[i], explanation: "Explaination generate nahi ho saki. Please refresh karein.", loading: false };
@@ -90,11 +86,11 @@ export function AIExplainSection({ lectureId, lectureTitle, lectureContent }: AI
         });
       }
     }
-  };
+  }, [hasGeneratedParagraphs, paragraphs, lectureTitle]);
 
   useEffect(() => {
     generateParagraphExplanations();
-  }, []);
+  }, [generateParagraphExplanations]);
 
   const handleSummarize = async () => {
     setLoadingSummary(true);
@@ -112,7 +108,7 @@ export function AIExplainSection({ lectureId, lectureTitle, lectureContent }: AI
       });
       const data = await res.json();
       setSummary(data.answer);
-    } catch (err) {
+    } catch {
       setSummary("Error generating summary.");
     } finally {
       setLoadingSummary(false);
@@ -135,7 +131,7 @@ export function AIExplainSection({ lectureId, lectureTitle, lectureContent }: AI
       });
       const data = await res.json();
       setKeyTerms(data.answer);
-    } catch (err) {
+    } catch {
       setKeyTerms("Error identifying key terms.");
     } finally {
       setLoadingKeyTerms(false);
@@ -160,7 +156,7 @@ export function AIExplainSection({ lectureId, lectureTitle, lectureContent }: AI
       });
       const data = await res.json();
       setSpecificAnswer(data.answer);
-    } catch (err) {
+    } catch {
       setSpecificAnswer("Error explaining specific input.");
     } finally {
       setLoadingSpecific(false);

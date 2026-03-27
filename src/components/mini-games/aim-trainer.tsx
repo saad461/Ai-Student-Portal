@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Target } from 'lucide-react';
@@ -11,6 +11,14 @@ export function AimTrainer() {
   const [timeLeft, setTimeLeft] = useState(20);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const handleGameOver = useCallback(async () => {
+    if (score >= 20) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Aim Trainer: Score ${score}`, 'game', `aim-${today}`);
+    }
+  }, [score]);
+
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
@@ -19,15 +27,7 @@ export function AimTrainer() {
       setIsPlaying(false);
       handleGameOver();
     }
-  }, [isPlaying, timeLeft]);
-
-  const handleGameOver = async () => {
-    if (score >= 20) {
-      const { rewardStudentAction } = await import('@/app/admin/actions');
-      const today = new Date().toLocaleDateString('en-CA');
-      await rewardStudentAction(5, `Aim Trainer: Score ${score}`, 'game', `aim-${today}`);
-    }
-  };
+  }, [isPlaying, timeLeft, handleGameOver]);
 
   const startGame = () => {
     setScore(0);

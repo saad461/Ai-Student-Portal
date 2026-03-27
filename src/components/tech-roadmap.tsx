@@ -1,9 +1,10 @@
 'use client';
 
-import { motion, useScroll, useSpring, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import { useRef, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
+  LucideIcon,
   Code,
   Database,
   Sparkles,
@@ -25,10 +26,10 @@ interface RoadmapPhase {
   tagline: string;
   goal: string;
   skills: string[];
-  toolbox: { name: string; icon: any }[];
+  toolbox: { name: string; icon: LucideIcon }[];
   color: string;
   glowColor: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 const PHASES: RoadmapPhase[] = [

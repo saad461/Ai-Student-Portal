@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Briefcase,
   Target,
@@ -9,20 +8,17 @@ import {
   TrendingUp,
   MapPin,
   Building2,
-  ExternalLink,
   ChevronRight,
   Zap,
-  CheckCircle2,
   ShieldCheck,
   Search,
   Filter
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast-provider';
 import { cn } from '@/lib/utils';
 
@@ -39,17 +35,13 @@ interface Job {
 }
 
 export default function CareerPage() {
-  const { success, error: toastError } = useToast();
+  const { error: toastError } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -62,8 +54,8 @@ export default function CareerPage() {
         }
         const jobsData = await res.json();
         setJobs(jobsData);
-      } catch (err) {
-        console.error("Failed to fetch jobs", err);
+      } catch (error) {
+        console.error("Failed to fetch jobs", error);
         toastError("AI Job Market is currently offline. Showing cached results.");
       }
 
@@ -73,15 +65,19 @@ export default function CareerPage() {
         .eq('id', user.id)
         .single();
 
-      setProfile(profileData);
-    } catch (err) {
-      console.error('Error fetching career data:', err);
+      setProfile(profileData as Record<string, unknown>);
+    } catch {
+      // ignore
     } finally {
       setLoading(false);
     }
-  };
+  }, [toastError]);
 
-  const currentLevel = Math.floor((profile?.total_points || 0) / 100) + 1;
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const currentLevel = Math.floor(((profile?.total_points as number) || 0) / 100) + 1;
 
   const filteredJobs = jobs.filter(j =>
     j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -181,7 +177,8 @@ export default function CareerPage() {
                           if (!res.ok) throw new Error("Search failed");
                           const data = await res.json();
                           setJobs(data);
-                        } catch (err) {
+                        } catch (error) {
+                          console.error("Search error:", error);
                           toastError("AI Search unavailable. Please try again later.");
                         } finally {
                           setLoading(false);
