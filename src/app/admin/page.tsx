@@ -91,7 +91,6 @@ interface Resource {
   title: string;
   description: string;
   type: 'book' | 'cheat_sheet' | 'roadmap' | 'note' | 'case_study';
-  content?: string;
   external_url?: string;
   thumbnail_url?: string;
   price_points: number;
@@ -1013,13 +1012,26 @@ export default function AdminDashboard() {
             </div>
             <Card>
               <Table>
-                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Type</TableHead><TableHead>Price</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {resources.map((res) => (
                     <TableRow key={res.id}>
                       <TableCell className="font-bold">{res.title}</TableCell>
                       <TableCell><Badge variant="secondary">{res.type.replace('_', ' ')}</Badge></TableCell>
                       <TableCell>{res.price_points} pts</TableCell>
+                      <TableCell>
+                        <Badge variant={res.is_published ? "default" : "outline"} className={res.is_published ? "bg-emerald-600" : ""}>
+                          {res.is_published ? 'Published' : 'Draft'}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button variant="ghost" size="icon" onClick={() => setEditingResource(res)}><Edit className="h-4 w-4" /></Button>
@@ -1697,6 +1709,15 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2"><Label>Title</Label><Input value={editingResource?.title} onChange={(e) => setEditingResource(prev => ({ ...prev!, title: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingResource?.description} onChange={(e) => setEditingResource(prev => ({ ...prev!, description: e.target.value }))} /></div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_published"
+                  checked={editingResource?.is_published || false}
+                  onChange={(e) => setEditingResource(prev => ({ ...prev!, is_published: e.target.checked }))}
+                />
+                <Label htmlFor="is_published">Published (Visible to Students)</Label>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Thumbnail Image</Label>
