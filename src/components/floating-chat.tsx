@@ -33,7 +33,7 @@ export function FloatingChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
-  const [adminId, setAdminId] = useState<string | null>(null);
+  const [adminId, setAdminId] = useState<string>('00000000-0000-0000-0000-000000000000');
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'chat' | 'video'>('chat');
   const [videoSessions, setVideoSessions] = useState<VideoSession[]>([]);
@@ -268,23 +268,6 @@ export function FloatingChat() {
                       <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
                          <p className="text-xs font-bold uppercase tracking-widest">Connecting to Support...</p>
-                      </div>
-                    ) : !adminId ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
-                         <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
-                            <AlertTriangle className="h-8 w-8" />
-                         </div>
-                         <div>
-                            <p className="text-xs font-bold uppercase tracking-widest text-foreground">Support Offline</p>
-                            <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-                               To enable chat, ensure at least one user in your Supabase <b>profiles</b> table has <b>role = &apos;admin&apos;</b>.
-                            </p>
-                         </div>
-                         <div className="pt-4 border-t w-full">
-                            <p className="text-[9px] font-mono bg-muted p-2 rounded text-left break-all">
-                               UPDATE profiles SET role = &apos;admin&apos; WHERE id = &apos;YOUR_USER_ID&apos;;
-                            </p>
-                         </div>
                       </div>
                     ) : messages.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
