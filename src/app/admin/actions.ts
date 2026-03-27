@@ -16,6 +16,34 @@ export async function verifyAdminPassword(password: string) {
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 // 24 hours
     });
+
+    // Auto-promote currently logged in user to admin if they exist in Auth
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (supabaseUrl && supabaseAnonKey && supabaseServiceKey) {
+        const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+          cookies: {
+            getAll() { return cookieStore.getAll() },
+            setAll(cookiesToSet) {
+              try {
+                cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+              } catch {}
+            },
+          },
+        });
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+          await supabaseAdmin.from('profiles').update({ role: 'admin' }).eq('id', user.id);
+        }
+      }
+    } catch (err) {
+      console.error('Auto-promotion failed:', err);
+    }
   }
 
   return isValid;
