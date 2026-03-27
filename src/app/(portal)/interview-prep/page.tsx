@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Mic,
-  MessageCircle,
   Play,
   Zap,
   Star,
@@ -16,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/toast-provider';
 import { Badge } from '@/components/ui/badge';
@@ -115,7 +114,7 @@ export default function InterviewPrepPage() {
         setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
         speak(data.answer);
       }
-    } catch (err) {
+    } catch {
       toastError('Failed to get AI response.');
     } finally {
       setIsTyping(false);
@@ -148,7 +147,7 @@ export default function InterviewPrepPage() {
         setMessages(prev => [...prev, { role: 'assistant', content: `### INTERVIEW EVALUATION\n\n${data.answer}` }]);
       }
       success("Interview evaluation complete!");
-    } catch (err) {
+    } catch {
       toastError("Failed to generate evaluation.");
     } finally {
       setIsTyping(false);

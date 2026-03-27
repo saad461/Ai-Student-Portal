@@ -13,7 +13,6 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +27,6 @@ import {
 import {
   CheckCircle2,
   Clock,
-  AlertCircle,
   Github,
   Lock,
   ArrowRight,
@@ -43,7 +41,6 @@ import {
   FileUser
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AICodeReview } from '@/components/code-review';
 import { QuizModule } from '@/components/quiz';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
@@ -52,7 +49,7 @@ import { DashboardSkeleton } from '@/components/skeletons';
 import { KnowledgeRadar } from '@/components/knowledge-radar';
 import { generateCV } from '@/lib/cv-generator';
 import { OnboardingTour } from '@/components/onboarding-tour';
-import { getRank, getLevel, getXpProgress, getSkillPoints, ShopItem } from '@/lib/gamification';
+import { getRank, getLevel, getXpProgress, getSkillPoints } from '@/lib/gamification';
 import { DailyBounty } from '@/components/daily-bounty';
 import { Skull } from 'lucide-react';
 
@@ -103,16 +100,14 @@ export default function DashboardPage() {
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
-  const [recentAttendance, setRecentAttendance] = useState<any[]>([]);
-  const [rewardHistory, setRewardHistory] = useState<any[]>([]);
-  const [userPerks, setUserPerks] = useState<any[]>([]);
+  const [recentAttendance, setRecentAttendance] = useState<Record<string, unknown>[]>([]);
+  const [rewardHistory, setRewardHistory] = useState<Record<string, unknown>[]>([]);
+  const [userPerks, setUserPerks] = useState<Record<string, unknown>[]>([]);
 
   const [githubUrl, setGithubUrl] = useState('');
-  const [lastSubmittedUrl, setLastSubmittedUrl] = useState('');
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [skippingId, setSkippingId] = useState<string | null>(null);
   const [skipPin, setSkipPin] = useState('');
-  const [showReviewFor, setShowReviewFor] = useState<string | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<CurriculumItem | null>(null);
 
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
@@ -274,9 +269,7 @@ export default function DashboardPage() {
         toastError('Failed to submit: ' + error.message);
       } else {
         success('Assignment submitted successfully!');
-        setLastSubmittedUrl(githubUrl);
         setGithubUrl('');
-        setShowReviewFor(curriculumId);
         fetchData();
       }
     } finally {
@@ -645,7 +638,7 @@ export default function DashboardPage() {
                 <Card className="bg-muted/10 border-dashed">
                   <CardContent className="p-8 text-center">
                     <p className="text-muted-foreground text-sm italic">
-                      "The secret of getting ahead is getting started."
+                      &quot;The secret of getting ahead is getting started.&quot;
                     </p>
                   </CardContent>
                 </Card>
@@ -686,12 +679,12 @@ export default function DashboardPage() {
                   {rewardHistory.length === 0 ? <p className="text-xs text-muted-foreground italic p-4">No points earned yet.</p> : (
                     <div className="divide-y">
                       {rewardHistory.map((reward) => (
-                        <div key={reward.id} className="flex justify-between items-center text-[10px] p-3">
+                        <div key={reward.id as string} className="flex justify-between items-center text-[10px] p-3">
                           <div className="flex flex-col">
-                            <span className="font-bold">{reward.reason}</span>
-                            <span className="text-[8px] text-muted-foreground opacity-70">{new Date(reward.created_at).toLocaleString()}</span>
+                            <span className="font-bold">{reward.reason as string}</span>
+                            <span className="text-[8px] text-muted-foreground opacity-70">{new Date(reward.created_at as string).toLocaleString()}</span>
                           </div>
-                          <Badge variant="secondary" className="text-[9px] bg-primary/10 text-primary font-black">+{reward.amount} XP</Badge>
+                          <Badge variant="secondary" className="text-[9px] bg-primary/10 text-primary font-black">+{reward.amount as number} XP</Badge>
                         </div>
                       ))}
                     </div>
@@ -705,8 +698,8 @@ export default function DashboardPage() {
                   {recentAttendance.length === 0 ? <p className="text-xs text-muted-foreground italic p-4">No records yet.</p> : (
                     <div className="divide-y">
                       {recentAttendance.map((record) => (
-                        <div key={record.id} className="flex justify-between items-center text-[10px] p-3">
-                          <span className="font-medium">{new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <div key={record.id as string} className="flex justify-between items-center text-[10px] p-3">
+                          <span className="font-medium">{new Date(record.date as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-700">PRESENT</Badge>
                         </div>
                       ))}

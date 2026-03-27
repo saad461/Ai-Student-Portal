@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, User, Phone, Video, Calendar, AlertTriangle } from 'lucide-react';
+import { MessageCircle, X, Send, User, Phone, Video, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -154,8 +154,9 @@ export function FloatingChat() {
         // Notifications are usually for auth.users, so we skip for the fixed ID
         setNewMessage('');
       }
-    } catch (err: any) {
-      toastError('An unexpected error occurred while sending: ' + err.message);
+    } catch (err) {
+      const error = err as Error;
+      toastError('An unexpected error occurred while sending: ' + error.message);
     } finally {
       setIsSending(false);
     }
@@ -194,8 +195,9 @@ export function FloatingChat() {
           setScheduledAt('');
           fetchVideoSessions(userId);
        }
-     } catch (err: any) {
-       toastError('An unexpected error occurred while requesting: ' + err.message);
+     } catch (err) {
+       const error = err as Error;
+       toastError('An unexpected error occurred while requesting: ' + error.message);
      } finally {
        setIsRequestingCall(false);
      }

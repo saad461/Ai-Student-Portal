@@ -1,24 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
-  BookOpen,
   Code,
   ShieldCheck,
   Timer,
-  Trophy,
-  Users,
   Zap,
   CheckCircle2,
   ArrowRight
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -127,7 +122,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold uppercase">Hacker Theme</h3>
                 <p className="text-muted-foreground">
-                  Unlock the immersive "Pro" theme as you progress, transforming your workspace into a terminal-inspired environment.
+                  Unlock the immersive &quot;Pro&quot; theme as you progress, transforming your workspace into a terminal-inspired environment.
                 </p>
               </div>
             </div>
@@ -168,11 +163,11 @@ export default function LandingPage() {
                   </div>
                   <div className="p-6 font-mono text-sm text-green-500">
                     <p className="mb-2">jules@pro-dev:~$ list-modules</p>
-                    <p className="text-white">Week 01: Setup & Web Basics</p>
+                <p className="text-white">Week 01: Setup &amp; Web Basics</p>
                     <p className="text-white">Week 04: Advanced React Patterns</p>
                     <p className="text-white">Week 08: Backend Architecture</p>
                     <p className="text-white">Week 12: Mid-term Assessment</p>
-                    <p className="text-white">Week 16: Security & Auth</p>
+                <p className="text-white">Week 16: Security &amp; Auth</p>
                     <p className="text-white">Week 24: Final Graduation Project</p>
                     <p className="mt-4 animate-pulse">_</p>
                   </div>

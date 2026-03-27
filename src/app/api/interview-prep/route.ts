@@ -16,12 +16,12 @@ export async function POST(req: Request) {
     `;
 
     const prompt = isFinal
-      ? `Evaluate the following interview session for ${currentModule}:\n\n${(messages || []).map((m: any) => `${m.role === 'assistant' ? 'Interviewer' : 'Student'}: ${m.content}`).join('\n')}`
+      ? `Evaluate the following interview session for ${currentModule}:\n\n${(messages || []).map((m: { role: string; content: string }) => `${m.role === 'assistant' ? 'Interviewer' : 'Student'}: ${m.content}`).join('\n')}`
       : `
       Current Module: ${currentModule}
 
       Conversation History:
-      ${(messages || []).map((m: any) => `${m.role === 'assistant' ? 'Interviewer' : 'Student'}: ${m.content}`).join('\n')}
+      ${(messages || []).map((m: { role: string; content: string }) => `${m.role === 'assistant' ? 'Interviewer' : 'Student'}: ${m.content}`).join('\n')}
 
       Provide the next question or response as the Interviewer.
     `;

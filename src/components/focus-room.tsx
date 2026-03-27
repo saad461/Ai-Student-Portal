@@ -66,7 +66,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
   // Binaural Beats Logic
   const startBinauralBeats = useCallback(() => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
     const ctx = audioContextRef.current;
     const oscL = ctx.createOscillator();
@@ -270,15 +270,15 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     }
 
     if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
 
     noiseNodeRef.current?.disconnect();
 
     let node: AudioBufferSourceNode | null = null;
-    if (type === 'rain') node = createNoiseNode('pink') as any;
-    if (type === 'wind') node = createNoiseNode('brown') as any;
-    if (type === 'white') node = createNoiseNode('white') as any;
+    if (type === 'rain') node = createNoiseNode('pink');
+    if (type === 'wind') node = createNoiseNode('brown');
+    if (type === 'white') node = createNoiseNode('white');
 
     if (node) {
         const ambientGain = audioContextRef.current.createGain();
@@ -457,7 +457,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
                     <BrainCircuit className="h-16 w-16 text-green-500 mb-6 animate-pulse" />
                     <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Logic Verification Required</h2>
                     <p className="text-sm opacity-70 mb-8 max-w-md">
-                        Your code passed the tests, but true mastery is understanding the "Why".
+                        Your code passed the tests, but true mastery is understanding the &quot;Why&quot;.
                         Explain the logic of your JS functions in plain text/pseudo-code below to continue.
                     </p>
                     <textarea

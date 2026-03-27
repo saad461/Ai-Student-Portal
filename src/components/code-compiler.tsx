@@ -38,12 +38,13 @@ export function CodeCompiler({
     if (js.trim()) {
         try {
             new Function(js);
-        } catch (e: any) {
+        } catch (e) {
+            const err = e as Error;
             // Try to extract line number from error message if possible
-            const lineMatch = e.stack?.match(/<anonymous>:(\d+):(\d+)/);
+            const lineMatch = err.stack?.match(/<anonymous>:(\d+):(\d+)/);
             newErrors.push({
                 line: lineMatch ? parseInt(lineMatch[1]) : undefined,
-                message: e.message,
+                message: err.message,
                 type: 'js'
             });
         }
@@ -176,7 +177,7 @@ export function CodeCompiler({
                   ? (tab === 'html' ? "bg-blue-500/20 text-blue-400" : tab === 'css' ? "bg-purple-500/20 text-purple-400" : "bg-yellow-500/20 text-yellow-400")
                   : "text-slate-500 hover:text-slate-300"
               )}
-              onClick={() => setActiveTab(tab as any)}
+          onClick={() => setActiveTab(tab as 'html' | 'css' | 'js')}
             >
               {tab.toUpperCase()}
               {errors.some(e => e.type === tab) && (

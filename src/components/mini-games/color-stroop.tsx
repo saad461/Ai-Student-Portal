@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
 import { Palette } from 'lucide-react';
 
 const COLORS = [
@@ -19,6 +18,14 @@ export function ColorStroop() {
   const [timeLeft, setTimeLeft] = useState(20);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const handleGameOver = useCallback(async () => {
+    if (score >= 20) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Color Stroop: Score ${score}`, 'game', `stroop-${today}`);
+    }
+  }, [score]);
+
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
@@ -27,15 +34,7 @@ export function ColorStroop() {
       setIsPlaying(false);
       handleGameOver();
     }
-  }, [isPlaying, timeLeft]);
-
-  const handleGameOver = async () => {
-    if (score >= 20) {
-      const { rewardStudentAction } = await import('@/app/admin/actions');
-      const today = new Date().toLocaleDateString('en-CA');
-      await rewardStudentAction(5, `Color Stroop: Score ${score}`, 'game', `stroop-${today}`);
-    }
-  };
+  }, [isPlaying, timeLeft, handleGameOver]);
 
   const startGame = () => {
     setScore(0);

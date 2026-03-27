@@ -2,7 +2,7 @@
 
 import { TechRoadmap } from '@/components/tech-roadmap';
 import { motion } from 'framer-motion';
-import { Zap, ArrowRight, Shield, Cpu, Code } from 'lucide-react';
+import { Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RoadmapPage() {

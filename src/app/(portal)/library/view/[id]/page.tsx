@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -27,11 +27,8 @@ export default function ResourceViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) fetchResource();
-  }, [id]);
-
-  const fetchResource = async () => {
+  const fetchResource = useCallback(async () => {
+    if (!id) return;
     setLoading(true);
     try {
       const { data, error: fetchError } = await supabase
@@ -44,13 +41,18 @@ export default function ResourceViewPage() {
       if (!data) throw new Error('Resource not found');
 
       setResource(data);
-    } catch (err: any) {
-      console.error('Error fetching resource:', err);
-      setError(err.message || 'Failed to load resource');
+    } catch (err) {
+      const errorObj = err as Error;
+      console.error('Error fetching resource:', errorObj);
+      setError(errorObj.message || 'Failed to load resource');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchResource();
+  }, [fetchResource]);
 
   const handleDownload = () => {
     if (!resource?.external_url) return;

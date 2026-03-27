@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import {
   Trophy,
   Zap,
@@ -10,13 +9,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  ChevronRight,
   Flame,
   Brain
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast-provider';
 import { CodeCompiler } from '@/components/code-compiler';
@@ -26,7 +24,7 @@ interface DailyChallenge {
   id: string;
   title: string;
   description: string;
-  initial_code: any;
+  initial_code: { js?: string };
   difficulty: 'easy' | 'medium' | 'hard';
   points_reward: number;
 }
@@ -89,7 +87,7 @@ export default function ChallengesPage() {
           code,
           title: challenge.title,
           description: challenge.description,
-          testCases: (challenge as any).test_cases
+          testCases: (challenge as unknown as { test_cases: Record<string, unknown>[] }).test_cases
         })
       });
       const data = await res.json();
@@ -115,7 +113,7 @@ export default function ChallengesPage() {
       } else {
         toastError(data.feedback || "Your solution is incorrect. Check requirements.");
       }
-    } catch (err) {
+    } catch {
       toastError('Verification service unavailable.');
     } finally {
       setIsSubmitting(false);
@@ -170,7 +168,7 @@ export default function ChallengesPage() {
                  </div>
                  <div className="space-y-2">
                     <h2 className="text-4xl font-black tracking-tighter uppercase">Mission Accomplished!</h2>
-                    <p className="text-emerald-700/70 font-bold text-lg">You've solved today's logic puzzle: <span className="text-emerald-900">"{challenge.title}"</span></p>
+                    <p className="text-emerald-700/70 font-bold text-lg">You&apos;ve solved today&apos;s logic puzzle: <span className="text-emerald-900">&quot;{challenge.title}&quot;</span></p>
                  </div>
                  <div className="flex gap-4 pt-4">
                     <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 px-6 py-2 rounded-full font-black">+50 XP</Badge>

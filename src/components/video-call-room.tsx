@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Video, Mic, MicOff, VideoOff, Monitor, X, PhoneOff, Maximize, Minimize } from 'lucide-react';
+import { Video, Mic, MicOff, VideoOff, Monitor, PhoneOff, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';

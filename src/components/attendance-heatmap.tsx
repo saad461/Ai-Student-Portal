@@ -28,8 +28,8 @@ export function AttendanceHeatmap({ data }: HeatmapProps) {
 
   // Group days by week for horizontal layout
   const weeks = useMemo(() => {
-    const w: Date[][] = [];
-    let currentWeek: Date[] = [];
+    const w: (Date | null)[][] = [];
+    let currentWeek: (Date | null)[] = [];
 
     // Alignment: find the first Sunday or Monday of the year
     const firstDay = allDays[0];
@@ -37,7 +37,7 @@ export function AttendanceHeatmap({ data }: HeatmapProps) {
 
     // Add empty spacers for the first week
     for (let i = 0; i < offset; i++) {
-        currentWeek.push(null as any);
+        currentWeek.push(null);
     }
 
     allDays.forEach((day) => {
@@ -50,7 +50,7 @@ export function AttendanceHeatmap({ data }: HeatmapProps) {
 
     if (currentWeek.length > 0) {
       while (currentWeek.length < 7) {
-          currentWeek.push(null as any);
+          currentWeek.push(null);
       }
       w.push(currentWeek);
     }

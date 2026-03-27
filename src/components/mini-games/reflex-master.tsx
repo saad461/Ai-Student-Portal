@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Trophy } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Zap } from 'lucide-react';
 
 export function ReflexMaster() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -11,6 +11,15 @@ export function ReflexMaster() {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [highScore, setHighScore] = useState(0);
+
+  const handleGameOver = useCallback(async () => {
+    if (score > highScore) setHighScore(score);
+    if (score >= 25) {
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      const today = new Date().toLocaleDateString('en-CA');
+      await rewardStudentAction(5, `Reflex Master: Score ${score}`, 'game', `reflex-${today}`);
+    }
+  }, [score, highScore]);
 
   useEffect(() => {
     if (isPlaying && timeLeft > 0) {
@@ -20,16 +29,7 @@ export function ReflexMaster() {
       setIsPlaying(false);
       handleGameOver();
     }
-  }, [isPlaying, timeLeft]);
-
-  const handleGameOver = async () => {
-    if (score > highScore) setHighScore(score);
-    if (score >= 25) {
-      const { rewardStudentAction } = await import('@/app/admin/actions');
-      const today = new Date().toLocaleDateString('en-CA');
-      await rewardStudentAction(5, `Reflex Master: Score ${score}`, 'game', `reflex-${today}`);
-    }
-  };
+  }, [isPlaying, timeLeft, handleGameOver]);
 
   const spawnTarget = () => {
     setTarget({
