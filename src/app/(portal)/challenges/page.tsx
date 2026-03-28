@@ -122,6 +122,31 @@ export default function ChallengesPage() {
 
   if (loading) return <main className="flex-1 p-8 text-center animate-pulse">Scanning for today&apos;s challenge...</main>;
 
+  const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+
+  if (isWeekend) {
+    return (
+      <main className="flex-1 p-4 lg:p-8 flex items-center justify-center min-h-[70vh]">
+        <Card className="max-w-md w-full p-12 text-center space-y-8 border-none shadow-2xl bg-slate-900 text-white rounded-[3rem]">
+          <div className="bg-primary/20 p-8 rounded-full w-fit mx-auto animate-pulse">
+            <Trophy className="h-16 w-16 text-primary" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-3xl font-black uppercase tracking-tight italic text-primary">Arena Closed</h2>
+            <p className="text-slate-400 font-bold text-lg leading-relaxed">
+              The Daily Logic Arena is closed on weekends. Take this time to recharge your brain for Monday&apos;s new challenges!
+            </p>
+          </div>
+          <div className="pt-4">
+            <Button asChild className="w-full h-16 rounded-2xl font-black uppercase tracking-widest bg-primary hover:bg-primary/90 text-lg shadow-xl shadow-primary/20">
+               <Link href="/dashboard">Return to Base</Link>
+            </Button>
+          </div>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
