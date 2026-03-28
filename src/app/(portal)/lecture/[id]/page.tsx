@@ -280,6 +280,29 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     </main>
   );
 
+  const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+
+  if (isWeekend) {
+    return (
+      <main className="flex-1 p-4 md:p-12 lg:p-16 flex items-center justify-center">
+        <Card className="max-w-md w-full p-8 text-center space-y-6 border-none shadow-2xl bg-slate-900 text-white">
+          <div className="bg-primary/20 p-6 rounded-full w-fit mx-auto animate-pulse">
+            <Lock className="h-12 w-12 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black uppercase tracking-tight">Lectures are Locked</h2>
+            <p className="text-slate-400 font-medium">
+              Lectures are not accessible during weekend study sessions. Use this time to review previous notes or work on personal projects.
+            </p>
+          </div>
+          <Button asChild className="w-full h-12 font-bold uppercase tracking-widest bg-primary hover:bg-primary/90">
+             <Link href="/dashboard">Back to Dashboard</Link>
+          </Button>
+        </Card>
+      </main>
+    );
+  }
+
   const MarkdownComponents = {
     h1: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
