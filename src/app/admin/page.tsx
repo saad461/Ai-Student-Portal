@@ -57,6 +57,8 @@ import {
   saveCourseAction,
   sendChatMessageAction,
   fetchChatMessagesAction,
+  markMessagesAsReadAction,
+  getUnreadCountsAction,
   createNotificationAction,
   deleteCourseAction,
   getAdminDataAction,
@@ -142,6 +144,7 @@ export default function AdminDashboard() {
 
   const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, unknown>[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [newChatInput, setNewChatInput] = useState('');
   const [adminId, setAdminId] = useState<string>('00000000-0000-0000-0000-000000000000');
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -177,7 +180,14 @@ export default function AdminDashboard() {
   const fetchChat = useCallback(async (studentId: string) => {
     if (!adminId) return;
     const res = await fetchChatMessagesAction(studentId, adminId);
-    if (res.success && res.data) setChatMessages(res.data as Record<string, unknown>[]);
+    if (res.success && res.data) {
+       setChatMessages(res.data as Record<string, unknown>[]);
+       // Mark as read when fetching
+       await markMessagesAsReadAction(studentId, adminId);
+       // Refresh unread counts
+       const countsRes = await getUnreadCountsAction(adminId);
+       if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
+    }
     fetchVideoSessions(studentId);
   }, [adminId, fetchVideoSessions]);
 
@@ -185,9 +195,14 @@ export default function AdminDashboard() {
     setLoading(true);
     const res = await getAdminDataAction();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) setAdminId(user.id);
-    else setAdminId('00000000-0000-0000-0000-000000000000'); // Fixed System Admin ID
+    // Use the fixed System Admin ID for chat & video sessions by default
+    // This ensures consistency even if the admin is using a student account for auth
+    const fixedAdminId = '00000000-0000-0000-0000-000000000000';
+    setAdminId(fixedAdminId);
+
+    // Initial unread counts
+    const countsRes = await getUnreadCountsAction(fixedAdminId);
+    if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
 
     if (res.success && res.data) {
       const {
@@ -241,8 +256,16 @@ export default function AdminDashboard() {
 
       const chatChannel = supabase
         .channel('admin_realtime_chat')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
-          if (selectedChatStudent) fetchChat(selectedChatStudent);
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
+          // Refresh unread counts for all student list items
+          const countsRes = await getUnreadCountsAction(adminId);
+          if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
+
+          // If the message is for the currently open chat, refresh messages
+          const newMsg = payload.new as Record<string, unknown>;
+          if (selectedChatStudent && (newMsg.sender_id === selectedChatStudent || newMsg.receiver_id === selectedChatStudent)) {
+             fetchChat(selectedChatStudent);
+          }
         })
         .subscribe();
 
@@ -256,12 +279,26 @@ export default function AdminDashboard() {
         })
         .subscribe();
 
+      // Polling fallback for chat updates (every 10 seconds)
+      const pollInterval = setInterval(async () => {
+        if (activeTab === 'support') {
+          const countsRes = await getUnreadCountsAction(adminId);
+          if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
+
+          if (selectedChatStudent) {
+            const res = await fetchChatMessagesAction(selectedChatStudent, adminId);
+            if (res.success && res.data) setChatMessages(res.data as Record<string, unknown>[]);
+          }
+        }
+      }, 10000);
+
       return () => {
         supabase.removeChannel(chatChannel);
         supabase.removeChannel(videoChannel);
+        clearInterval(pollInterval);
       };
     }
-  }, [router, fetchAdminData, selectedChatStudent, fetchChat, fetchVideoSessions]);
+  }, [router, fetchAdminData, selectedChatStudent, fetchChat, fetchVideoSessions, activeTab, adminId]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -530,7 +567,7 @@ export default function AdminDashboard() {
                             fetchChat(s.id);
                          }}
                          className={cn(
-                            "w-full p-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0 text-left",
+                            "w-full p-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0 text-left relative",
                             selectedChatStudent === s.id && "bg-primary/5 border-r-4 border-r-primary"
                          )}
                        >
@@ -539,6 +576,11 @@ export default function AdminDashboard() {
                              <div className="font-bold text-sm truncate">{s.full_name}</div>
                              <div className="text-[10px] text-muted-foreground truncate italic">Real-time Chat</div>
                           </div>
+                          {unreadCounts[s.id] > 0 && (
+                             <Badge className="absolute top-4 right-4 h-5 w-5 flex items-center justify-center p-0 rounded-full bg-red-600">
+                                {unreadCounts[s.id]}
+                             </Badge>
+                          )}
                        </button>
                     ))}
                  </div>
