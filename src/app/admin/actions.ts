@@ -308,7 +308,11 @@ export async function uploadResourceFileAction(formData: FormData) {
   const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
   const { error } = await supabaseAdmin.storage
     .from('library-resources')
-    .upload(fileName, file);
+    .upload(fileName, file, {
+      contentType: file.type || 'application/octet-stream',
+      cacheControl: '3600',
+      upsert: false
+    });
 
   if (error) return { success: false, error: error.message };
 
