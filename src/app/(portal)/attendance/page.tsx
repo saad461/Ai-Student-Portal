@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { AttendanceHeatmap } from '@/components/attendance-heatmap';
 import {
   Card,
@@ -49,27 +47,32 @@ export default function StudentAttendancePage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    // Fetch Profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('full_name, current_streak, total_points')
-      .eq('id', user.id)
-      .single();
+      // Fetch Profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name, current_streak, total_points')
+        .eq('id', user.id)
+        .single();
 
-    setProfile(profileData as Profile);
+      if (profileData) setProfile(profileData as Profile);
 
-    // Fetch Attendance
-    const { data: attendanceData } = await supabase
-      .from('attendance')
-      .select('*')
-      .eq('student_id', user.id)
-      .order('date', { ascending: false });
+      // Fetch Attendance
+      const { data: attendanceData } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('date', { ascending: false });
 
-    setAttendance((attendanceData as AttendanceRecord[]) || []);
-    setLoading(false);
+      setAttendance((attendanceData as AttendanceRecord[]) || []);
+    } catch (err) {
+      console.error('Error fetching attendance data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -77,17 +80,14 @@ export default function StudentAttendancePage() {
   }, [fetchData]);
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center">
+    <main className="flex-1 p-4 lg:p-8 flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-    </div>
+    </main>
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
-        <div className="max-w-5xl mx-auto space-y-8">
+    <main className="flex-1 p-4 lg:p-8">
+        <div className="max-w-5xl mx-auto space-y-8 w-full">
           <header>
             <h1 className="text-3xl font-bold">My Attendance</h1>
             <p className="text-muted-foreground">Track your daily portal activity and streaks.</p>
@@ -116,7 +116,7 @@ export default function StudentAttendancePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-xs opacity-90">Total days you've spent 15+ minutes in the portal.</p>
+                <p className="text-xs opacity-90">Total days you&apos;ve spent 15+ minutes in the portal.</p>
               </CardContent>
             </Card>
 
@@ -138,7 +138,7 @@ export default function StudentAttendancePage() {
             <Info className="h-4 w-4 text-blue-600" />
             <AlertTitle className="text-blue-800 dark:text-blue-400">How it works</AlertTitle>
             <AlertDescription className="text-blue-700 dark:text-blue-500">
-              Attendance is marked automatically once you spend a total of 15 minutes on the portal each day (Monday-Friday). You don't need to click anything!
+              Attendance is marked automatically once you spend a total of 15 minutes on the portal each day (Monday-Friday). You don&apos;t need to click anything!
             </AlertDescription>
           </Alert>
 
@@ -209,7 +209,6 @@ export default function StudentAttendancePage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </main>
   );
 }

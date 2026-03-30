@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import {
   Trophy,
   Zap,
@@ -10,13 +9,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  ChevronRight,
   Flame,
   Brain
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast-provider';
 import { CodeCompiler } from '@/components/code-compiler';
@@ -26,7 +24,7 @@ interface DailyChallenge {
   id: string;
   title: string;
   description: string;
-  initial_code: any;
+  initial_code: { js?: string };
   difficulty: 'easy' | 'medium' | 'hard';
   points_reward: number;
 }
@@ -45,30 +43,35 @@ export default function ChallengesPage() {
 
   const fetchChallenge = async () => {
     setLoading(true);
-    const today = new Date().toISOString().split('T')[0];
+    try {
+      const today = new Date().toISOString().split('T')[0];
 
-    const { data: challengeData } = await supabase
-      .from('daily_challenges')
-      .select('*')
-      .eq('active_date', today)
-      .single();
+      const { data: challengeData } = await supabase
+        .from('daily_challenges')
+        .select('*')
+        .eq('active_date', today)
+        .single();
 
-    if (challengeData) {
-      setChallenge(challengeData);
+      if (challengeData) {
+        setChallenge(challengeData);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: submission } = await supabase
-          .from('challenge_submissions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('challenge_id', challengeData.id)
-          .single();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: submission } = await supabase
+            .from('challenge_submissions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('challenge_id', challengeData.id)
+            .single();
 
-        if (submission) setCompletedToday(true);
+          if (submission) setCompletedToday(true);
+        }
       }
+    } catch (err) {
+      console.error('Error fetching challenge:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmit = async (code: string) => {
@@ -84,7 +87,7 @@ export default function ChallengesPage() {
           code,
           title: challenge.title,
           description: challenge.description,
-          testCases: (challenge as any).test_cases
+          testCases: (challenge as unknown as { test_cases: Record<string, unknown>[] }).test_cases
         })
       });
       const data = await res.json();
@@ -110,17 +113,17 @@ export default function ChallengesPage() {
       } else {
         toastError(data.feedback || "Your solution is incorrect. Check requirements.");
       }
-    } catch (err) {
+    } catch {
       toastError('Verification service unavailable.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-center animate-pulse">Scanning for today's challenge...</div>;
+  if (loading) return <main className="flex-1 p-8 text-center animate-pulse">Scanning for today&apos;s challenge...</main>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-2">
            <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
@@ -165,7 +168,7 @@ export default function ChallengesPage() {
                  </div>
                  <div className="space-y-2">
                     <h2 className="text-4xl font-black tracking-tighter uppercase">Mission Accomplished!</h2>
-                    <p className="text-emerald-700/70 font-bold text-lg">You've solved today's logic puzzle: <span className="text-emerald-900">"{challenge.title}"</span></p>
+                    <p className="text-emerald-700/70 font-bold text-lg">You&apos;ve solved today&apos;s logic puzzle: <span className="text-emerald-900">&quot;{challenge.title}&quot;</span></p>
                  </div>
                  <div className="flex gap-4 pt-4">
                     <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 px-6 py-2 rounded-full font-black">+50 XP</Badge>
@@ -201,8 +204,8 @@ export default function ChallengesPage() {
            </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[calc(100vh-250px)]">
-           <div className="lg:col-span-1 space-y-6 flex flex-col overflow-y-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-[calc(100vh-250px)]">
+           <div className="lg:col-span-1 space-y-6 flex flex-col">
               <Card className="rounded-3xl border-2 overflow-hidden shrink-0">
                  <CardHeader className="bg-primary/5">
                     <div className="flex justify-between items-center mb-2">
@@ -242,7 +245,7 @@ export default function ChallengesPage() {
            </div>
 
            <div className="lg:col-span-2 flex flex-col gap-6">
-              <div className="flex-1 bg-background rounded-[2rem] overflow-hidden flex flex-col shadow-2xl">
+              <div className="flex-1 bg-background rounded-[2rem] overflow-hidden flex flex-col shadow-2xl min-h-[400px]">
                  <CodeCompiler
                    initialJs={challenge.initial_code?.js || '// Write your solution here...'}
                    onChange={(codes) => setCurrentCode(codes.js || '')}
@@ -260,6 +263,6 @@ export default function ChallengesPage() {
            </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

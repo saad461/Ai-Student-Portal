@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { VideoCallRoom } from '@/components/video-call-room';
 import {
   Card,
   CardHeader,
@@ -14,12 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import {
   Users,
   MessageCircle,
-  Check,
   Clock,
   Plus,
   Search,
   FileText,
-  AlertTriangle,
   Database,
   BookOpen,
   Edit,
@@ -27,11 +27,17 @@ import {
   FilePlus,
   Layers,
   ChevronRight,
-  ChevronDown,
   Layout,
-  Video as VideoIcon
+  Video as VideoIcon,
+  PhoneCall,
+  Calendar,
+  SendHorizontal,
+  X,
+  CheckCheck,
+  Paperclip,
+  ImageIcon,
+  Download
 } from 'lucide-react';
-import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -53,15 +59,22 @@ import {
   deleteSubModuleAction,
   uploadVideoAction,
   saveCourseAction,
+  sendChatMessageAction,
+  fetchChatMessagesAction,
+  markMessagesAsReadAction,
+  getUnreadCountsAction,
+  createNotificationAction,
   deleteCourseAction,
-  unlockCourseForStudentAction,
+  getAdminDataAction,
+  adminLogoutAction,
   saveResourceAction,
   deleteResourceAction,
   saveDailyChallengeAction,
   reviewSubmissionAction,
-  uploadResourceFileAction
+  uploadResourceFileAction,
+  uploadImageAction
 } from './actions';
-import { CurriculumItem, QuizQuestion, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
+import { CurriculumItem, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
   Table,
   TableBody,
@@ -73,14 +86,13 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Target, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check } from 'lucide-react';
 
 interface Resource {
   id?: string;
   title: string;
   description: string;
   type: 'book' | 'cheat_sheet' | 'roadmap' | 'note' | 'case_study';
-  content?: string;
   external_url?: string;
   thumbnail_url?: string;
   price_points: number;
@@ -91,8 +103,8 @@ interface DailyChallenge {
   id?: string;
   title: string;
   description: string;
-  initial_code: any;
-  test_cases: any;
+  initial_code: Record<string, unknown>;
+  test_cases: Record<string, unknown>[];
   difficulty: 'easy' | 'medium' | 'hard';
   points_reward: number;
   active_date: string;
@@ -115,37 +127,40 @@ interface StudentProfile {
   enrollment_date: string;
   is_pro: boolean;
   submissions: StudentSubmission[];
-  student_activity?: any[];
-}
-
-interface SorryMessage {
-  id: string;
-  student_id: string;
-  body: string;
-  status: string;
-  created_at: string;
-  profiles: { full_name: string };
+  student_activity?: Record<string, unknown>[];
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<StudentProfile[]>([]);
-  const [messages, setMessages] = useState<SorryMessage[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [subModules, setSubModules] = useState<SubModule[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [parentCourses, setParentCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [attendance, setAttendance] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, unknown>[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support'>('students');
 
-  const [extraTaskText, setExtraTaskText] = useState('');
-  const [isAssigning, setIsAssigning] = useState(false);
+  const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<Record<string, unknown>[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [newChatInput, setNewChatInput] = useState('');
+  const [adminId, setAdminId] = useState<string>('00000000-0000-0000-0000-000000000000');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const [studentVideoSessions, setStudentVideoSessions] = useState<Record<string, unknown>[]>([]);
+  const [ringingSession, setRingingSession] = useState<Record<string, unknown> | null>(null);
+  const [activeCallSessionId, setActiveCallSessionId] = useState<string | null>(null);
+  const [typingStudents, setTypingStudents] = useState<Record<string, boolean>>({});
+  const [onlineStudents, setOnlineStudents] = useState<Record<string, boolean>>({});
+  const [isChatUploading, setIsChatUploading] = useState(false);
+  const chatChannelRef = useRef<any>(null);
+  const chatFileRef = useRef<HTMLInputElement>(null);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
   const [studentTab, setStudentTab] = useState<'submissions' | 'activity'>('submissions');
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
@@ -156,84 +171,294 @@ export default function AdminDashboard() {
   const [editingChallenge, setEditingChallenge] = useState<Partial<DailyChallenge> | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const resourceFileRef = useRef<HTMLInputElement>(null);
+  const thumbnailFileRef = useRef<HTMLInputElement>(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [isResourceUploading, setIsResourceUploading] = useState(false);
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+  }, []);
+
+  const fetchVideoSessions = useCallback(async (studentId: string) => {
+    const { data } = await supabase
+      .from('video_sessions')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('scheduled_at', { ascending: false });
+    if (data) setStudentVideoSessions(data as Record<string, unknown>[]);
+  }, []);
+
+  const fetchChat = useCallback(async (studentId: string) => {
+    if (!adminId) return;
+    const res = await fetchChatMessagesAction(studentId, adminId);
+    if (res.success && res.data) {
+       setChatMessages(res.data as Record<string, unknown>[]);
+       // Mark as read when fetching
+       await markMessagesAsReadAction(studentId, adminId);
+       // Refresh unread counts
+       const countsRes = await getUnreadCountsAction(adminId);
+       if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
+    }
+    fetchVideoSessions(studentId);
+  }, [adminId, fetchVideoSessions]);
 
   const fetchAdminData = useCallback(async () => {
     setLoading(true);
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select(`*, submissions (*), student_activity (*)`);
+    const res = await getAdminDataAction();
 
-    setStudents((profiles as unknown as StudentProfile[]) || []);
+    // Use the fixed System Admin ID for chat & video sessions by default
+    // This ensures consistency even if the admin is using a student account for auth
+    const fixedAdminId = '00000000-0000-0000-0000-000000000000';
+    setAdminId(fixedAdminId);
 
-    const { data: msgs } = await supabase
-      .from('messages')
-      .select('*, profiles(full_name)')
-      .order('created_at', { ascending: false });
+    // Initial unread counts
+    const countsRes = await getUnreadCountsAction(fixedAdminId);
+    if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
 
-    setMessages((msgs as unknown as SorryMessage[]) || []);
+    if (res.success && res.data) {
+      const {
+        profiles,
+        courses: coursesData,
+        curriculum: curriculumData,
+        modules: modulesData,
+        subModules: subModulesData,
+        attendance: attendanceData,
+        resources: resourcesData,
+        challenges: challengesData
+      } = res.data as {
+        profiles: StudentProfile[];
+        courses: Course[];
+        curriculum: CurriculumItem[];
+        modules: Module[];
+        subModules: SubModule[];
+        attendance: Record<string, unknown>[];
+        resources: Resource[];
+        challenges: DailyChallenge[];
+      };
 
-    const { data: coursesData } = await supabase
-      .from('courses')
-      .select('*')
-      .order('index', { ascending: true });
-    const fetchedCourses = (coursesData as Course[]) || [];
-    setCourses(fetchedCourses);
-    setParentCourses(fetchedCourses.filter(c => !c.parent_id));
+      setStudents(profiles);
 
-    // Set default selected course if not set
-    if (fetchedCourses.length > 0 && !selectedCourseId) {
-       setSelectedCourseId(fetchedCourses[0].id);
+      const fetchedCourses = coursesData || [];
+      setCourses(fetchedCourses);
+      setParentCourses(fetchedCourses.filter(c => !c.parent_id));
+
+      if (fetchedCourses.length > 0 && !selectedCourseId) {
+        setSelectedCourseId(fetchedCourses[0].id);
+      }
+
+      setCurriculum(curriculumData);
+      setModules(modulesData);
+      setSubModules(subModulesData);
+      setAttendance(attendanceData);
+      setResources(resourcesData);
+      setChallenges(challengesData);
+    } else {
+      toastError('Error fetching admin data: ' + (typeof res.error === 'string' ? res.error : 'Unknown error'));
     }
 
-    const { data: curriculumData } = await supabase
-      .from('curriculum')
-      .select('*')
-      .order('week', { ascending: true });
-
-    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
-
-    const { data: modulesData } = await supabase
-      .from('modules')
-      .select('*')
-      .order('index', { ascending: true });
-    setModules((modulesData as Module[]) || []);
-
-    const { data: subModulesData } = await supabase
-      .from('sub_modules')
-      .select('*')
-      .order('index', { ascending: true });
-    setSubModules((subModulesData as SubModule[]) || []);
-
-    const { data: attendanceData } = await supabase
-      .from('attendance')
-      .select('*, profiles(full_name)')
-      .order('date', { ascending: false });
-
-    setAttendance(attendanceData || []);
-
-    const { data: resourcesData } = await supabase
-      .from('resources')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setResources(resourcesData || []);
-
-    const { data: challengesData } = await supabase
-      .from('daily_challenges')
-      .select('*')
-      .order('active_date', { ascending: false });
-    setChallenges(challengesData || []);
-
     setLoading(false);
-  }, [selectedCourseId]);
+  }, [selectedCourseId, toastError]);
 
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
     if (auth !== 'true') router.push('/admin/login');
-    else fetchAdminData();
-  }, [router, fetchAdminData]);
+    else {
+      fetchAdminData();
+
+      // Request browser notification permission
+      if (typeof window !== 'undefined' && "Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+      }
+
+      const chatChannel = supabase
+        .channel('support_presence', {
+           config: {
+              presence: {
+                 key: adminId,
+              },
+           },
+        })
+        .on('presence', { event: 'sync' }, () => {
+           const state = chatChannel.presenceState();
+           const typing: Record<string, boolean> = {};
+           const online: Record<string, boolean> = {};
+           Object.keys(state).forEach(uid => {
+              const userState = state[uid];
+              if (userState && Array.isArray(userState)) {
+                 online[uid] = true;
+                 if (userState.some((s: any) => s.isTyping && s.typingTo === adminId)) {
+                    typing[uid] = true;
+                 }
+              }
+           });
+           setTypingStudents(typing);
+           setOnlineStudents(online);
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
+           // Track when student reads our messages
+           const msg = payload.new as Record<string, unknown>;
+           if (selectedChatStudent && (msg.sender_id === adminId && msg.receiver_id === selectedChatStudent)) {
+              setChatMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+           }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
+          // Refresh unread counts for all student list items
+          const countsRes = await getUnreadCountsAction(adminId);
+          if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
+
+          // If the message is for the currently open chat, refresh messages
+          const newMsg = payload.new as Record<string, unknown>;
+
+          // Browser Notification for new messages from students
+          if (newMsg.receiver_id === adminId) {
+             audioRef.current?.play().catch(() => {});
+             if (!document.hasFocus()) {
+                const student = students.find(s => s.id === newMsg.sender_id);
+                if ("Notification" in window && Notification.permission === "granted") {
+                   new Notification(`New Message from ${student?.full_name || 'Student'}`, {
+                      body: (newMsg.content as string).substring(0, 100)
+                   });
+                }
+             }
+          }
+
+          if (selectedChatStudent && (newMsg.sender_id === selectedChatStudent || newMsg.receiver_id === selectedChatStudent)) {
+             fetchChat(selectedChatStudent);
+          }
+        })
+        .subscribe();
+
+      chatChannelRef.current = chatChannel;
+
+      const videoChannel = supabase
+        .channel('admin_video_calls')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'video_sessions' }, (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
+          if (payload.new && payload.new.is_ringing && !payload.old?.is_ringing) {
+             setRingingSession(payload.new);
+          }
+          if (selectedChatStudent) fetchVideoSessions(selectedChatStudent);
+        })
+        .subscribe();
+
+      // Polling fallback for chat updates (every 10 seconds)
+      const pollInterval = setInterval(async () => {
+        if (activeTab === 'support') {
+          const countsRes = await getUnreadCountsAction(adminId);
+          if (countsRes.success && countsRes.data) setUnreadCounts(countsRes.data as Record<string, number>);
+
+          if (selectedChatStudent) {
+            const res = await fetchChatMessagesAction(selectedChatStudent, adminId);
+            if (res.success && res.data) setChatMessages(res.data as Record<string, unknown>[]);
+          }
+        }
+      }, 10000);
+
+      return () => {
+        supabase.removeChannel(chatChannel);
+        supabase.removeChannel(videoChannel);
+        clearInterval(pollInterval);
+      };
+    }
+  }, [router, fetchAdminData, selectedChatStudent, fetchChat, fetchVideoSessions, activeTab, adminId]);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+
+  const updateVideoStatus = async (sessionId: string, status: string) => {
+    await supabase.from('video_sessions').update({ status, admin_id: adminId }).eq('id', sessionId);
+    if (selectedChatStudent) await fetchVideoSessions(selectedChatStudent);
+  };
+
+  const handleTyping = (val: string) => {
+     setNewChatInput(val);
+     if (chatChannelRef.current) {
+        if (val.trim() && selectedChatStudent) {
+           chatChannelRef.current.track({ isTyping: true, typingTo: selectedChatStudent });
+        } else {
+           chatChannelRef.current.track({ isTyping: false });
+        }
+     }
+  };
+
+  const handleChatFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file || !selectedChatStudent || !adminId) return;
+
+     setIsChatUploading(true);
+     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+
+     try {
+        const { error: uploadError } = await supabase.storage
+          .from('chat-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) {
+           toastError('Upload failed: ' + uploadError.message);
+           return;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(fileName);
+
+        // Send a message with the attachment URL
+        handleSendChat(publicUrl);
+     } catch (err) {
+        toastError('Unexpected upload error');
+     } finally {
+        setIsChatUploading(false);
+        if (chatFileRef.current) chatFileRef.current.value = '';
+     }
+  };
+
+  const handleSendChat = async (customContent?: string) => {
+    const content = customContent || newChatInput.trim();
+    if (!content || !selectedChatStudent || !adminId) return;
+
+    // Optimistic Update
+    const tempId = Math.random().toString(36).substring(7);
+    const optimisticMsg = {
+      id: tempId,
+      sender_id: adminId,
+      receiver_id: selectedChatStudent,
+      content,
+      created_at: new Date().toISOString(),
+      is_read: false
+    };
+    setChatMessages(prev => [...prev, optimisticMsg]);
+    setNewChatInput('');
+
+    const res = await sendChatMessageAction(adminId, selectedChatStudent, content);
+
+    if (!res.success) {
+       toastError('Failed to send message: ' + (typeof res.error === 'string' ? res.error : (res.error as Error)?.message || JSON.stringify(res.error)));
+       // Rollback
+       setChatMessages(prev => prev.filter(m => m.id !== tempId));
+       return;
+    }
+
+    // Replace optimistic with real
+    if (res.data) {
+       setChatMessages(prev => prev.map(m => m.id === tempId ? (res.data as Record<string, unknown>) : m));
+    }
+
+    // Notify Student via Server Action (bypasses RLS)
+    await createNotificationAction(
+       selectedChatStudent,
+       'New Message from Admin',
+       'An instructor has replied to your query.',
+       'info'
+    );
+
+    fetchChat(selectedChatStudent);
+  };
 
   const handleSaveCurriculum = async (item: Partial<CurriculumItem>) => {
     if (!item.id) return;
@@ -247,7 +472,7 @@ export default function AdminDashboard() {
       } else {
         toastError('Error saving curriculum: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
       }
-    } catch (err) {
+    } catch {
       toastError('An unexpected error occurred while saving.');
     } finally {
       setIsSaving(false);
@@ -295,7 +520,14 @@ export default function AdminDashboard() {
       setEditingCourse(null);
       fetchAdminData();
     } else {
-      toastError('Error saving course: ' + JSON.stringify(res.error));
+      let msg = 'An unknown error occurred.';
+      const errorObj = res.error as Record<string, unknown> | null;
+      if (errorObj && typeof errorObj === 'object' && errorObj.code === '23505') {
+        msg = 'The course slug (URL identifier) is already in use by another course. Please choose a unique slug.';
+      } else {
+        msg = typeof res.error === 'string' ? res.error : JSON.stringify(res.error);
+      }
+      toastError('Error saving course: ' + msg);
     }
   };
 
@@ -333,14 +565,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUnlockCourse = async (email: string, courseId: string) => {
-    const res = await unlockCourseForStudentAction(email, courseId);
-    if (res.success) {
-      success('Course unlocked successfully!');
-    } else {
-      toastError('Error unlocking course: ' + res.error);
-    }
-  };
 
   const handleDeleteCurriculum = async (id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
@@ -349,7 +573,9 @@ export default function AdminDashboard() {
   };
 
   const moveItem = async (item: CurriculumItem, direction: 'up' | 'down') => {
-    const moduleItems = curriculum.filter(i => i.week === item.week).sort((a, b) => (a.lecture_index || 0) - (b.lecture_index || 0));
+    const moduleItems = curriculum
+      .filter(i => (i.module_id && i.module_id === item.module_id) || (!i.module_id && i.week === item.week && i.course_id === item.course_id))
+      .sort((a, b) => (a.lecture_index || 0) - (b.lecture_index || 0));
     const currentIndex = moduleItems.findIndex(i => i.id === item.id);
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
 
@@ -368,98 +594,452 @@ export default function AdminDashboard() {
   if (loading) return <div className="p-8 text-center">Loading Admin Controls...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <header className="flex justify-between items-start">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8">
+      {activeCallSessionId && adminId && (
+         <VideoCallRoom
+           sessionId={activeCallSessionId}
+           userId={adminId}
+           onClose={() => setActiveCallSessionId(null)}
+         />
+      )}
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
+        <header className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-slate-500">Manage students and curriculum progression.</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-sm md:text-base text-slate-500">Manage students and curriculum progression.</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={async () => {
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={async () => {
               const res = await seedCurriculumAction();
               if (res.success) success('Curriculum seeded successfully!');
               else toastError('Error: ' + JSON.stringify(res.error));
             }}>
-              <Database className="h-4 w-4 mr-2" /> Seed Curriculum
+              <Database className="h-4 w-4 mr-2" /> Seed
             </Button>
-            <Button variant="outline" onClick={() => { localStorage.removeItem('admin_auth'); router.push('/admin/login'); }}>
-              Logout Admin
+            <Button variant="outline" size="sm" onClick={async () => {
+              await adminLogoutAction();
+              localStorage.removeItem('admin_auth');
+              router.push('/admin/login');
+            }}>
+              Logout
             </Button>
           </div>
         </header>
 
-        <div className="flex gap-4 border-b pb-4 overflow-x-auto">
-          <Button variant={activeTab === 'students' ? 'default' : 'ghost'} onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-2" /> Students</Button>
-          <Button variant={activeTab === 'courses' ? 'default' : 'ghost'} onClick={() => setActiveTab('courses')}><Layers className="h-4 w-4 mr-2" /> Courses</Button>
-          <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-2" /> Structure</Button>
-          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Content</Button>
-          <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-2" /> Attendance</Button>
-          <Button variant={activeTab === 'library' ? 'default' : 'ghost'} onClick={() => setActiveTab('library')}><Library className="h-4 w-4 mr-2" /> Library</Button>
-          <Button variant={activeTab === 'challenges' ? 'default' : 'ghost'} onClick={() => setActiveTab('challenges')}><Trophy className="h-4 w-4 mr-2" /> Challenges</Button>
-          <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-2" /> Insights</Button>
+        <div className="flex gap-2 border-b pb-4 overflow-x-auto no-scrollbar scroll-smooth">
+          <Button variant={activeTab === 'students' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-1 md:mr-2" /> Students</Button>
+          <Button variant={activeTab === 'courses' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('courses')}><Layers className="h-4 w-4 mr-1 md:mr-2" /> Courses</Button>
+          <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-1 md:mr-2" /> Structure</Button>
+          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-1 md:mr-2" /> Content</Button>
+          <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-1 md:mr-2" /> Attendance</Button>
+          <Button variant={activeTab === 'library' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('library')}><Library className="h-4 w-4 mr-1 md:mr-2" /> Library</Button>
+          <Button variant={activeTab === 'challenges' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('challenges')}><Trophy className="h-4 w-4 mr-1 md:mr-2" /> Challenges</Button>
+          <Button variant={activeTab === 'support' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('support')}><MessageCircle className="h-4 w-4 mr-1 md:mr-2" /> Support</Button>
+          <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-1 md:mr-2" /> Insights</Button>
         </div>
 
-        {activeTab === 'courses' ? (
-          <div className="space-y-8">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold">Manage Courses</h2>
-                <p className="text-sm text-muted-foreground">Add and manage different training programs.</p>
+        <Dialog open={!!ringingSession} onOpenChange={(o) => !o && setRingingSession(null)}>
+          <DialogContent className="sm:max-w-[425px] bg-emerald-600 text-white border-none shadow-2xl">
+             <div className="flex flex-col items-center py-12 space-y-8">
+                <div className="h-24 w-24 rounded-full bg-white/20 flex items-center justify-center animate-bounce">
+                   <PhoneCall className="h-12 w-12" />
+                </div>
+                <div className="text-center">
+                   <h2 className="text-2xl font-black uppercase tracking-tighter">Incoming Call</h2>
+                   <p className="opacity-80 font-bold">{students.find(s => s.id === ringingSession?.student_id)?.full_name} is ringing...</p>
+                </div>
+                <div className="flex gap-4 w-full px-4">
+                   <Button
+                    className="flex-1 h-14 bg-white text-emerald-600 hover:bg-slate-100 font-black uppercase tracking-widest text-xs"
+                    onClick={() => {
+                        if (ringingSession) {
+                          setActiveCallSessionId(ringingSession.id as string);
+                          setRingingSession(null);
+                        }
+                    }}
+                   >
+                     Accept Call
+                   </Button>
+                   <Button
+                    variant="ghost"
+                    className="flex-1 h-14 bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest text-xs border-none"
+                    onClick={async () => {
+                       if (ringingSession) {
+                         await updateVideoStatus(ringingSession.id as string, 'missed');
+                         await supabase.from('video_sessions').update({ is_ringing: false }).eq('id', ringingSession.id);
+                         setRingingSession(null);
+                       }
+                    }}
+                   >
+                     Decline
+                   </Button>
+                </div>
+             </div>
+          </DialogContent>
+        </Dialog>
+
+        {activeTab === 'support' ? (
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8 h-auto md:h-[700px]">
+              <div className="md:col-span-1 bg-white dark:bg-slate-900 rounded-2xl border flex flex-col overflow-hidden h-[300px] md:h-auto">
+                 <div className="p-4 border-b">
+                    <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Chat History</h3>
+                 </div>
+                 <div className="flex-1 overflow-y-auto">
+                    {students.map((s: StudentProfile) => (
+                       <button
+                         key={s.id}
+                         onClick={() => {
+                            setSelectedChatStudent(s.id);
+                            fetchChat(s.id);
+                         }}
+                         className={cn(
+                            "w-full p-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0 text-left relative",
+                            selectedChatStudent === s.id && "bg-primary/5 border-r-4 border-r-primary"
+                         )}
+                       >
+                          <div className="relative">
+                             <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold">{s.full_name[0]}</div>
+                             {onlineStudents[s.id] && (
+                                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                             )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                             <div className="font-bold text-sm truncate">{s.full_name}</div>
+                             <div className="text-[10px] text-muted-foreground truncate italic">Real-time Chat</div>
+                          </div>
+                          {unreadCounts[s.id] > 0 && (
+                             <Badge className="absolute top-4 right-4 h-5 w-5 flex items-center justify-center p-0 rounded-full bg-red-600">
+                                {unreadCounts[s.id]}
+                             </Badge>
+                          )}
+                       </button>
+                    ))}
+                 </div>
               </div>
-              <Button onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}>
-                <Plus className="h-4 w-4 mr-2" /> Add Course
+
+              <div className="md:col-span-3 bg-white dark:bg-slate-900 rounded-2xl border flex flex-col overflow-hidden">
+                 {selectedChatStudent ? (
+                    <>
+                       <div className="p-4 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                          <div className="flex items-center gap-3">
+                             <div className="relative">
+                                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">{students.find(s => s.id === selectedChatStudent)?.full_name[0]}</div>
+                                {onlineStudents[selectedChatStudent] && (
+                                   <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                                )}
+                             </div>
+                             <div>
+                                <h3 className="font-bold leading-none">{students.find(s => s.id === selectedChatStudent)?.full_name}</h3>
+                                {onlineStudents[selectedChatStudent] ? (
+                                   <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest animate-pulse">Online</span>
+                                ) : (
+                                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Offline</span>
+                                )}
+                             </div>
+                          </div>
+                          <div className="flex gap-2">
+                             <Dialog>
+                                <DialogTrigger asChild>
+                                   <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-tighter"><Calendar className="h-3 w-3 mr-2" /> Sessions</Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-md">
+                                   <DialogHeader><DialogTitle>Video Sessions: {students.find(s => s.id === selectedChatStudent)?.full_name}</DialogTitle></DialogHeader>
+                                   <div className="space-y-4 py-4">
+                                      {studentVideoSessions.length === 0 ? (
+                                         <p className="text-center text-sm text-muted-foreground py-8">No session requests found.</p>
+                                      ) : studentVideoSessions.map(session => (
+                                         <div key={session.id as string} className="p-4 border rounded-xl flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+                                            <div>
+                                               <p className="font-bold text-sm">{new Date(session.scheduled_at as string).toLocaleString()}</p>
+                                               <Badge variant={session.status === 'approved' ? 'default' : session.status === 'rejected' ? 'destructive' : 'secondary'}>
+                                                  {(session.status as string).toUpperCase()}
+                                               </Badge>
+                                            </div>
+                                            {session.status === 'requested' && (
+                                               <div className="flex gap-1">
+                                                  <Button size="sm" variant="outline" className="h-8 text-[10px]" onClick={() => updateVideoStatus(session.id as string, 'approved')}><Check className="h-3 w-3 mr-1" /> Approve</Button>
+                                                  <Button size="sm" variant="ghost" className="h-8 text-[10px] text-destructive" onClick={() => updateVideoStatus(session.id as string, 'rejected')}><X className="h-3 w-3 mr-1" /> Reject</Button>
+                                               </div>
+                                            )}
+                                         </div>
+                                      ))}
+                                   </div>
+                                </DialogContent>
+                             </Dialog>
+                             <Button
+                              variant="default"
+                              size="sm"
+                              className="h-8 text-[10px] font-black uppercase tracking-tighter bg-emerald-600 hover:bg-emerald-700"
+                              onClick={async () => {
+                                 if (!selectedChatStudent) return;
+                                 // Check if there's an active session first, or just create an ad-hoc one
+                                 let session = studentVideoSessions.find(s => {
+                                    const now = new Date();
+                                    const start = new Date(s.scheduled_at as string);
+                                    const end = s.scheduled_at ? new Date(new Date(s.scheduled_at as string).getTime() + 60 * 60 * 1000) : null;
+                                    return s.status === 'approved' && now >= start && end && now <= end;
+                                 });
+
+                                 if (!session) {
+                                    const now = new Date();
+                                    const { data } = await supabase.from('video_sessions').insert({
+                                       student_id: selectedChatStudent,
+                                       admin_id: adminId,
+                                       scheduled_at: now.toISOString(),
+                                       end_at: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+                                       status: 'approved',
+                                       is_ringing: true
+                                    }).select().single();
+                                    if (data) session = data as Record<string, unknown>;
+                                 } else {
+                                    await supabase.from('video_sessions').update({ is_ringing: true }).eq('id', session.id as string);
+                                 }
+
+                                 if (session) setActiveCallSessionId(session.id as string);
+                              }}
+                             >
+                                <PhoneCall className="h-3 w-3 mr-2" /> Start Call
+                             </Button>
+                          </div>
+                       </div>
+                       <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={chatScrollRef}>
+                          {chatMessages.length === 0 ? (
+                             <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                                <MessageCircle className="h-12 w-12 mb-2" />
+                                <p className="text-sm font-bold">No messages yet with this student.</p>
+                             </div>
+                          ) : (
+                             <>
+                             {chatMessages.map(msg => (
+                                <div key={msg.id as string} className={cn(
+                                   "flex flex-col max-w-[70%]",
+                                   msg.sender_id === adminId ? "ml-auto items-end" : "items-start"
+                                )}>
+                                   <div className={cn(
+                                      "p-3 rounded-2xl text-sm font-medium shadow-sm",
+                                      msg.sender_id === adminId ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-slate-100 dark:bg-slate-800 text-foreground rounded-tl-none border"
+                                   )}>
+                                      {(msg.content as string).startsWith('https://') && (msg.content as string).includes('chat-attachments') ? (
+                                         <div className="space-y-2">
+                                            {(msg.content as string).match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                               <img
+                                                  src={msg.content as string}
+                                                  alt="Attachment"
+                                                  className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity max-h-60"
+                                                  onClick={() => window.open(msg.content as string, '_blank')}
+                                               />
+                                            ) : (
+                                               <a
+                                                  href={msg.content as string}
+                                                  target="_blank"
+                                                  className="flex items-center gap-2 underline decoration-dotted underline-offset-4"
+                                               >
+                                                  <Download className="h-4 w-4" /> Download File
+                                               </a>
+                                            )}
+                                         </div>
+                                      ) : (
+                                         msg.content as string
+                                      )}
+                                   </div>
+                                   <div className={cn(
+                                      "flex items-center gap-1 mt-1 px-1",
+                                      msg.sender_id === adminId ? "justify-end" : "justify-start"
+                                   )}>
+                                      <span className="text-[9px] text-muted-foreground">
+                                         {new Date(msg.created_at as string).toLocaleString()}
+                                      </span>
+                                      {msg.sender_id === adminId && (
+                                         msg.is_read ? (
+                                            <CheckCheck className="h-3 w-3 text-sky-400" />
+                                         ) : (
+                                            <Check className="h-3 w-3 text-slate-400" />
+                                         )
+                                      )}
+                                   </div>
+                                </div>
+                             ))}
+                             {selectedChatStudent && typingStudents[selectedChatStudent] && (
+                                <div className="flex flex-col max-w-[70%] items-start animate-pulse">
+                                   <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-2xl rounded-tl-none border text-[10px] font-bold italic">
+                                      Student is typing...
+                                   </div>
+                                </div>
+                             )}
+                             </>
+                          )}
+                       </div>
+                       <div className="p-4 border-t bg-slate-50/30 dark:bg-slate-800/10">
+                          <form onSubmit={(e) => { e.preventDefault(); handleSendChat(); }} className="flex gap-2 items-center">
+                             <input
+                                type="file"
+                                className="hidden"
+                                ref={chatFileRef}
+                                onChange={handleChatFileUpload}
+                             />
+                             <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-12 w-12 shrink-0 text-muted-foreground hover:text-primary"
+                                disabled={isChatUploading}
+                                onClick={() => chatFileRef.current?.click()}
+                             >
+                                {isChatUploading ? <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Paperclip className="h-5 w-5" />}
+                             </Button>
+                             <Input
+                                placeholder="Type your response..."
+                                className="h-12 text-sm focus-visible:ring-primary"
+                                value={newChatInput}
+                                onChange={(e) => handleTyping(e.target.value)}
+                                disabled={isChatUploading}
+                             />
+                             <Button type="submit" size="icon" className="h-12 w-12 shrink-0" disabled={isChatUploading}>
+                                <SendHorizontal className="h-5 w-5" />
+                             </Button>
+                          </form>
+                       </div>
+                    </>
+                 ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 p-12 text-center">
+                       <MessageCircle className="h-20 w-20 mb-6" />
+                       <h2 className="text-2xl font-black uppercase tracking-tighter">Support Command Center</h2>
+                       <p className="max-w-md mt-2 text-sm">Select a student from the sidebar to start a real-time 1-on-1 conversation or manage their video call requests.</p>
+                    </div>
+                 )}
+              </div>
+           </div>
+        ) : activeTab === 'courses' ? (
+          <div className="space-y-8 md:space-y-12">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold">Course Management</h2>
+                <p className="text-xs md:text-sm text-muted-foreground">Organize your curriculum into Parent Courses, Sub-Courses, and Standalone programs.</p>
+              </div>
+              <Button size="sm" className="w-full sm:w-auto" onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}>
+                <Plus className="h-4 w-4 mr-2" /> Create New
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map(course => (
-                <Card key={course.id} className="overflow-hidden group">
-                  <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
-                     {course.thumbnail_url ? (
-                       <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
-                     ) : (
-                       <div className="w-full h-full flex items-center justify-center text-slate-400">
-                          <BookOpen className="h-12 w-12" />
-                       </div>
-                     )}
-                     <div className="absolute top-2 right-2 flex gap-1">
-                        <Button variant="secondary" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
-                     </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-bold text-lg">{course.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{course.description || 'No description provided.'}</p>
-                    <div className="flex justify-between items-center mt-4">
-                       <Badge variant="outline">{course.slug}</Badge>
-                       <span className="text-xs text-muted-foreground font-medium">Index: {course.index}</span>
+            {/* Parent Courses */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-slate-400 uppercase tracking-widest">
+                <Layers className="h-5 w-5" /> Parent Courses
+              </h3>
+              <div className="grid grid-cols-1 gap-6">
+                {courses.filter(c => !c.parent_id && courses.some(sub => sub.parent_id === c.id)).map(parent => (
+                  <Card key={parent.id} className="overflow-hidden border-2">
+                    <div className="p-6 bg-slate-50 dark:bg-slate-900 border-b flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                          <Layout className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-black">{parent.name}</h4>
+                          <p className="text-sm text-muted-foreground">{parent.description || 'Parent container for sub-courses.'}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setEditingCourse({ parent_id: parent.id, index: courses.filter(c => c.parent_id === parent.id).length + 1, name: '', slug: '' })}>
+                          <Plus className="h-4 w-4 mr-2" /> Add Sub-Course
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingCourse(parent)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteCourse(parent.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <CardContent className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                          <div key={sub.id} className="group relative p-4 rounded-xl border bg-card hover:shadow-md transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tighter">Sub-Course</Badge>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingCourse(sub)}><Edit className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCourse(sub.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                              </div>
+                            </div>
+                            <h5 className="font-bold">{sub.name}</h5>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{sub.description}</p>
+                            <div className="mt-4 flex items-center justify-between">
+                              <span className="text-[10px] font-mono text-muted-foreground">{sub.slug}</span>
+                              <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
+                                setSelectedCourseId(sub.id);
+                                setActiveTab('structure');
+                              }}>Manage Content <ChevronRight className="h-3 w-3 ml-1" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Standalone Courses */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-slate-400 uppercase tracking-widest">
+                <BookOpen className="h-5 w-5" /> Standalone Courses
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {courses.filter(c => !c.parent_id && !courses.some(sub => sub.parent_id === c.id)).map(course => (
+                  <Card key={course.id} className="overflow-hidden group flex flex-col">
+                    <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
+                       {course.thumbnail_url ? (
+                         <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
+                       ) : (
+                         <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <BookOpen className="h-12 w-12" />
+                         </div>
+                       )}
+                       <div className="absolute top-2 right-2 flex gap-1">
+                          <Button variant="secondary" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
+                       </div>
+                    </div>
+                    <CardContent className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-bold text-lg">{course.name}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1 flex-1">{course.description || 'No description provided.'}</p>
+                      <div className="flex justify-between items-center mt-4">
+                         <Badge variant="outline" className="text-[10px]">{course.slug}</Badge>
+                         <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
+                            setSelectedCourseId(course.id);
+                            setActiveTab('structure');
+                          }}>Manage <ChevronRight className="h-3 w-3 ml-1" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                <button
+                  onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}
+                  className="border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-slate-400 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all space-y-2"
+                >
+                  <Plus className="h-8 w-8" />
+                  <span className="font-bold uppercase tracking-tighter text-sm">Create New Program</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : activeTab === 'students' ? (
             <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> Enrolled Students</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2 shrink-0"><Users className="h-5 w-5" /> All Profiles</h2>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                   <Input placeholder="Search students..." className="pl-9" />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4">
-                {students.map((student) => (
+                {students.map((student: StudentProfile) => (
                   <Card key={student.id}>
-                    <CardContent className="p-6 flex items-center justify-between">
+                    <CardContent className="p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg">{student.full_name[0]}</div>
-                        <div><p className="font-bold">{student.full_name}</p><p className="text-xs text-slate-500">Joined {new Date(student.enrollment_date).toLocaleDateString()}</p></div>
+                        <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg">{student.full_name[0]}</div>
+                        <div><p className="font-bold text-sm md:text-base">{student.full_name}</p><p className="text-[10px] md:text-xs text-slate-500">Joined {new Date(student.enrollment_date).toLocaleDateString()}</p></div>
                       </div>
-                      <div className="flex items-center gap-8">
-                        <div className="text-center"><p className="text-xs text-slate-500 uppercase tracking-wider">Submissions</p><p className="font-bold">{student.submissions?.length || 0}</p></div>
-                        <Badge variant={student.is_pro ? "default" : "secondary"}>{student.is_pro ? 'PRO' : 'BASIC'}</Badge>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-8 w-full sm:w-auto border-t sm:border-0 pt-4 sm:pt-0">
+                        <div className="text-center"><p className="text-[10px] text-slate-500 uppercase tracking-wider">Submissions</p><p className="font-bold text-sm">{student.submissions?.length || 0}</p></div>
+                        <Badge variant={student.is_pro ? "default" : "secondary"} className="text-[10px]">{student.is_pro ? 'PRO' : 'BASIC'}</Badge>
                         <Button variant="ghost" size="icon" onClick={() => setViewingStudent(student)}><FileText className="h-4 w-4" /></Button>
                       </div>
                     </CardContent>
@@ -469,30 +1049,64 @@ export default function AdminDashboard() {
             </div>
         ) : activeTab === 'structure' ? (
           <div className="space-y-8">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full sm:w-auto">
                 <div>
-                  <h2 className="text-2xl font-bold">Structure</h2>
-                  <p className="text-sm text-muted-foreground">Modules & Sub-Modules.</p>
+                  <h2 className="text-xl md:text-2xl font-bold">Structure</h2>
+                  <p className="text-xs md:text-sm text-muted-foreground">Modules & Sub-Modules.</p>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border">
-                   <Label className="pl-3 text-xs font-bold uppercase text-slate-500">Course:</Label>
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border w-full sm:w-auto">
+                   <Label className="pl-3 text-[10px] font-bold uppercase text-slate-500">Course:</Label>
                    <select
                      className="bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
                      value={selectedCourseId}
                      onChange={(e) => setSelectedCourseId(e.target.value)}
                    >
-                     {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                     {parentCourses.map(parent => {
+                       const hasChildren = courses.some(c => c.parent_id === parent.id);
+                       return (
+                        <optgroup key={parent.id} label={parent.name}>
+                          {/* If it's a parent course container, mark it clearly */}
+                          <option value={parent.id}>{parent.name} {hasChildren ? '(Parent Container)' : '(Standalone)'}</option>
+                          {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                            <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                          ))}
+                        </optgroup>
+                       );
+                     })}
+                     {courses.filter(c => !c.parent_id && !parentCourses.find(pc => pc.id === c.id)).map(standalone => (
+                       <option key={standalone.id} value={standalone.id}>{standalone.name}</option>
+                     ))}
                    </select>
                 </div>
               </div>
-              <Button onClick={() => setEditingModule({ course_id: selectedCourseId, index: modules.filter(m => m.course_id === selectedCourseId).length + 1, name: '' })}>
-                <Plus className="h-4 w-4 mr-2" /> Add Module
-              </Button>
+              {/* Only show Add Module if the selected course is a Sub-Course or Standalone (not a Parent with children) */}
+              {(!courses.some(c => c.parent_id === selectedCourseId)) && (
+                <Button onClick={() => setEditingModule({ course_id: selectedCourseId, index: modules.filter(m => m.course_id === selectedCourseId).length + 1, name: '' })}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Module
+                </Button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-              {modules.filter(m => m.course_id === selectedCourseId).map(mod => (
+            {/* If a Parent Course is selected, show its sub-courses instead of modules */}
+            {courses.some(c => c.parent_id === selectedCourseId) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {courses.filter(c => c.parent_id === selectedCourseId).map(sub => (
+                  <Card key={sub.id} className="group hover:border-primary transition-all cursor-pointer" onClick={() => setSelectedCourseId(sub.id)}>
+                    <CardHeader>
+                      <Badge variant="outline" className="w-fit mb-2">Sub-Course</Badge>
+                      <CardTitle className="flex justify-between items-center">
+                        {sub.name}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-2">{modules.filter(m => m.course_id === sub.id).length} Modules defined.</p>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {modules.filter(m => m.course_id === selectedCourseId).map(mod => (
                 <Card key={mod.id} className="overflow-hidden">
                   <div className="bg-slate-100 dark:bg-slate-900 p-4 flex justify-between items-center border-b">
                     <div className="flex items-center gap-3">
@@ -530,36 +1144,53 @@ export default function AdminDashboard() {
                 </Card>
               ))}
               {modules.length === 0 && (
-                <div className="p-12 text-center border-2 border-dashed rounded-xl">
-                  <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                  <p className="text-slate-500">No modules created yet. Start by adding your first module.</p>
+                <div className="p-6 md:p-12 text-center border-2 border-dashed rounded-xl">
+                  <Layout className="h-10 w-10 md:h-12 md:w-12 mx-auto text-slate-300 mb-4" />
+                  <p className="text-sm md:text-base text-slate-500">No modules created yet. Start by adding your first module.</p>
                   <Button variant="outline" className="mt-4" onClick={() => setEditingModule({ index: 1, name: '' })}>Add First Module</Button>
                 </div>
               )}
             </div>
+            )}
           </div>
         ) : activeTab === 'curriculum' ? (
           <div className="space-y-12">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-6">
-                <div><h2 className="text-2xl font-bold">Content</h2><p className="text-sm text-muted-foreground">Lectures & Tasks.</p></div>
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border">
-                   <Label className="pl-3 text-xs font-bold uppercase text-slate-500">Course:</Label>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full sm:w-auto">
+                <div><h2 className="text-xl md:text-2xl font-bold">Content</h2><p className="text-xs md:text-sm text-muted-foreground">Lectures & Tasks.</p></div>
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border w-full sm:w-auto">
+                   <Label className="pl-3 text-[10px] font-bold uppercase text-slate-500">Course:</Label>
                    <select
                      className="bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
                      value={selectedCourseId}
                      onChange={(e) => setSelectedCourseId(e.target.value)}
                    >
-                     {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                     {parentCourses.map(parent => {
+                        const hasChildren = courses.some(c => c.parent_id === parent.id);
+                        return (
+                          <optgroup key={parent.id} label={parent.name}>
+                            <option value={parent.id}>{parent.name} {hasChildren ? '(Parent Container)' : '(Standalone)'}</option>
+                            {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                              <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                            ))}
+                          </optgroup>
+                        );
+                     })}
+                     {courses.filter(c => !c.parent_id && !parentCourses.find(pc => pc.id === c.id)).map(standalone => (
+                       <option key={standalone.id} value={standalone.id}>{standalone.name}</option>
+                     ))}
                    </select>
                 </div>
               </div>
-              <Button onClick={() => {
+              {(!courses.some(c => c.parent_id === selectedCourseId)) && (
+                <Button onClick={() => {
                 const courseModules = modules.filter(m => m.course_id === selectedCourseId).sort((a,b) => a.index - b.index);
                 const lastMod = courseModules[courseModules.length - 1];
                 const lastSub = subModules.filter(s => s.module_id === lastMod?.id).pop();
                 setEditingItem({
                   id: `new-${Date.now()}`,
+                  course_id: selectedCourseId,
+                  module_id: lastMod?.id,
                   week: lastMod?.index || 1,
                   module_name: lastMod?.name || '',
                   day: 'Lecture 1',
@@ -573,17 +1204,53 @@ export default function AdminDashboard() {
               }}>
                 <Plus className="h-4 w-4 mr-2" /> Add New Lecture
               </Button>
+              )}
             </div>
-            {modules.filter(m => m.course_id === selectedCourseId).length > 0 ? modules.filter(m => m.course_id === selectedCourseId).map(mod => {
+            {courses.some(c => c.parent_id === selectedCourseId) ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {courses.filter(c => c.parent_id === selectedCourseId).map(sub => (
+                    <Card key={sub.id} className="group hover:border-primary transition-all cursor-pointer" onClick={() => setSelectedCourseId(sub.id)}>
+                      <CardHeader>
+                        <Badge variant="outline" className="w-fit mb-2">Sub-Course</Badge>
+                        <CardTitle className="flex justify-between items-center">
+                          {sub.name}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-2">{curriculum.filter(i => i.course_id === sub.id).length} Lectures & Tasks.</p>
+                      </CardHeader>
+                    </Card>
+                  ))}
+               </div>
+            ) : modules.filter(m => m.course_id === selectedCourseId).length > 0 ? modules.filter(m => m.course_id === selectedCourseId).map(mod => {
               const moduleSubModules = subModules.filter(s => s.module_id === mod.id);
-              const moduleLectures = curriculum.filter(i => i.week === mod.index);
+              const moduleLectures = curriculum.filter(i => i.module_id === mod.id || (!i.module_id && i.week === mod.index && (i.course_id === selectedCourseId || !i.course_id)));
 
               return (
                 <div key={mod.id} className="space-y-6">
-                  <div className="flex items-center gap-4">
-                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">M{mod.index}</div>
-                     <h3 className="text-xl font-bold">{mod.name}</h3>
-                     <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
+                  <div className="flex items-center justify-between gap-4">
+                     <div className="flex items-center gap-4 flex-1">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">M{mod.index}</div>
+                        <h3 className="text-xl font-bold">{mod.name}</h3>
+                        <div className="flex-1 h-[1px] bg-slate-200 dark:bg-slate-800" />
+                     </div>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setEditingItem({
+                          id: `new-${Date.now()}`,
+                          course_id: selectedCourseId,
+                          module_id: mod.id,
+                          week: mod.index,
+                          module_name: mod.name,
+                          day: `Lecture ${moduleLectures.length + 1}`,
+                          type: 'lecture',
+                          title: '',
+                          description: '',
+                          lecture_index: (moduleLectures[moduleLectures.length - 1]?.lecture_index || 0) + 1
+                       })}
+                     >
+                       <Plus className="h-3 w-3 mr-1" /> Add Lecture
+                     </Button>
                   </div>
 
                   <div className="space-y-8 pl-4 border-l-2 border-slate-100 dark:border-slate-800 ml-5">
@@ -616,6 +1283,8 @@ export default function AdminDashboard() {
                               className="h-full min-h-[100px] border-2 border-dashed hover:border-primary hover:bg-primary/5 group"
                               onClick={() => setEditingItem({
                                 id: `new-${Date.now()}`,
+                                course_id: selectedCourseId,
+                                module_id: mod.id,
                                 week: mod.index,
                                 module_name: mod.name,
                                 sub_module_id: sub.id,
@@ -642,12 +1311,14 @@ export default function AdminDashboard() {
                           <ChevronRight className="h-4 w-4" /> Uncategorized Lectures
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                           {moduleLectures.filter(l => !l.sub_module_id).map((item) => (
+                           {moduleLectures.filter(l => !l.sub_module_id).sort((a,b) => (a.lecture_index || 0) - (b.lecture_index || 0)).map((item) => (
                               <Card key={item.id} className="group hover:shadow-md transition-shadow relative">
                                 <CardHeader className="pb-2">
                                   <div className="flex justify-between items-start">
                                     <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'up')}><Clock className="h-4 w-4 rotate-180" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveItem(item, 'down')}><Clock className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteCurriculum(item.id)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
@@ -662,10 +1333,10 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               );
-            }) : (
+            }) : !courses.some(c => c.parent_id === selectedCourseId) && (
               <div className="p-12 text-center border-2 border-dashed rounded-xl">
                  <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                 <p className="text-slate-500">Create some Modules first in the "Course Structure" tab.</p>
+                 <p className="text-slate-500">Create some Modules first in the &quot;Course Structure&quot; tab.</p>
                  <Button variant="outline" className="mt-4" onClick={() => setActiveTab('structure')}>Go to Course Structure</Button>
               </div>
             )}
@@ -673,71 +1344,94 @@ export default function AdminDashboard() {
         ) : activeTab === 'attendance' ? (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold flex items-center gap-2"><Clock className="h-5 w-5" /> Attendance Log</h2>
-            <Card>
-              <Table>
-                <TableHeader><TableRow><TableHead>Student</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {attendance.map((record) => (
-                    <TableRow key={record.id}><TableCell>{record.profiles?.full_name}</TableCell><TableCell>{new Date(record.date).toLocaleDateString()}</TableCell><TableCell><Badge className="bg-green-600">PRESENT</Badge></TableCell></TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Student</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Status</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {attendance.map((record) => (
+                      <TableRow key={record.id as string}>
+                        <TableCell className="font-medium">{(record.profiles as Record<string, unknown>)?.full_name as string}</TableCell>
+                        <TableCell className="whitespace-nowrap">{new Date(record.date as string).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right"><Badge className="bg-green-600 text-[10px]">PRESENT</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </div>
         ) : activeTab === 'library' ? (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold flex items-center gap-2"><Library className="h-5 w-5" /> Library Management</h2>
-              <Button onClick={() => setEditingResource({ title: '', type: 'book', price_points: 0, is_published: true })}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2"><Library className="h-5 w-5" /> Library</h2>
+              <Button size="sm" className="w-full sm:w-auto" onClick={() => setEditingResource({ title: '', type: 'book', price_points: 0, is_published: true })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Resource
               </Button>
             </div>
-            <Card>
-              <Table>
-                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Type</TableHead><TableHead>Price</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {resources.map((res) => (
                     <TableRow key={res.id}>
                       <TableCell className="font-bold">{res.title}</TableCell>
                       <TableCell><Badge variant="secondary">{res.type.replace('_', ' ')}</Badge></TableCell>
                       <TableCell>{res.price_points} pts</TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => setEditingResource(res)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteResource(res.id!)}><Trash2 className="h-4 w-4" /></Button>
+                        <Badge variant={res.is_published ? "default" : "outline"} className={res.is_published ? "bg-emerald-600" : ""}>
+                          {res.is_published ? 'Published' : 'Draft'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1 md:gap-2">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingResource(res)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteResource(res.id!)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </div>
         ) : activeTab === 'challenges' ? (
            <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-xl font-semibold flex items-center gap-2"><Trophy className="h-5 w-5" /> Daily Challenges</h2>
-              <Button onClick={() => setEditingChallenge({ title: '', difficulty: 'easy', points_reward: 50, active_date: new Date().toISOString().split('T')[0] })}>
+              <Button size="sm" className="w-full sm:w-auto" onClick={() => setEditingChallenge({ title: '', difficulty: 'easy', points_reward: 50, active_date: new Date().toISOString().split('T')[0] })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Challenge
               </Button>
             </div>
-            <Card>
-              <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Title</TableHead><TableHead>Difficulty</TableHead><TableHead>Reward</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Title</TableHead><TableHead>Difficulty</TableHead><TableHead>Reward</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  <TableBody>
                   {challenges.map((ch) => (
                     <TableRow key={ch.id}>
                       <TableCell>{ch.active_date}</TableCell>
                       <TableCell className="font-bold">{ch.title}</TableCell>
                       <TableCell><Badge variant={ch.difficulty === 'hard' ? 'destructive' : ch.difficulty === 'medium' ? 'default' : 'secondary'}>{ch.difficulty}</Badge></TableCell>
                       <TableCell>{ch.points_reward} pts</TableCell>
-                      <TableCell>
-                         <Button variant="ghost" size="icon" onClick={() => setEditingChallenge(ch)}><Edit className="h-4 w-4" /></Button>
+                      <TableCell className="text-right">
+                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingChallenge(ch)}><Edit className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </div>
         ) : (
@@ -749,35 +1443,35 @@ export default function AdminDashboard() {
                </div>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 <Card className="bg-blue-500 text-white border-none shadow-xl">
                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                      <CardTitle className="text-[10px] md:text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
                         <Users className="h-4 w-4" /> Active Students
                       </CardTitle>
-                      <div className="text-3xl font-black">{students.length}</div>
+                      <div className="text-2xl md:text-3xl font-black">{students.length}</div>
                    </CardHeader>
-                   <CardContent className="text-xs opacity-90">Total enrolled across all courses.</CardContent>
+                   <CardContent className="text-[10px] md:text-xs opacity-90">Total enrolled across all courses.</CardContent>
                 </Card>
                 <Card className="bg-emerald-500 text-white border-none shadow-xl">
                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                      <CardTitle className="text-[10px] md:text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
                         <Check className="h-4 w-4" /> Avg Completion
                       </CardTitle>
-                      <div className="text-3xl font-black">
+                      <div className="text-2xl md:text-3xl font-black">
                          {students.length > 0 ? Math.round(students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0) / (students.length * curriculum.length || 1) * 100) : 0}%
                       </div>
                    </CardHeader>
-                   <CardContent className="text-xs opacity-90">Average progress per student.</CardContent>
+                   <CardContent className="text-[10px] md:text-xs opacity-90">Average progress per student.</CardContent>
                 </Card>
-                <Card className="bg-purple-600 text-white border-none shadow-xl">
+                <Card className="bg-purple-600 text-white border-none shadow-xl sm:col-span-2 md:col-span-1">
                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                      <CardTitle className="text-[10px] md:text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
                         <TrendingUp className="h-4 w-4" /> Total Submissions
                       </CardTitle>
-                      <div className="text-3xl font-black">{students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0)}</div>
+                      <div className="text-2xl md:text-3xl font-black">{students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0)}</div>
                    </CardHeader>
-                   <CardContent className="text-xs opacity-90">Total assignments & quizzes turned in.</CardContent>
+                   <CardContent className="text-[10px] md:text-xs opacity-90">Total assignments & quizzes turned in.</CardContent>
                 </Card>
              </div>
 
@@ -839,21 +1533,21 @@ export default function AdminDashboard() {
         )}
 
         <Dialog open={!!viewingStudent} onOpenChange={(open) => !open && setViewingStudent(null)}>
-          <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl w-[95vw] md:w-full max-h-[85vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
-               <div className="flex justify-between items-center pr-8">
+               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pr-8">
                   <DialogTitle>Student Profile: {viewingStudent?.full_name}</DialogTitle>
-                  <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                  <div className="flex gap-1 p-1 bg-muted rounded-lg w-full sm:w-auto">
                      <Button
                         variant={studentTab === 'submissions' ? 'secondary' : 'ghost'}
                         size="sm"
-                        className="text-xs font-bold"
+                        className="flex-1 sm:flex-none text-[10px] md:text-xs font-bold"
                         onClick={() => setStudentTab('submissions')}
                      >Submissions</Button>
                      <Button
                         variant={studentTab === 'activity' ? 'secondary' : 'ghost'}
                         size="sm"
-                        className="text-xs font-bold"
+                        className="flex-1 sm:flex-none text-[10px] md:text-xs font-bold"
                         onClick={() => setStudentTab('activity')}
                      >Activity Log</Button>
                   </div>
@@ -865,7 +1559,7 @@ export default function AdminDashboard() {
                  <div className="space-y-4">
                     <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter"><Send className="h-5 w-5" /> Recent Submissions</h3>
                     <div className="grid grid-cols-1 gap-4">
-                       {viewingStudent?.submissions?.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map((sub) => (
+                       {viewingStudent?.submissions?.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map((sub: StudentSubmission) => (
                          <Card key={sub.id} className="overflow-hidden">
                             <CardHeader className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-row justify-between items-center border-b">
                                <div className="flex gap-2 items-center">
@@ -875,7 +1569,9 @@ export default function AdminDashboard() {
                                <div className="flex gap-2">
                                   {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><GithubIcon className="h-3 w-3 mr-2" /> Repo</a></Button>}
                                   <Badge className={cn(
-                                    sub.status === 'reviewed' ? 'bg-green-600' : 'bg-amber-500'
+                                    sub.status === 'reviewed' ? 'bg-green-600' :
+                                    sub.status === 'priority_review' ? 'bg-red-600 animate-pulse' :
+                                    'bg-amber-500'
                                   )}>{sub.status.toUpperCase()}</Badge>
                                </div>
                             </CardHeader>
@@ -916,8 +1612,8 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 pl-8 space-y-8">
-                       {viewingStudent?.student_activity?.sort((a:any, b:any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((act: any) => (
-                         <div key={act.id} className="relative">
+                       {viewingStudent?.student_activity?.sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime()).map((act: Record<string, unknown>) => (
+                         <div key={act.id as string} className="relative">
                             <div className={cn(
                                "absolute -left-[41px] top-0 h-6 w-6 rounded-full border-4 border-background flex items-center justify-center",
                                act.activity_type === 'login' ? "bg-blue-500" :
@@ -930,14 +1626,14 @@ export default function AdminDashboard() {
                             <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border">
                                <div className="flex justify-between items-start mb-2">
                                   <div>
-                                     <span className="text-xs font-black uppercase tracking-widest text-primary">{act.activity_type.replace('_', ' ')}</span>
-                                     <h4 className="font-bold text-sm">{act.page_url || '/'}</h4>
+                                     <span className="text-xs font-black uppercase tracking-widest text-primary">{(act.activity_type as string).replace('_', ' ')}</span>
+                                     <h4 className="font-bold text-sm">{act.page_url as string || '/'}</h4>
                                   </div>
-                                  <span className="text-[10px] font-medium text-muted-foreground">{new Date(act.created_at).toLocaleString()}</span>
+                                  <span className="text-[10px] font-medium text-muted-foreground">{new Date(act.created_at as string).toLocaleString()}</span>
                                </div>
-                               {act.details && Object.keys(act.details).length > 0 && (
+                               {(act.details as Record<string, unknown>) && Object.keys(act.details as Record<string, unknown>).length > 0 && (
                                   <div className="text-[10px] bg-white dark:bg-black p-2 rounded border font-mono opacity-80">
-                                     {JSON.stringify(act.details)}
+                                     {JSON.stringify(act.details as Record<string, unknown>)}
                                   </div>
                                )}
                             </div>
@@ -954,7 +1650,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
-          <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
+          <DialogContent className="max-w-4xl w-[95vw] md:w-full overflow-y-auto max-h-[90vh] p-4 md:p-6">
             <DialogHeader><DialogTitle>{editingItem?.id?.startsWith('new-') ? 'Add' : 'Edit'} Curriculum Item</DialogTitle></DialogHeader>
             <div className="flex flex-col gap-8 py-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -963,14 +1659,24 @@ export default function AdminDashboard() {
                     <Label>Parent Module</Label>
                     <select
                       className="w-full p-2 rounded border bg-background"
-                      value={editingItem?.week || ''}
+                      value={editingItem?.module_id || ''}
                       onChange={(e) => {
-                        const mod = modules.find(m => m.index === parseInt(e.target.value));
-                        setEditingItem(prev => ({ ...prev!, week: parseInt(e.target.value), module_name: mod?.name || '' }))
+                        const mod = modules.find(m => m.id === e.target.value);
+                        setEditingItem(prev => ({
+                           ...prev!,
+                           module_id: e.target.value,
+                           week: mod?.index || 1,
+                           module_name: mod?.name || '',
+                           course_id: mod?.course_id || prev?.course_id,
+                           sub_module_id: undefined, // Clear sub-module when module changes
+                           sub_module_name: undefined
+                        }))
                       }}
                     >
                       <option value="">Select Module</option>
-                      {modules.map(m => <option key={m.id} value={m.index}>M{m.index}: {m.name}</option>)}
+                      {modules.filter(m => m.course_id === editingItem?.course_id).map(m => (
+                        <option key={m.id} value={m.id}>M{m.index}: {m.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -984,7 +1690,11 @@ export default function AdminDashboard() {
                       }}
                     >
                       <option value="">No Sub-Module</option>
-                      {subModules.filter(s => s.module_id === modules.find(m => m.index === editingItem?.week)?.id).map(s => (
+                      {subModules.filter(s => s.module_id === editingItem?.module_id).map((s: SubModule) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                      {/* Fallback to index-based if module_id not matching above (legacy) */}
+                      {subModules.filter(s => s.module_id === modules.find(m => m.index === editingItem?.week && m.course_id === editingItem?.course_id)?.id).map(s => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
@@ -998,7 +1708,7 @@ export default function AdminDashboard() {
 
                 <div className="space-y-2">
                   <Label>Item Type</Label>
-                  <select className="w-full p-2 rounded border bg-background" value={editingItem?.type || 'lecture'} onChange={(e) => setEditingItem(prev => ({ ...prev!, type: e.target.value as any }))}>
+                  <select className="w-full p-2 rounded border bg-background" value={editingItem?.type || 'lecture'} onChange={(e) => setEditingItem(prev => ({ ...prev!, type: e.target.value as CurriculumItem['type'] }))}>
                     <option value="lecture">Lecture</option>
                     <option value="assignment">Assignment</option>
                     <option value="quiz">Quiz</option>
@@ -1054,8 +1764,8 @@ export default function AdminDashboard() {
                           success('Video uploaded successfully!');
                           setEditingItem(prev => ({ ...prev!, video_url: res.url }));
                         }
-                        else toastError('Upload failed: ' + res.error);
-                      } catch (err) { toastError('Upload error'); }
+                        else toastError('Upload failed: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
+                      } catch { toastError('Upload error'); }
                       finally {
                         setIsVideoUploading(false);
                         if (videoInputRef.current) videoInputRef.current.value = '';
@@ -1170,7 +1880,7 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="space-y-3">
-                        {((Array.isArray(editingItem.content) ? editingItem.content : null) || extractHeadings(editingItem.theory_content)).map((entry: any, idx: number) => (
+                        {((Array.isArray(editingItem.content) ? editingItem.content : null) || extractHeadings(editingItem.theory_content)).map((entry: { level: number; text: string; id: string }, idx: number) => (
                           <div key={idx} className="flex gap-2 items-center group">
                             <select
                               className="h-8 text-[10px] font-bold border rounded bg-transparent px-1 outline-none w-14 shrink-0"
@@ -1216,7 +1926,7 @@ export default function AdminDashboard() {
                               className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100"
                               onClick={() => {
                                 const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
-                                const newToc = currentToc.filter((_: any, i: number) => i !== idx);
+                                const newToc = currentToc.filter((_, i: number) => i !== idx);
                                 setEditingItem(prev => ({ ...prev!, content: newToc }));
                               }}
                             >
@@ -1252,7 +1962,19 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-2">
                          <Label>Description</Label>
-                         <Textarea value={editingItem.attached_assignment?.description || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, attached_assignment: { ...prev!.attached_assignment!, description: e.target.value, title: prev!.attached_assignment?.title || '', requirements: prev!.attached_assignment?.requirements || [] } }))} />
+                         <RichTextEditor
+                            key={`assignment-desc-${editingItem.id}`}
+                            content={editingItem.attached_assignment?.description || ''}
+                            onChange={(content) => setEditingItem(prev => ({
+                               ...prev!,
+                               attached_assignment: {
+                                  ...prev!.attached_assignment!,
+                                  description: content,
+                                  title: prev!.attached_assignment?.title || '',
+                                  requirements: prev!.attached_assignment?.requirements || []
+                               }
+                            }))}
+                         />
                       </div>
                       <div className="space-y-2">
                          <Label>Requirements (One per line)</Label>
@@ -1276,7 +1998,9 @@ export default function AdminDashboard() {
                         try {
                           const quiz = JSON.parse(e.target.value);
                           setEditingItem(prev => ({ ...prev!, attached_quiz: quiz }));
-                        } catch (err) {}
+                        } catch {
+                          // Ignore
+                        }
                       }}
                     />
                   </div>
@@ -1292,7 +2016,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingModule} onOpenChange={(open) => !open && setEditingModule(null)}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] md:max-w-lg">
             <DialogHeader><DialogTitle>{editingModule?.id ? 'Edit' : 'Add'} Module</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Module Index</Label><Input type="number" value={editingModule?.index || 1} onChange={(e) => setEditingModule(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
@@ -1304,7 +2028,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingSubModule} onOpenChange={(open) => !open && setEditingSubModule(null)}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] md:max-w-lg">
             <DialogHeader><DialogTitle>{editingSubModule?.id ? 'Edit' : 'Add'} Sub-Module</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Sub-Module Index</Label><Input type="number" value={editingSubModule?.index || 1} onChange={(e) => setEditingSubModule(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
@@ -1315,7 +2039,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingCourse} onOpenChange={(open) => !open && setEditingCourse(null)}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] md:max-w-lg">
             <DialogHeader><DialogTitle>{editingCourse?.id ? 'Edit' : 'Add'} Course</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1323,17 +2047,20 @@ export default function AdminDashboard() {
                 <div className="space-y-2"><Label>Slug</Label><Input value={editingCourse?.slug || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, slug: e.target.value }))} /></div>
               </div>
               <div className="space-y-2">
-                <Label>Parent Course (Optional)</Label>
+                <Label>Course Hierarchy</Label>
                 <select
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded font-medium"
                   value={editingCourse?.parent_id || ''}
                   onChange={(e) => setEditingCourse(prev => ({ ...prev!, parent_id: e.target.value || undefined }))}
                 >
-                  <option value="">No Parent (This is a Parent Course)</option>
-                  {parentCourses.filter(c => c.id !== editingCourse?.id).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                  <option value="">Standalone / Parent Course Container</option>
+                  {courses.filter(c => c.id !== editingCourse?.id && !c.parent_id).map(c => (
+                    <option key={c.id} value={c.id}>Sub-Course of: {c.name}</option>
                   ))}
                 </select>
+                <p className="text-[10px] text-muted-foreground mt-1 italic">
+                  Note: A Parent Course container should not have modules/lectures directly. It only groups sub-courses.
+                </p>
               </div>
               <div className="space-y-2"><Label>Index</Label><Input type="number" value={editingCourse?.index || 1} onChange={(e) => setEditingCourse(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingCourse?.description || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, description: e.target.value }))} /></div>
@@ -1344,13 +2071,13 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingResource} onOpenChange={(open) => !open && setEditingResource(null)}>
-          <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+          <DialogContent className="max-w-3xl w-[95vw] md:w-full overflow-y-auto max-h-[90vh]">
             <DialogHeader><DialogTitle>{editingResource?.id ? 'Edit' : 'Add'} Library Resource</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Type</Label>
-                  <select className="w-full p-2 border rounded" value={editingResource?.type} onChange={(e) => setEditingResource(prev => ({ ...prev!, type: e.target.value as any }))}>
+                  <select className="w-full p-2 border rounded" value={editingResource?.type} onChange={(e) => setEditingResource(prev => ({ ...prev!, type: e.target.value as Resource['type'] }))}>
                     <option value="book">Book</option>
                     <option value="cheat_sheet">Cheat Sheet</option>
                     <option value="roadmap">Roadmap</option>
@@ -1362,6 +2089,65 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2"><Label>Title</Label><Input value={editingResource?.title} onChange={(e) => setEditingResource(prev => ({ ...prev!, title: e.target.value }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingResource?.description} onChange={(e) => setEditingResource(prev => ({ ...prev!, description: e.target.value }))} /></div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_published"
+                  checked={editingResource?.is_published || false}
+                  onChange={(e) => setEditingResource(prev => ({ ...prev!, is_published: e.target.checked }))}
+                />
+                <Label htmlFor="is_published">Published (Visible to Students)</Label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Thumbnail Image</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Image URL..."
+                      className="flex-1"
+                      value={editingResource?.thumbnail_url || ''}
+                      onChange={(e) => setEditingResource(prev => ({ ...prev!, thumbnail_url: e.target.value }))}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={isThumbnailUploading}
+                      onClick={() => thumbnailFileRef.current?.click()}
+                    >
+                      <Plus className={cn("h-4 w-4", isThumbnailUploading && "animate-pulse")} />
+                    </Button>
+                  </div>
+                  <input
+                    type="file"
+                    ref={thumbnailFileRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsThumbnailUploading(true);
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      try {
+                        const res = await uploadImageAction(fd);
+                        if (res.success) {
+                          success('Thumbnail uploaded!');
+                          setEditingResource(prev => ({ ...prev!, thumbnail_url: res.url }));
+                        } else toastError('Upload failed: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
+                      } catch { toastError('Upload error'); }
+                      finally {
+                        setIsThumbnailUploading(false);
+                        if (thumbnailFileRef.current) thumbnailFileRef.current.value = '';
+                      }
+                    }}
+                  />
+                </div>
+                {editingResource?.thumbnail_url && (
+                  <div className="h-20 w-20 rounded-lg overflow-hidden border">
+                    <img src={editingResource.thumbnail_url} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label>Resource URL or Upload</Label>
                 <div className="flex gap-2">
@@ -1397,8 +2183,8 @@ export default function AdminDashboard() {
                         success('Resource uploaded successfully!');
                         setEditingResource(prev => ({ ...prev!, external_url: res.url }));
                       }
-                      else toastError('Upload failed: ' + res.error);
-                    } catch (err) { toastError('Upload error'); }
+                      else toastError('Upload failed: ' + (typeof res.error === 'string' ? res.error : JSON.stringify(res.error)));
+                    } catch { toastError('Upload error'); }
                     finally {
                       setIsResourceUploading(false);
                       if (resourceFileRef.current) resourceFileRef.current.value = '';
@@ -1407,23 +2193,19 @@ export default function AdminDashboard() {
                 />
                 <p className="text-[10px] text-muted-foreground mt-1">Upload PDF, Image, Word, etc.</p>
               </div>
-              <div className="space-y-2">
-                <Label>Content (Markdown/HTML)</Label>
-                <RichTextEditor content={editingResource?.content || ''} onChange={(c) => setEditingResource(prev => ({ ...prev!, content: c }))} />
-              </div>
             </div>
             <DialogFooter><Button onClick={() => handleSaveResource(editingResource!)}>Save Resource</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog open={!!editingChallenge} onOpenChange={(open) => !open && setEditingChallenge(null)}>
-          <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
+          <DialogContent className="max-w-4xl w-[95vw] md:w-full overflow-y-auto max-h-[90vh]">
             <DialogHeader><DialogTitle>{editingChallenge?.id ? 'Edit' : 'Add'} Daily Challenge</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>Active Date</Label><Input type="date" value={editingChallenge?.active_date} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, active_date: e.target.value }))} /></div>
                 <div className="space-y-2"><Label>Difficulty</Label>
-                  <select className="w-full p-2 border rounded" value={editingChallenge?.difficulty} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, difficulty: e.target.value as any }))}>
+                  <select className="w-full p-2 border rounded" value={editingChallenge?.difficulty} onChange={(e) => setEditingChallenge(prev => ({ ...prev!, difficulty: e.target.value as DailyChallenge['difficulty'] }))}>
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
                     <option value="hard">Hard</option>
@@ -1440,9 +2222,9 @@ export default function AdminDashboard() {
                   value={JSON.stringify(editingChallenge?.initial_code || {}, null, 2)}
                   onChange={(e) => {
                     try {
-                      setEditingChallenge(prev => ({ ...prev!, initial_code: JSON.parse(e.target.value) }));
-                    } catch(err) {
-                      console.error("Invalid JSON for Initial Code:", err);
+                      setEditingChallenge(prev => ({ ...prev!, initial_code: JSON.parse(e.target.value) as Record<string, unknown> }));
+                    } catch {
+                      // Ignore
                     }
                   }}
                 />
@@ -1454,9 +2236,9 @@ export default function AdminDashboard() {
                   value={JSON.stringify(editingChallenge?.test_cases || [], null, 2)}
                   onChange={(e) => {
                     try {
-                      setEditingChallenge(prev => ({ ...prev!, test_cases: JSON.parse(e.target.value) }));
-                    } catch(err) {
-                      console.error("Invalid JSON for Test Cases:", err);
+                      setEditingChallenge(prev => ({ ...prev!, test_cases: JSON.parse(e.target.value) as Record<string, unknown>[] }));
+                    } catch {
+                      // Ignore
                     }
                   }}
                 />

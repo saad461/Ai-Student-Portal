@@ -4,20 +4,17 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, FileText, Layout, Github, Zap, Milestone, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { CurriculumItem } from '@/lib/curriculum';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 
 export function GlobalSearch() {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState<any[]>([]);
+  const [results, setResults] = React.useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = React.useState(false);
   const router = useRouter();
 
@@ -31,19 +28,6 @@ export function GlobalSearch() {
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
   }, []);
-
-  const staticLinks = [
-    { title: 'Dashboard', href: '/dashboard', icon: Layout, category: 'Navigation' },
-    { title: 'Learning Path', href: '/roadmap', icon: Milestone, category: 'Navigation' },
-    { title: 'Attendance', href: '/attendance', icon: Clock, category: 'Navigation' },
-    { title: 'GitHub Mastery', href: '/github-mastery', icon: Github, category: 'Navigation' },
-    { title: 'Deep Work Timer', href: '/timer', icon: Zap, category: 'Navigation' },
-    { title: 'Phase 1: Foundations', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 2: Web Architecture', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 3: Data Intelligence', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 4: Cognitive AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-    { title: 'Phase 5: Agentic AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
-  ];
 
   const search = React.useCallback(async (q: string) => {
     if (!q) {
@@ -65,11 +49,24 @@ export function GlobalSearch() {
        category: 'Curriculum'
     }));
 
+    const staticLinks = [
+      { title: 'Dashboard', href: '/dashboard', icon: Layout, category: 'Navigation' },
+      { title: 'Learning Path', href: '/roadmap', icon: Milestone, category: 'Navigation' },
+      { title: 'Attendance', href: '/attendance', icon: Clock, category: 'Navigation' },
+      { title: 'GitHub Mastery', href: '/github-mastery', icon: Github, category: 'Navigation' },
+      { title: 'Deep Work Timer', href: '/timer', icon: Zap, category: 'Navigation' },
+      { title: 'Phase 1: Foundations', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+      { title: 'Phase 2: Web Architecture', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+      { title: 'Phase 3: Data Intelligence', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+      { title: 'Phase 4: Cognitive AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+      { title: 'Phase 5: Agentic AI', href: '/roadmap', icon: Milestone, category: 'Roadmap' },
+    ];
+
     const filteredStatic = staticLinks.filter(l =>
         l.title.toLowerCase().includes(q.toLowerCase())
     );
 
-    setResults([...filteredStatic, ...formattedResults]);
+    setResults([...filteredStatic, ...formattedResults] as Record<string, unknown>[]);
     setLoading(false);
   }, []);
 
@@ -116,7 +113,7 @@ export function GlobalSearch() {
 
             {!loading && query && results.length === 0 && (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                No results found for "{query}".
+                No results found for &quot;{query}&quot;.
               </div>
             )}
 
@@ -124,7 +121,13 @@ export function GlobalSearch() {
               <div className="p-4">
                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2">Suggestions</p>
                  <div className="space-y-1">
-                    {staticLinks.map(link => (
+                    {[
+                      { title: 'Dashboard', href: '/dashboard', icon: Layout, category: 'Navigation' },
+                      { title: 'Learning Path', href: '/roadmap', icon: Milestone, category: 'Navigation' },
+                      { title: 'Attendance', href: '/attendance', icon: Clock, category: 'Navigation' },
+                      { title: 'GitHub Mastery', href: '/github-mastery', icon: Github, category: 'Navigation' },
+                      { title: 'Deep Work Timer', href: '/timer', icon: Zap, category: 'Navigation' },
+                    ].map(link => (
                       <button
                         key={link.href}
                         onClick={() => onSelect(link.href)}
@@ -150,12 +153,12 @@ export function GlobalSearch() {
                             {catResults.map((res, i) => (
                               <button
                                 key={i}
-                                onClick={() => onSelect(res.href)}
+                                onClick={() => onSelect(res.href as string)}
                                 className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-primary/10 transition-colors text-left group"
                               >
-                                <res.icon className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                                {React.createElement(res.icon as React.ComponentType<{ className?: string }>, { className: "h-4 w-4 text-muted-foreground group-hover:text-primary" })}
                                 <div className="flex-1">
-                                  <div className="font-medium">{res.title}</div>
+                                  <div className="font-medium">{res.title as string}</div>
                                 </div>
                               </button>
                             ))}

@@ -2,32 +2,32 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Send, X, Bot, Sparkles, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
+import { useChat } from '@/components/chat-context';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-interface AIAssistantProps {
-  lectureId: string;
-  lectureTitle: string;
-  lectureContent: string;
-}
+export function AIAssistant() {
+  const { isAIOpen: isOpen, toggleAI: setIsOpen, lectureData } = useChat();
 
-export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssistantProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const lectureId = lectureData?.id || 'global';
+  const lectureTitle = lectureData?.title || 'Course Content';
+  const lectureContent = lectureData?.content || '';
+
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<'cloud' | 'native'>('cloud');
-  const [timeSinceLastActivity, setTimeSinceLastActivity] = useState(0);
+  const [, setTimeSinceLastActivity] = useState(0);
   const [hasNudged, setHasNudged] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +37,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
     if (saved) {
       try {
         setMessages(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         setMessages([{ role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` }]);
       }
     } else {
@@ -87,9 +87,11 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
 
   useEffect(() => {
     const checkNativeAI = async () => {
-      if (typeof window !== 'undefined' && (window as any).ai?.assistant) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const win = window as any;
+      if (typeof window !== 'undefined' && win.ai?.assistant) {
         try {
-          const capabilities = await (window as any).ai.assistant.capabilities();
+          const capabilities = await win.ai.assistant.capabilities();
           if (capabilities.available === 'readily') {
             setAiProvider('native');
           }
@@ -113,7 +115,9 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
     try {
       if (aiProvider === 'native') {
         try {
-          const session = await (window as any).ai.assistant.create({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const win = window as any;
+          const session = await win.ai.assistant.create({
             systemPrompt: `You are an expert software engineering tutor. Context: ${lectureTitle}. Content: ${lectureContent}`
           });
           const response = await session.prompt(userMessage);
@@ -127,7 +131,7 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
       } else {
         await callCloudAI(userMessage);
       }
-    } catch (err) {
+    } catch {
       setError("AI is currently unavailable. Please try again in a moment.");
     } finally {
       setLoading(false);
@@ -166,21 +170,13 @@ export function AIAssistant({ lectureId, lectureTitle, lectureContent }: AIAssis
 
   return (
     <>
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 bg-primary hover:scale-110 transition-all p-0 group"
-      >
-        <Bot className="h-6 w-6" />
-        <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
-      </Button>
-
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 w-[400px] h-[600px] bg-background border rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden"
+            className="fixed bottom-24 right-6 w-[calc(100vw-3rem)] md:w-[400px] h-[600px] bg-background border rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="p-4 border-b bg-primary text-primary-foreground flex justify-between items-center">

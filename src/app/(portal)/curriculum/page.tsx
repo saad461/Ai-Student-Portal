@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
 import { CurriculumItem, isItemUnlocked, Module, SubModule, Course } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,101 +56,100 @@ function CurriculumContent() {
   };
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-    if (profile) {
-      setAgreedTC(profile.agreed_tc);
-    }
+      if (profile) {
+        setAgreedTC(profile.agreed_tc);
+      }
 
-    const { data: subs } = await supabase
-      .from('submissions')
-      .select('*')
-      .eq('student_id', user.id);
+      const { data: subs } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('student_id', user.id);
 
-    setSubmissions((subs as unknown as Submission[]) || []);
+      setSubmissions((subs as unknown as Submission[]) || []);
 
-    // Fetch active course ID if not in URL
-    let targetCourseId = courseIdParam;
-    if (!targetCourseId) {
-      if (profile?.current_course_id) {
-        targetCourseId = profile.current_course_id;
-      } else {
-        // Fallback to first unlocked course
-        const { data: userCourses } = await supabase
-          .from('user_courses')
-          .select('course_id')
-          .eq('user_id', user.id)
-          .eq('status', 'unlocked')
-          .order('unlocked_at', { ascending: true })
-          .limit(1);
+      // Fetch active course ID if not in URL
+      let targetCourseId = courseIdParam;
+      if (!targetCourseId) {
+        if (profile?.current_course_id) {
+          targetCourseId = profile.current_course_id;
+        } else {
+          // Fallback to first unlocked course
+          const { data: userCourses } = await supabase
+            .from('user_courses')
+            .select('course_id')
+            .eq('user_id', user.id)
+            .eq('status', 'unlocked')
+            .order('unlocked_at', { ascending: true })
+            .limit(1);
 
-        if (userCourses && userCourses.length > 0) {
-          targetCourseId = userCourses[0].course_id;
+          if (userCourses && userCourses.length > 0) {
+            targetCourseId = userCourses[0].course_id;
+          }
         }
       }
+
+      if (targetCourseId) {
+         const { data: courseData } = await supabase
+           .from('courses')
+           .select('*')
+           .eq('id', targetCourseId)
+           .single();
+         setCurrentCourse(courseData as Course);
+
+         // Update current course in profile if changed
+         if (targetCourseId !== profile?.current_course_id) {
+           await supabase.from('profiles').update({ current_course_id: targetCourseId }).eq('id', user.id);
+         }
+      }
+
+      const { data: modulesData } = await supabase
+        .from('modules')
+        .select('*')
+        .eq('course_id', targetCourseId)
+        .order('index', { ascending: true });
+
+      const fetchedModules = modulesData || [];
+      setModules(fetchedModules);
+
+      const { data: curriculumData } = await supabase
+        .from('curriculum')
+        .select('*')
+        .or(`course_id.eq.${targetCourseId},course_id.is.null`)
+        .order('week', { ascending: true });
+
+      setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
+
+      const { data: subModulesData } = await supabase
+        .from('sub_modules')
+        .select('*')
+        .order('index', { ascending: true });
+      setSubModules(subModulesData || []);
+
+      const { data: focusData } = await supabase
+        .from('focus_sessions')
+        .select('duration_seconds')
+        .eq('student_id', user.id);
+
+      if (focusData) {
+        const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+        setTotalFocusMinutes(Math.round(totalSeconds / 60));
+      }
+    } catch (err) {
+      console.error('Error fetching curriculum:', err);
+    } finally {
+      setLoading(false);
     }
-
-    if (targetCourseId) {
-       const { data: courseData } = await supabase
-         .from('courses')
-         .select('*')
-         .eq('id', targetCourseId)
-         .single();
-       setCurrentCourse(courseData as Course);
-
-       // Update current course in profile if changed
-       if (targetCourseId !== profile?.current_course_id) {
-         await supabase.from('profiles').update({ current_course_id: targetCourseId }).eq('id', user.id);
-       }
-    }
-
-    const { data: modulesData } = await supabase
-      .from('modules')
-      .select('*')
-      .eq('course_id', targetCourseId)
-      .order('index', { ascending: true });
-
-    const fetchedModules = modulesData || [];
-    setModules(fetchedModules);
-
-    const moduleIndices = fetchedModules.map(m => m.index);
-
-    const { data: curriculumData } = await supabase
-      .from('curriculum')
-      .select('*')
-      .in('week', moduleIndices)
-      .order('week', { ascending: true });
-
-    setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
-
-    const { data: subModulesData } = await supabase
-      .from('sub_modules')
-      .select('*')
-      .order('index', { ascending: true });
-    setSubModules(subModulesData || []);
-
-    const { data: focusData } = await supabase
-      .from('focus_sessions')
-      .select('duration_seconds')
-      .eq('student_id', user.id);
-
-    if (focusData) {
-      const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
-      setTotalFocusMinutes(Math.round(totalSeconds / 60));
-    }
-
-    setLoading(false);
-  }, []);
+  }, [courseIdParam]);
 
   useEffect(() => {
     fetchData();
@@ -191,20 +188,13 @@ function CurriculumContent() {
   const displayModules = modules.length > 0 ? modules : Array.from({ length: 24 }, (_, i) => ({ id: (i + 1).toString(), index: i + 1, name: `Module ${i + 1}` }));
 
   if (loading) return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
-        <CurriculumSkeleton />
-      </main>
-    </div>
+    <main className="flex-1 p-4 lg:p-8">
+      <CurriculumSkeleton />
+    </main>
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30">
-      <Sidebar />
-      <PortalNavbar />
-      <main className="flex-1 p-4 lg:p-8">
+    <main className="flex-1 p-4 lg:p-8">
         <div className="max-w-5xl mx-auto space-y-8">
           <header className="flex justify-between items-end">
             <div>
@@ -289,7 +279,7 @@ function CurriculumContent() {
             <TabsContent value="all" className="space-y-4">
               {displayModules.map((m) => {
                 const moduleSubModules = subModules.filter(s => s.module_id === m.id);
-                const moduleLectures = curriculum.filter(item => item.week === m.index);
+              const moduleLectures = curriculum.filter(item => item.module_id === m.id || (!item.module_id && item.week === m.index));
                 const isExpanded = expandedModules.includes(m.id);
 
                 return (
@@ -531,9 +521,8 @@ function CurriculumContent() {
             </TabsContent>
           </Tabs>
         </div>
-      </main>
       <TermsModal isOpen={showTerms} onAgree={handleAgreeTC} />
-    </div>
+    </main>
   );
 }
 

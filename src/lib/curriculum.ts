@@ -40,7 +40,7 @@ export interface CurriculumItem {
   requirements?: string[];
   required_focus_hours?: number;
   required_read_minutes?: number;
-  content?: any;
+  content?: { level: number; text: string; id: string }[];
   theory_content?: string;
   video_url?: string;
   enable_compiler?: boolean;
@@ -61,6 +61,8 @@ export interface CurriculumItem {
   };
   attached_quiz?: QuizQuestion[];
   is_boss_project?: boolean;
+  course_id?: string;
+  module_id?: string;
   module_index?: number;
   module_name?: string;
   lecture_index?: number;

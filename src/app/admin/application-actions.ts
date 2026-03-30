@@ -79,9 +79,10 @@ export async function approveApplication(applicationId: string) {
       }
     };
 
-  } catch (err: any) {
-    console.error('Approve error:', err);
-    return { success: false, error: err.message };
+  } catch (err) {
+    const errorObj = err as Error;
+    console.error('Approve error:', errorObj);
+    return { success: false, error: errorObj.message };
   }
 }
 

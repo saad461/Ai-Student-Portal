@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Briefcase,
   Target,
@@ -9,20 +8,17 @@ import {
   TrendingUp,
   MapPin,
   Building2,
-  ExternalLink,
   ChevronRight,
   Zap,
-  CheckCircle2,
   ShieldCheck,
   Search,
   Filter
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast-provider';
 import { cn } from '@/lib/utils';
 
@@ -39,54 +35,59 @@ interface Job {
 }
 
 export default function CareerPage() {
-  const { success, error: toastError } = useToast();
+  const { error: toastError } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      try {
+        const res = await fetch('/api/jobs');
+        if (!res.ok) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+        const jobsData = await res.json();
+        setJobs(jobsData);
+      } catch (error) {
+        console.error("Failed to fetch jobs", error);
+        toastError("AI Job Market is currently offline. Showing cached results.");
+      }
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      setProfile(profileData as Record<string, unknown>);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [toastError]);
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    try {
-      const res = await fetch('/api/jobs');
-      if (!res.ok) {
-        throw new Error(`API Error: ${res.status}`);
-      }
-      const jobsData = await res.json();
-      setJobs(jobsData);
-    } catch (err) {
-      console.error("Failed to fetch jobs", err);
-      toastError("AI Job Market is currently offline. Showing cached results.");
-    }
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    setProfile(profileData);
-    setLoading(false);
-  };
-
-  const currentLevel = Math.floor((profile?.total_points || 0) / 100) + 1;
+  const currentLevel = Math.floor(((profile?.total_points as number) || 0) / 100) + 1;
 
   const filteredJobs = jobs.filter(j =>
     j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     j.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) return <div className="p-8 text-center">Opening the Career Portal...</div>;
+  if (loading) return <main className="flex-1 p-8 text-center">Opening the Career Portal...</main>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-1000">
+    <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-1000 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
@@ -176,7 +177,8 @@ export default function CareerPage() {
                           if (!res.ok) throw new Error("Search failed");
                           const data = await res.json();
                           setJobs(data);
-                        } catch (err) {
+                        } catch (error) {
+                          console.error("Search error:", error);
                           toastError("AI Search unavailable. Please try again later.");
                         } finally {
                           setLoading(false);
@@ -241,6 +243,6 @@ export default function CareerPage() {
            </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

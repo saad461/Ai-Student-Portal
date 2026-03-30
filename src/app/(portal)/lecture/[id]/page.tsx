@@ -2,21 +2,16 @@
 
 import { useState, useEffect, useCallback, use, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/sidebar';
-import { PortalNavbar } from '@/components/portal-navbar';
-import { CurriculumItem, QuizQuestion, getEstimatedReadTime, extractHeadings } from '@/lib/curriculum';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
+import { CurriculumItem, getEstimatedReadTime, extractHeadings } from '@/lib/curriculum';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
-  BookOpen,
   Video,
   CheckCircle2,
   Github,
   Send,
-  AlertCircle,
   FileText,
   HelpCircle,
   Lock,
@@ -37,7 +32,7 @@ import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CodeCompiler } from '@/components/code-compiler';
-import { AIAssistant } from '@/components/ai-assistant';
+import { useChat } from '@/components/chat-context';
 import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
 import { logActivityAction } from '@/app/admin/actions';
@@ -59,6 +54,7 @@ interface Submission {
 
 export default function LecturePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
+  const { setLectureData } = useChat();
   const [lecture, setLecture] = useState<CurriculumItem | null>(null);
   const [allCurriculum, setAllCurriculum] = useState<CurriculumItem[]>([]);
   const [submission, setSubmission] = useState<Submission | null>(null);
@@ -67,7 +63,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [githubUrl, setGithubUrl] = useState('');
 
   const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz' | 'explain'>('theory');
-  const [userPerks, setUserPerks] = useState<any[]>([]);
+  const [userPerks, setUserPerks] = useState<Record<string, unknown>[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [readTimeSeconds, setReadTimeSeconds] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -95,45 +91,49 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   }, [activeTab, isTheoryDone, effectiveReadMinutes]);
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const { data: allCurr } = await supabase.from('curriculum').select('*');
-    const sorted = (allCurr || []).sort((a, b) => {
-      if (a.week !== b.week) return a.week - b.week;
-      return (a.lecture_index || 0) - (b.lecture_index || 0);
-    });
-    setAllCurriculum(sorted as CurriculumItem[]);
+      const { data: allCurr } = await supabase.from('curriculum').select('*');
+      const sorted = (allCurr || []).sort((a, b) => {
+        if (a.week !== b.week) return a.week - b.week;
+        return (a.lecture_index || 0) - (b.lecture_index || 0);
+      });
+      setAllCurriculum(sorted as CurriculumItem[]);
 
-    const { data: lectureData } = await supabase
-      .from('curriculum')
-      .select('*')
-      .eq('id', resolvedParams.id)
-      .single();
+      const { data: lectureData } = await supabase
+        .from('curriculum')
+        .select('*')
+        .eq('id', resolvedParams.id)
+        .single();
 
-    if (lectureData) {
-      setLecture(lectureData as unknown as CurriculumItem);
-      if (!lectureData.theory_content && lectureData.video_url) {
-        setActiveTab('video');
+      if (lectureData) {
+        setLecture(lectureData as unknown as CurriculumItem);
+        if (!lectureData.theory_content && lectureData.video_url) {
+          setActiveTab('video');
+        }
       }
+
+      const { data: subData } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('student_id', user.id)
+        .eq('curriculum_id', resolvedParams.id)
+        .single();
+
+      if (subData) {
+        setSubmission(subData as unknown as Submission);
+        setGithubUrl(subData.github_url || '');
+      }
+
+      const { data: perks } = await supabase.from('user_perks').select('*').eq('user_id', user.id);
+      setUserPerks(perks || []);
+    } catch (err) {
+      console.error('Error fetching lecture data:', err);
+    } finally {
+      setLoading(false);
     }
-
-    const { data: subData } = await supabase
-      .from('submissions')
-      .select('*')
-      .eq('student_id', user.id)
-      .eq('curriculum_id', resolvedParams.id)
-      .single();
-
-    if (subData) {
-      setSubmission(subData as unknown as Submission);
-      setGithubUrl(subData.github_url || '');
-    }
-
-    const { data: perks } = await supabase.from('user_perks').select('*').eq('user_id', user.id);
-    setUserPerks(perks || []);
-
-    setLoading(false);
   }, [resolvedParams.id]);
 
   useEffect(() => {
@@ -142,6 +142,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
        logActivityAction('lecture_view', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
     }
   }, [fetchData, resolvedParams.id]);
+
+  useEffect(() => {
+    if (lecture) {
+      setLectureData({
+        id: lecture.id,
+        title: lecture.title,
+        content: lecture.theory_content || ''
+      });
+    }
+    return () => setLectureData(null);
+  }, [lecture, setLectureData]);
 
   const headings = useMemo(() => {
     if (Array.isArray(lecture?.content) && lecture.content.length > 0) {
@@ -185,11 +196,11 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     return () => window.removeEventListener('scroll', handleScroll);
   }, [activeTab, headings]);
 
-  const updateCompletion = async (newData: any) => {
+  const updateCompletion = async (newData: Record<string, unknown>) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const currentData = submission?.completion_data || {};
+    const currentData = (submission?.completion_data || {}) as Record<string, unknown>;
     const updatedData = { ...currentData, ...newData };
 
     // Check if everything is done
@@ -258,28 +269,37 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     return isFullyDone; // Current must be done to unlock next
   }, [nextItem, isFullyDone]);
 
-  if (loading) return <div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading Lecture Content...</div>;
-  if (!lecture) return <div className="p-8 text-center text-red-500">Lecture not found.</div>;
+  if (loading) return (
+    <main className="flex-1 p-4 md:p-12 lg:p-16 flex items-center justify-center animate-pulse text-muted-foreground">
+      Loading Lecture Content...
+    </main>
+  );
+  if (!lecture) return (
+    <main className="flex-1 p-8 text-center text-red-500">
+      Lecture not found.
+    </main>
+  );
 
   const MarkdownComponents = {
-    h1: ({ children }: any) => {
+    h1: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h1 id={id} className="text-4xl font-black mt-12 mb-6 text-slate-900 dark:text-white pb-2 border-b-2 border-slate-100 dark:border-slate-800">{children}</h1>;
     },
-    h2: ({ children }: any) => {
+    h2: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-800 dark:text-slate-100 pb-1 border-b border-slate-100 dark:border-slate-800">{children}</h2>;
     },
-    h3: ({ children }: any) => {
+    h3: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h3 id={id} className="text-2xl font-bold mt-8 mb-4 text-slate-800 dark:text-slate-200">{children}</h3>;
     },
-    p: ({ children }: any) => <p className="text-lg leading-relaxed mb-6 text-slate-600 dark:text-slate-400 font-medium">{children}</p>,
-    ul: ({ children }: any) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
-    ol: ({ children }: any) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-600 dark:text-slate-400">{children}</ol>,
-    li: ({ children, ordered, node }: any) => {
+    p: ({ children }: { children?: React.ReactNode }) => <p className="text-lg leading-relaxed mb-6 text-slate-600 dark:text-slate-400 font-medium">{children}</p>,
+    ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
+    ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-600 dark:text-slate-400">{children}</ol>,
+    li: ({ children, ordered, node }: { children?: React.ReactNode; ordered?: boolean; node?: Record<string, unknown> }) => {
       // Check if it's a task list item
-      const isTask = node?.children?.some((c: any) => c.tagName === 'input');
+      const childrenNodes = (node?.children as Record<string, unknown>[]) || [];
+      const isTask = childrenNodes.some((c) => c.tagName === 'input');
 
       if (isTask) {
         return <li className="text-lg flex items-start gap-3 mb-2">{children}</li>;
@@ -292,9 +312,9 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         </li>
       );
     },
-    strong: ({ children }: any) => <strong className="font-black text-slate-900 dark:text-white">{children}</strong>,
-    em: ({ children }: any) => <em className="italic text-primary/80 font-medium">{children}</em>,
-    a: ({ href, children }: any) => (
+    strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-black text-slate-900 dark:text-white">{children}</strong>,
+    em: ({ children }: { children?: React.ReactNode }) => <em className="italic text-primary/80 font-medium">{children}</em>,
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
       <a
         href={href}
         target="_blank"
@@ -304,7 +324,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         {children}
       </a>
     ),
-    code: ({ inline, children }: any) => (
+    code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => (
       inline
         ? <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">{children}</code>
         : <div className="relative my-8 group">
@@ -314,25 +334,25 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             </pre>
           </div>
     ),
-    blockquote: ({ children }: any) => (
+    blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className="border-l-8 border-primary bg-primary/5 p-6 rounded-r-2xl italic my-8 text-xl text-slate-700 dark:text-slate-300 font-medium shadow-inner">
         {children}
       </blockquote>
     ),
-    img: ({ src, alt }: any) => (
+    img: ({ src, alt }: { src?: string; alt?: string }) => (
       <div className="my-10 text-center">
         <img src={src} alt={alt} className="rounded-3xl shadow-2xl mx-auto border-4 border-white dark:border-slate-800 max-w-full h-auto" />
         {alt && <p className="mt-4 text-sm text-muted-foreground font-bold italic">Above: {alt}</p>}
       </div>
     ),
-    table: ({ children }: any) => (
+    table: ({ children }: { children?: React.ReactNode }) => (
       <div className="my-8 overflow-x-auto border rounded-xl shadow-sm">
         <table className="w-full text-left border-collapse">{children}</table>
       </div>
     ),
-    thead: ({ children }: any) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
-    th: ({ children }: any) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
-    td: ({ children }: any) => <td className="p-4 border-b text-slate-600 dark:text-slate-400 text-sm md:text-base">{children}</td>,
+    thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
+    th: ({ children }: { children?: React.ReactNode }) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
+    td: ({ children }: { children?: React.ReactNode }) => <td className="p-4 border-b text-slate-600 dark:text-slate-400 text-sm md:text-base">{children}</td>,
   };
 
   const isDirectVideo = (url: string) => {
@@ -353,7 +373,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950">
+    <main className="flex-1 p-4 md:p-12 lg:p-16 w-full overflow-x-hidden">
       <div className="fixed top-0 left-0 right-0 h-1 bg-primary/20 z-[60] lg:hidden">
         <motion.div
           className="h-full bg-primary"
@@ -361,9 +381,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
           animate={{ width: `${scrollProgress}%` }}
         />
       </div>
-      <PortalNavbar />
-      <main className="flex-1 p-4 md:p-12 lg:p-16">
-        <div className="max-w-6xl mx-auto space-y-8 pb-20">
+      <div className="max-w-6xl mx-auto space-y-8 pb-20">
 
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -577,7 +595,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypeRaw]}
-                            components={MarkdownComponents as any}
+                            components={MarkdownComponents as Record<string, unknown>}
                           >
                             {lecture.theory_content}
                           </ReactMarkdown>
@@ -882,13 +900,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             </div>
           )}
         </div>
-      </main>
 
-      <AIAssistant
-        lectureId={lecture.id}
-        lectureTitle={lecture.title}
-        lectureContent={lecture.theory_content || ''}
-      />
-    </div>
+    </main>
   );
 }

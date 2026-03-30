@@ -1,28 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart,
   Zap,
   Book,
-  FileText,
-  Map,
-  Shield,
-  Clock,
   Sparkles,
-  Trophy,
   ArrowRight,
   CheckCircle2,
-  Lock,
-  ChevronRight,
-  LayoutGrid,
-  Tags,
   Search
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -49,7 +39,7 @@ interface Course {
 
 export default function ShopPage() {
   const { success, error: toastError } = useToast();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [myResources, setMyResources] = useState<string[]>([]);
@@ -63,27 +53,33 @@ export default function ShopPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const [profileData, resData, myResData, coursesData, myCoursesData] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user.id).single(),
-      supabase.from('resources').select('*').eq('is_published', true),
-      supabase.from('user_resources').select('resource_id').eq('user_id', user.id),
-      supabase.from('courses').select('*').order('index', { ascending: true }),
-      supabase.from('user_courses').select('course_id').eq('user_id', user.id)
-    ]);
+      const [profileData, resData, myResData, coursesData, myCoursesData] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('resources').select('*').eq('is_published', true),
+        supabase.from('user_resources').select('resource_id').eq('user_id', user.id),
+        supabase.from('courses').select('*').order('index', { ascending: true }),
+        supabase.from('user_courses').select('course_id').eq('user_id', user.id)
+      ]);
 
-    setProfile(profileData.data);
-    setResources(resData.data || []);
-    setMyResources(myResData.data?.map(r => r.resource_id) || []);
-    setCourses(coursesData.data || []);
-    setMyCourses(myCoursesData.data?.map(c => c.course_id) || []);
-    setLoading(false);
+      setProfile(profileData.data as Record<string, unknown>);
+      setResources(resData.data || []);
+      setMyResources(myResData.data?.map(r => r.resource_id) || []);
+      setCourses(coursesData.data || []);
+      setMyCourses(myCoursesData.data?.map(c => c.course_id) || []);
+    } catch (err) {
+      console.error('Error fetching shop data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePurchase = async (id: string, type: 'resource' | 'course' | 'perk', price: number, name: string) => {
-    const currentSparks = Math.floor((profile?.total_points || 0) / 10);
+    const totalPoints = (profile?.total_points as number) || 0;
+    const currentSparks = Math.floor(totalPoints / 10);
     if (currentSparks < price) {
       toastError(`Insufficient Sparks! You need ${price - currentSparks} more Sparks.`);
       return;
@@ -104,18 +100,18 @@ export default function ShopPage() {
       } else {
         toastError(res.error || 'Transaction failed.');
       }
-    } catch (err) {
+    } catch {
       toastError('Transaction failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && !profile) return <div className="p-12 text-center animate-pulse font-black text-2xl uppercase tracking-widest">Entering the Vault...</div>;
+  if (loading && !profile) return <main className="flex-1 p-12 text-center animate-pulse font-black text-2xl uppercase tracking-widest">Entering the Vault...</main>;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-slate-900 text-white p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+    <main className="flex-1 p-4 lg:p-8 w-full overflow-x-hidden space-y-8 md:space-y-12">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-slate-900 text-white p-6 md:p-12 rounded-3xl md:rounded-[3rem] shadow-2xl relative overflow-hidden">
          <div className="relative z-10 space-y-2">
             <h1 className="text-5xl font-black tracking-tighter flex items-center gap-4">
                <ShoppingCart className="h-12 w-12 text-primary" />
@@ -130,7 +126,7 @@ export default function ShopPage() {
             </div>
             <div>
                <div className="text-xs font-black uppercase tracking-widest text-slate-400">Total Sparks</div>
-               <div className="text-4xl font-black text-white tabular-nums">{Math.floor((profile?.total_points || 0) / 10)} <span className="text-sm opacity-50">SPARKS</span></div>
+               <div className="text-4xl font-black text-white tabular-nums">{Math.floor(((profile?.total_points as number) || 0) / 10)} <span className="text-sm opacity-50">SPARKS</span></div>
             </div>
          </div>
 
@@ -272,6 +268,6 @@ export default function ShopPage() {
             </div>
          </TabsContent>
       </Tabs>
-    </div>
+    </main>
   );
 }

@@ -60,7 +60,7 @@ export async function generateAIResponse(prompt: string, systemPrompt: string = 
       const content = data.choices[0].message.content;
 
       if (responseFormat === 'json') {
-        let parsed = JSON.parse(content.replace(/```json|```/g, '').trim());
+        const parsed = JSON.parse(content.replace(/```json|```/g, '').trim());
         // Standardize common AI wrapping
         if (parsed.jobs && Array.isArray(parsed.jobs)) return parsed.jobs;
         if (parsed.items && Array.isArray(parsed.items)) return parsed.items;

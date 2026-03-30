@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Heart,
   Wind,
@@ -9,11 +9,8 @@ import {
   Zap,
   Gamepad2,
   Sparkles,
-  RefreshCw,
   Quote,
-  Smile,
   Moon,
-  Sun,
   Play,
   Shuffle,
   Fingerprint,
@@ -26,9 +23,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { ReflexMaster } from '@/components/mini-games/reflex-master';
 import { MemorySequence } from '@/components/mini-games/memory-sequence';
 import { SpeedTyper } from '@/components/mini-games/speed-typer';
@@ -76,7 +72,7 @@ export default function WellnessPage() {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-1000">
+    <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-1000 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
            <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3">
@@ -218,7 +214,7 @@ export default function WellnessPage() {
                      <CardTitle className="text-2xl font-black tracking-tighter uppercase">{story.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                     <p className="text-muted-foreground font-medium leading-relaxed italic">"{story.body}"</p>
+                     <p className="text-muted-foreground font-medium leading-relaxed italic">&quot;{story.body}&quot;</p>
                   </CardContent>
                </Card>
              ))}
@@ -246,6 +242,6 @@ export default function WellnessPage() {
             </div>
          </Card>
       </footer>
-    </div>
+    </main>
   );
 }

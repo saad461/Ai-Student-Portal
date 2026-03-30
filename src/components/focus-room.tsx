@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Volume2, VolumeX, X, Play, Pause, RotateCcw,
-  CloudRain, Wind, TreePine, ShieldAlert, Sparkles,
-  Terminal, ChevronRight, CheckCircle2, AlertTriangle,
-  Maximize2, Eye, BrainCircuit
+  Volume2, VolumeX, X, ShieldAlert, Sparkles,
+  Terminal, CheckCircle2, Maximize2, Eye, BrainCircuit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeCompiler } from './code-compiler';
@@ -65,7 +63,64 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
   const sessionStartTimeRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Binaural Beats Logic
+  const startBinauralBeats = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+    const ctx = audioContextRef.current;
+    const oscL = ctx.createOscillator();
+    const panL = ctx.createStereoPanner();
+    oscL.frequency.value = 440;
+    panL.pan.value = -1;
+    const oscR = ctx.createOscillator();
+    const panR = ctx.createStereoPanner();
+    oscR.frequency.value = 444;
+    panR.pan.value = 1;
+    const gain = ctx.createGain();
+    gain.gain.value = volume;
+    oscL.connect(panL).connect(gain).connect(ctx.destination);
+    oscR.connect(panR).connect(gain).connect(ctx.destination);
+    oscL.start();
+    oscR.start();
+    oscillatorLRef.current = oscL;
+    oscillatorRRef.current = oscR;
+    gainNodeRef.current = gain;
+  }, [volume]);
+
+  const stopBinauralBeats = useCallback(() => {
+    oscillatorLRef.current?.stop();
+    oscillatorRRef.current?.stop();
+    oscillatorLRef.current = null;
+    oscillatorRRef.current = null;
+  }, []);
+
+  const stopAmbient = useCallback(() => {
+    noiseNodeRef.current?.disconnect();
+    noiseNodeRef.current = null;
+    setActiveAmbient(null);
+  }, []);
+
   // Fullscreen Detection
+  const handleViolation = useCallback(async (type: string) => {
+    setIsActive(false);
+    setLastViolationType(type);
+    setIsViolationOpen(true);
+    setStrikes(prev => prev + 1);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        // Atomic point deduction via RPC
+        await supabase.rpc('increment_points', { user_id: user.id, amount: -5 });
+        info(`Strict Mode Violation: -5 XP deducted for ${type}`);
+    }
+
+    if (strikes >= 2) { // 3rd strike
+        toastError("MAX STRIKES REACHED. Focus session terminated.");
+        onClose();
+    }
+  }, [info, onClose, strikes, toastError]);
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
@@ -76,7 +131,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, [isActive, isOpen]);
+  }, [isActive, isOpen, handleViolation]);
 
   // Tab Switch Detection
   useEffect(() => {
@@ -117,7 +172,8 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
         toastError("MAX STRIKES REACHED. Focus session terminated.");
         onClose();
     }
-  };
+  }
+  }, [isActive, isOpen, handleViolation]);
 
   const startFocus = () => {
     if (!isFullscreen) {
@@ -142,14 +198,14 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
       });
       const data = await res.json();
       setTask(data);
-    } catch (err) {
+    } catch {
       toastError("Failed to fetch focus task.");
     } finally {
       setLoadingTask(false);
     }
   };
 
-  const handleGetReview = async () => {
+  const handleGetReview = useCallback(async () => {
     setReviewing(true);
     try {
         const res = await fetch('/api/focus/review-code', {
@@ -167,12 +223,12 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
             success("Task objectives met! Keep focusing until the timer ends.");
             setShowPseudoCodeRequest(true);
         }
-    } catch (err) {
+    } catch {
         toastError("Review failed. Please try again.");
     } finally {
         setReviewing(false);
     }
-  };
+  }, [codes, task, success, toastError]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -198,7 +254,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
       }
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval)
   }, [isOpen, isActive, saveCurrentSegment, onClose, success]);
 
   // Binaural Beats Logic
@@ -232,6 +288,9 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     oscillatorLRef.current = null;
     oscillatorRRef.current = null;
   };
+
+  }, [isOpen, isActive, onSaveSession, onClose, success, timeLeft, stopAmbient, stopBinauralBeats]);
+
 
   useEffect(() => {
     if (gainNodeRef.current) {
@@ -268,28 +327,22 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     return noise;
   };
 
-  const stopAmbient = () => {
-    noiseNodeRef.current?.disconnect();
-    noiseNodeRef.current = null;
-    setActiveAmbient(null);
-  };
-
-  const toggleAmbient = (type: string) => {
+  const toggleAmbient = useCallback((type: string) => {
     if (activeAmbient === type) {
         stopAmbient();
         return;
     }
 
     if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
 
     noiseNodeRef.current?.disconnect();
 
     let node: AudioBufferSourceNode | null = null;
-    if (type === 'rain') node = createNoiseNode('pink') as any;
-    if (type === 'wind') node = createNoiseNode('brown') as any;
-    if (type === 'white') node = createNoiseNode('white') as any;
+    if (type === 'rain') node = createNoiseNode('pink');
+    if (type === 'wind') node = createNoiseNode('brown');
+    if (type === 'white') node = createNoiseNode('white');
 
     if (node) {
         const ambientGain = audioContextRef.current.createGain();
@@ -299,13 +352,13 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
         noiseNodeRef.current = node;
         setActiveAmbient(type);
     }
-  };
+  }, [activeAmbient, stopAmbient, volume]);
 
-  const toggleAudio = () => {
+  const toggleAudio = useCallback(() => {
     if (isAudioEnabled) stopBinauralBeats();
     else startBinauralBeats();
     setIsAudioEnabled(!isAudioEnabled);
-  };
+  }, [isAudioEnabled, stopBinauralBeats, startBinauralBeats]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -468,7 +521,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
                     <BrainCircuit className="h-16 w-16 text-green-500 mb-6 animate-pulse" />
                     <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Logic Verification Required</h2>
                     <p className="text-sm opacity-70 mb-8 max-w-md">
-                        Your code passed the tests, but true mastery is understanding the "Why".
+                        Your code passed the tests, but true mastery is understanding the &quot;Why&quot;.
                         Explain the logic of your JS functions in plain text/pseudo-code below to continue.
                     </p>
                     <textarea

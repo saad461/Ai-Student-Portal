@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Hash } from 'lucide-react';
@@ -18,10 +18,12 @@ export function GridLogic() {
   };
 
   const generatePuzzle = () => {
-    const newTarget = Array(16).fill(0).map(() => Math.random() > 0.6 ? 1 : 0);
-    if (newTarget.every(v => v === 0)) (newTarget as any)[0] = 1;
-    setTarget(newTarget as any);
-    setGrid(Array(16).fill(0));
+    const puzzle = Array.from({ length: 16 }, () => Math.random() > 0.6 ? 1 : 0);
+    if (puzzle.every(v => v === 0)) {
+      (puzzle as (0|1)[])[0] = 1;
+    }
+    setTarget(puzzle);
+    setGrid(new Array(16).fill(0) as number[]);
   };
 
   const toggle = (idx: number) => {

@@ -26,7 +26,6 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
      doc.setFillColor(60, 80, 255);
      doc.rect(0, 0, 10, 297, 'F');
   }
-  const primaryColor = [0, 0, 0]; // Black for professional look
 
   // Header Background
   doc.setFillColor(245, 245, 245);
@@ -105,7 +104,7 @@ export const generateCV = (data: CVData, isPremium: boolean = false) => {
   });
 
   // Footer
-  const finalY = (doc as any).lastAutoTable.finalY + 20;
+  const finalY = ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable?.finalY || 200) + 20;
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
   doc.text('Verified via Student Training Portal Authentication System', 105, finalY, { align: 'center' });
