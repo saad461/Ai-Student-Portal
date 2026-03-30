@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, User, Phone, Video, Calendar } from 'lucide-react';
+import { MessageCircle, X, Send, User, Phone, Video, Calendar, Check, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -90,7 +90,10 @@ export function FloatingChat() {
             filter: `receiver_id=eq.${user.id}`
           }, (payload) => {
             const msg = payload.new as Message;
-            setMessages(prev => [...prev, msg]);
+            setMessages(prev => {
+               if (prev.find(m => m.id === msg.id)) return prev;
+               return [...prev, msg];
+            });
             if (!isOpen) setUnreadCount(prev => prev + 1);
           })
           .on('postgres_changes', {
@@ -104,6 +107,15 @@ export function FloatingChat() {
                 if (prev.find(m => m.id === msg.id)) return prev;
                 return [...prev, msg];
              });
+          })
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `sender_id=eq.${user.id}`
+          }, (payload) => {
+             const msg = payload.new as Message;
+             setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
           })
           .on('postgres_changes', {
             event: '*',
@@ -138,26 +150,45 @@ export function FloatingChat() {
 
     // Use default System Support ID if no adminId found
     const targetAdminId = adminId || '00000000-0000-0000-0000-000000000000';
+    const content = newMessage.trim();
+
+    // Optimistic Update
+    const tempId = Math.random().toString(36).substring(7);
+    const optimisticMsg: Message = {
+      id: tempId,
+      sender_id: userId,
+      receiver_id: targetAdminId,
+      content,
+      created_at: new Date().toISOString(),
+      is_read: false
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+    setNewMessage('');
 
     setIsSending(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert({
           sender_id: userId,
           receiver_id: targetAdminId,
-          content: newMessage.trim()
-        });
+          content
+        })
+        .select()
+        .single();
 
       if (error) {
         toastError('Failed to send message: ' + error.message);
-      } else {
-        // Notifications are usually for auth.users, so we skip for the fixed ID
-        setNewMessage('');
+        // Rollback optimistic update on error
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+      } else if (data) {
+        // Replace temp message with real one
+        setMessages(prev => prev.map(m => m.id === tempId ? (data as Message) : m));
       }
     } catch (err) {
       const error = err as Error;
       toastError('An unexpected error occurred while sending: ' + error.message);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
     } finally {
       setIsSending(false);
     }
@@ -296,9 +327,21 @@ export function FloatingChat() {
                           >
                             {msg.content}
                           </div>
-                          <span className="text-[9px] text-muted-foreground mt-1 px-1">
-                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          <div className={cn(
+                             "flex items-center gap-1 mt-1 px-1",
+                             msg.sender_id === userId ? "justify-end" : "justify-start"
+                          )}>
+                             <span className="text-[9px] text-muted-foreground">
+                               {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                             </span>
+                             {msg.sender_id === userId && (
+                                msg.is_read ? (
+                                   <CheckCheck className="h-3 w-3 text-sky-400" />
+                                ) : (
+                                   <Check className="h-3 w-3 text-muted-foreground" />
+                                )
+                             )}
+                          </div>
                         </div>
                       ))
                     )}
