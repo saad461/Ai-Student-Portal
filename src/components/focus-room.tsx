@@ -142,6 +142,37 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isActive, isOpen]);
+
+  const saveCurrentSegment = useCallback(() => {
+    if (sessionStartTimeRef.current !== null) {
+      const elapsed = sessionStartTimeRef.current - timeLeft;
+      if (elapsed > 0) {
+        onSaveSession(elapsed);
+      }
+      sessionStartTimeRef.current = null;
+    }
+  }, [timeLeft, onSaveSession]);
+
+  const handleViolation = async (type: string) => {
+    saveCurrentSegment();
+    setIsActive(false);
+    setLastViolationType(type);
+    setIsViolationOpen(true);
+    setStrikes(prev => prev + 1);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        // Atomic point deduction via RPC
+        await supabase.rpc('increment_points', { user_id: user.id, amount: -5 });
+        info(`Strict Mode Violation: -5 XP deducted for ${type}`);
+    }
+
+    if (strikes >= 2) { // 3rd strike
+        toastError("MAX STRIKES REACHED. Focus session terminated.");
+        onClose();
+    }
+  }
   }, [isActive, isOpen, handleViolation]);
 
   const startFocus = () => {
@@ -201,9 +232,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
 
   useEffect(() => {
     if (!isOpen) {
-      if (isActive && sessionStartTimeRef.current !== null) {
-        onSaveSession(sessionStartTimeRef.current - timeLeft);
-      }
+      saveCurrentSegment();
       stopBinauralBeats();
       stopAmbient();
       setIsActive(false);
@@ -215,7 +244,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
         setTimeLeft((prev) => {
           const next = prev - 1;
           if (next <= 0) {
-            onSaveSession(sessionStartTimeRef.current! - 0);
+            saveCurrentSegment();
             success("Focus Session Complete! 60 minutes logged.");
             onClose();
             return 0;
@@ -225,8 +254,43 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
       }
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval)
+  }, [isOpen, isActive, saveCurrentSegment, onClose, success]);
+
+  // Binaural Beats Logic
+  const startBinauralBeats = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioContextRef.current;
+    const oscL = ctx.createOscillator();
+    const panL = ctx.createStereoPanner();
+    oscL.frequency.value = 440;
+    panL.pan.value = -1;
+    const oscR = ctx.createOscillator();
+    const panR = ctx.createStereoPanner();
+    oscR.frequency.value = 444;
+    panR.pan.value = 1;
+    const gain = ctx.createGain();
+    gain.gain.value = volume;
+    oscL.connect(panL).connect(gain).connect(ctx.destination);
+    oscR.connect(panR).connect(gain).connect(ctx.destination);
+    oscL.start();
+    oscR.start();
+    oscillatorLRef.current = oscL;
+    oscillatorRRef.current = oscR;
+    gainNodeRef.current = gain;
+  };
+
+  const stopBinauralBeats = () => {
+    oscillatorLRef.current?.stop();
+    oscillatorRRef.current?.stop();
+    oscillatorLRef.current = null;
+    oscillatorRRef.current = null;
+  };
+
   }, [isOpen, isActive, onSaveSession, onClose, success, timeLeft, stopAmbient, stopBinauralBeats]);
+
 
   useEffect(() => {
     if (gainNodeRef.current) {

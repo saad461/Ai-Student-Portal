@@ -166,7 +166,10 @@ export function DeepWorkTimer() {
         <Button
           variant="outline"
           className="w-full border-primary/50 text-primary hover:bg-primary/10"
-          onClick={() => setIsFocusRoomOpen(true)}
+          onClick={() => {
+            if (isActive) toggleTimer();
+            setIsFocusRoomOpen(true);
+          }}
         >
           <Maximize2 className="mr-2 h-4 w-4" />
           Enter Focus Room (Immersive)
@@ -176,7 +179,10 @@ export function DeepWorkTimer() {
       <FocusRoom
         isOpen={isFocusRoomOpen}
         onClose={() => setIsFocusRoomOpen(false)}
-        onSaveSession={saveSession}
+        onSaveSession={(seconds) => {
+          saveSession(seconds);
+          setTimeLeft((prev) => Math.max(0, prev - seconds));
+        }}
         moduleIndex={moduleContext.index}
         moduleName={moduleContext.name}
       />
