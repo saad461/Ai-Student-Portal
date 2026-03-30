@@ -32,7 +32,8 @@ import {
   PhoneCall,
   Calendar,
   SendHorizontal,
-  X
+  X,
+  CheckCheck
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -254,8 +255,20 @@ export default function AdminDashboard() {
     else {
       fetchAdminData();
 
+      // Request browser notification permission
+      if (typeof window !== 'undefined' && "Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+      }
+
       const chatChannel = supabase
         .channel('admin_realtime_chat')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
+           // Track when student reads our messages
+           const msg = payload.new as Record<string, unknown>;
+           if (selectedChatStudent && (msg.sender_id === adminId && msg.receiver_id === selectedChatStudent)) {
+              setChatMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+           }
+        })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
           // Refresh unread counts for all student list items
           const countsRes = await getUnreadCountsAction(adminId);
@@ -263,6 +276,17 @@ export default function AdminDashboard() {
 
           // If the message is for the currently open chat, refresh messages
           const newMsg = payload.new as Record<string, unknown>;
+
+          // Browser Notification for new messages from students
+          if (newMsg.receiver_id === adminId && !document.hasFocus()) {
+             const student = students.find(s => s.id === newMsg.sender_id);
+             if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(`New Message from ${student?.full_name || 'Student'}`, {
+                   body: (newMsg.content as string).substring(0, 100)
+                });
+             }
+          }
+
           if (selectedChatStudent && (newMsg.sender_id === selectedChatStudent || newMsg.receiver_id === selectedChatStudent)) {
              fetchChat(selectedChatStudent);
           }
@@ -315,11 +339,32 @@ export default function AdminDashboard() {
   const handleSendChat = async () => {
     if (!newChatInput.trim() || !selectedChatStudent || !adminId) return;
 
-    const res = await sendChatMessageAction(adminId, selectedChatStudent, newChatInput.trim());
+    const content = newChatInput.trim();
+    // Optimistic Update
+    const tempId = Math.random().toString(36).substring(7);
+    const optimisticMsg = {
+      id: tempId,
+      sender_id: adminId,
+      receiver_id: selectedChatStudent,
+      content,
+      created_at: new Date().toISOString(),
+      is_read: false
+    };
+    setChatMessages(prev => [...prev, optimisticMsg]);
+    setNewChatInput('');
+
+    const res = await sendChatMessageAction(adminId, selectedChatStudent, content);
 
     if (!res.success) {
        toastError('Failed to send message: ' + (typeof res.error === 'string' ? res.error : (res.error as Error)?.message || JSON.stringify(res.error)));
+       // Rollback
+       setChatMessages(prev => prev.filter(m => m.id !== tempId));
        return;
+    }
+
+    // Replace optimistic with real
+    if (res.data) {
+       setChatMessages(prev => prev.map(m => m.id === tempId ? (res.data as Record<string, unknown>) : m));
     }
 
     // Notify Student via Server Action (bypasses RLS)
@@ -330,7 +375,6 @@ export default function AdminDashboard() {
        'info'
     );
 
-    setNewChatInput('');
     fetchChat(selectedChatStudent);
   };
 
@@ -677,9 +721,21 @@ export default function AdminDashboard() {
                                    )}>
                                       {msg.content as string}
                                    </div>
-                                   <span className="text-[9px] text-muted-foreground mt-1 px-1">
-                                      {new Date(msg.created_at as string).toLocaleString()}
-                                   </span>
+                                   <div className={cn(
+                                      "flex items-center gap-1 mt-1 px-1",
+                                      msg.sender_id === adminId ? "justify-end" : "justify-start"
+                                   )}>
+                                      <span className="text-[9px] text-muted-foreground">
+                                         {new Date(msg.created_at as string).toLocaleString()}
+                                      </span>
+                                      {msg.sender_id === adminId && (
+                                         msg.is_read ? (
+                                            <CheckCheck className="h-3 w-3 text-sky-400" />
+                                         ) : (
+                                            <Check className="h-3 w-3 text-slate-400" />
+                                         )
+                                      )}
+                                   </div>
                                 </div>
                              ))
                           )}
