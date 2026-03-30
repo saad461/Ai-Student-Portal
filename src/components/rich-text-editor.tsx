@@ -16,7 +16,58 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { Underline } from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
-import { Extension } from '@tiptap/core';
+import { Extension, InputRule } from '@tiptap/core';
+import { Plugin } from 'prosemirror-state';
+
+// Custom WordReplacer extension to replace "Odin" with "daurix"
+const WordReplacer = Extension.create({
+  name: 'wordReplacer',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          transformPastedText(text) {
+            return text.replace(/\bodin\b/gi, 'daurix');
+          },
+          transformPastedHTML(html) {
+            if (typeof window === 'undefined') return html;
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+            let node;
+            while ((node = walker.nextNode())) {
+              if (node.textContent) {
+                node.textContent = node.textContent.replace(/\bodin\b/gi, 'daurix');
+              }
+            }
+            return doc.body.innerHTML;
+          },
+        },
+      }),
+    ];
+  },
+  addInputRules() {
+    return [
+      // Replaces "odin" with "daurix" when followed by a space or punctuation
+      new InputRule({
+        find: /\bodin([\s\.,!?;:])$/i,
+        handler: ({ state, range, match }) => {
+          const { tr } = state;
+          const punctuation = match[1];
+          tr.replaceWith(range.from, range.to, state.schema.text(`daurix${punctuation}`));
+        },
+      }),
+      // Also catch "odin" if it's the end of a line/block
+      new InputRule({
+        find: /\bodin$/i,
+        handler: ({ state, range }) => {
+          const { tr } = state;
+          tr.replaceWith(range.from, range.to, state.schema.text('daurix'));
+        },
+      }),
+    ];
+  },
+});
 
 // Custom FontSize extension as it's not in the official package
 const FontSize = Extension.create({
@@ -84,6 +135,7 @@ import {
   Heading2,
   Heading3,
   Link as LinkIcon,
+  Link2Off,
   Image as ImageIcon,
   AlignLeft,
   AlignCenter,
@@ -406,15 +458,26 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBa
 
       {/* Media & Links */}
       <div className="flex gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={addLink}
-          className={cn(editor.isActive('link') && 'bg-slate-200 dark:bg-slate-800')}
-          title="Link"
-        >
-          <LinkIcon className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={addLink}
+            className={cn(editor.isActive('link') && 'bg-slate-200 dark:bg-slate-800')}
+            title="Link"
+          >
+            <LinkIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => editor.chain().focus().unsetLink().run()}
+            disabled={!editor.isActive('link')}
+            title="Remove Link"
+          >
+            <Link2Off className="h-4 w-4" />
+          </Button>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -509,8 +572,12 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
     immediatelyRender: false,
     extensions: [
       StarterKit,
+      WordReplacer,
       Link.configure({
         openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-primary underline cursor-pointer hover:text-primary/80 transition-colors',
+        },
       }),
       Image,
       Table.configure({
@@ -646,17 +713,34 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
               </div>
             </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => {
-                const url = window.prompt('URL');
-                if (url) editor.chain().focus().setLink({ href: url }).run();
-              }}
-            >
-              <LinkIcon className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("h-8 w-8 p-0", editor.isActive('link') && 'text-primary bg-slate-100 dark:bg-slate-800')}
+                onClick={() => {
+                  const previousUrl = editor.getAttributes('link').href;
+                  const url = window.prompt('URL', previousUrl);
+                  if (url === '') {
+                    editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                  } else if (url) {
+                    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+                  }
+                }}
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
+              {editor.isActive('link') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-destructive"
+                  onClick={() => editor.chain().focus().unsetLink().run()}
+                >
+                  <Link2Off className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
 
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
 
