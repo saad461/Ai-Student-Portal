@@ -776,6 +776,40 @@ export async function sendChatMessageAction(senderId: string, receiverId: string
   return { success: !error, data: data?.[0], error };
 }
 
+export async function sendAutoResponseAction(studentId: string) {
+  // Use Service Role to act as Admin
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const adminId = '00000000-0000-0000-0000-000000000000';
+
+  // 1. Check if we already sent an auto-response recently (e.g., in the last 2 hours)
+  const { data: recentAuto } = await supabaseAdmin
+    .from('chat_messages')
+    .select('id')
+    .eq('sender_id', adminId)
+    .eq('receiver_id', studentId)
+    .ilike('content', '%automated message%')
+    .gt('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+    .limit(1);
+
+  if (recentAuto && recentAuto.length > 0) return { success: true, skipped: true };
+
+  // 2. Send the auto-response
+  const { error } = await supabaseAdmin
+    .from('chat_messages')
+    .insert({
+      sender_id: adminId,
+      receiver_id: studentId,
+      content: "Hello! This is an automated message to let you know that we have received your query. An instructor will get back to you as soon as possible. Thank you for your patience!",
+      is_read: false
+    });
+
+  return { success: !error, skipped: false };
+}
+
 export async function markMessagesAsReadAction(studentId: string, adminId: string) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };

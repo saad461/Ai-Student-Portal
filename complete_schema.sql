@@ -143,6 +143,9 @@ begin
 end; $$;
 
 -- 10. ENABLE RLS
+alter table chat_messages enable row level security;
+alter table video_sessions enable row level security;
+alter table webrtc_signals enable row level security;
 alter table reward_log enable row level security;
 alter table user_perks enable row level security;
 alter table courses enable row level security;
@@ -153,3 +156,21 @@ alter table daily_challenges enable row level security;
 alter table challenge_submissions enable row level security;
 alter table student_activity enable row level security;
 alter table notifications enable row level security;
+
+-- Fix Notifications RLS: Ensure students can see their own notifications
+drop policy if exists "Students can view their own notifications" on notifications;
+create policy "Students can view their own notifications" on notifications
+for select using (auth.uid() = student_id);
+
+drop policy if exists "Students can update their own notifications" on notifications;
+create policy "Students can update their own notifications" on notifications
+for update using (auth.uid() = student_id);
+
+-- Fix Chat RLS for Anonymous Admin Support
+drop policy if exists "Users can view their own messages" on chat_messages;
+create policy "Users can view their own messages" on chat_messages
+for select using (auth.uid() = sender_id OR auth.uid() = receiver_id);
+
+drop policy if exists "Anyone can insert chat messages" on chat_messages;
+create policy "Anyone can insert chat messages" on chat_messages
+for insert with check (true);
