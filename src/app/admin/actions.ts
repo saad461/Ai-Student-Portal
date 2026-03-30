@@ -733,13 +733,20 @@ export async function fetchChatMessagesAction(studentId: string, adminId: string
   if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+  // We use a more robust query for fetching messages
   const { data, error } = await supabaseAdmin
     .from('chat_messages')
     .select('*')
-    .or(`and(sender_id.eq.${adminId},receiver_id.eq.${studentId}),and(sender_id.eq.${studentId},receiver_id.eq.${adminId})`)
+    .or(`sender_id.eq.${studentId},receiver_id.eq.${studentId}`)
     .order('created_at', { ascending: true });
 
-  return { success: !error, data: data || [], error };
+  // Filter messages to ensure they are between the student and the admin
+  const filteredData = data?.filter(msg =>
+    (msg.sender_id === studentId && msg.receiver_id === adminId) ||
+    (msg.sender_id === adminId && msg.receiver_id === studentId)
+  ) || [];
+
+  return { success: !error, data: filteredData, error };
 }
 
 export async function sendChatMessageAction(senderId: string, receiverId: string, content: string) {
@@ -757,11 +764,58 @@ export async function sendChatMessageAction(senderId: string, receiverId: string
     .insert({
       sender_id: senderId,
       receiver_id: receiverId,
-      content: content.trim()
+      content: content.trim(),
+      is_read: false
     })
     .select();
 
   return { success: !error, data: data?.[0], error };
+}
+
+export async function markMessagesAsReadAction(studentId: string, adminId: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { error } = await supabaseAdmin
+    .from('chat_messages')
+    .update({ is_read: true })
+    .eq('sender_id', studentId)
+    .eq('receiver_id', adminId)
+    .eq('is_read', false);
+
+  return { success: !error, error };
+}
+
+export async function getUnreadCountsAction(adminId: string) {
+  const isAdmin = await authorizeAdmin();
+  if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('chat_messages')
+    .select('sender_id')
+    .eq('receiver_id', adminId)
+    .eq('is_read', false);
+
+  if (error) return { success: false, error };
+
+  const counts: Record<string, number> = {};
+  data?.forEach(msg => {
+    counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+  });
+
+  return { success: true, data: counts };
 }
 
 export async function deleteCurriculumItemAction(id: string) {
