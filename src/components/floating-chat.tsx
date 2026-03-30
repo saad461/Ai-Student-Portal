@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, User, Phone, Video, Calendar, Check, CheckCheck } from 'lucide-react';
+import { MessageCircle, X, Send, User, Phone, Video, Calendar, Check, CheckCheck, Paperclip, ImageIcon, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { VideoCallRoom } from '@/components/video-call-room';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
 import { useChat } from '@/components/chat-context';
+import { sendAutoResponseAction } from '@/app/admin/actions';
 
 interface Message {
   id: string;
@@ -43,8 +45,17 @@ export function FloatingChat() {
   const [isSending, setIsSending] = useState(false);
   const [isRequestingCall, setIsRequestingCall] = useState(false);
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(true);
+  const [isAdminTyping, setIsAdminTyping] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const chatChannelRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { success, error: toastError } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+  }, []);
 
   const fetchVideoSessions = async (uid: string) => {
     const { data } = await supabase
@@ -82,7 +93,28 @@ export function FloatingChat() {
 
         // Subscription
         const channel = supabase
-          .channel('realtime_chat')
+          .channel('support_presence', {
+             config: {
+                presence: {
+                   key: user.id,
+                },
+             },
+          })
+          .on('presence', { event: 'sync' }, () => {
+             const state = channel.presenceState();
+             // Check if admin is typing in this student's channel
+             // The fixed ID is 0000...
+             const adminState = state[systemAdminId];
+             if (adminState && Array.isArray(adminState)) {
+                if (adminState.some((s: any) => s.isTyping && s.typingTo === user.id)) {
+                   setIsAdminTyping(true);
+                } else {
+                   setIsAdminTyping(false);
+                }
+             } else {
+                setIsAdminTyping(false);
+             }
+          })
           .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public',
@@ -94,7 +126,10 @@ export function FloatingChat() {
                if (prev.find(m => m.id === msg.id)) return prev;
                return [...prev, msg];
             });
-            if (!isOpen) setUnreadCount(prev => prev + 1);
+            if (!isOpen) {
+               setUnreadCount(prev => prev + 1);
+               audioRef.current?.play().catch(() => {});
+            }
           })
           .on('postgres_changes', {
             event: 'INSERT',
@@ -127,6 +162,7 @@ export function FloatingChat() {
           })
           .subscribe();
 
+        chatChannelRef.current = channel;
         setIsLoadingAdmin(false);
         return () => {
           supabase.removeChannel(channel);
@@ -143,14 +179,56 @@ export function FloatingChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isAdminTyping]);
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !userId) return;
+  const handleTyping = (val: string) => {
+     setNewMessage(val);
+     if (chatChannelRef.current) {
+        if (val.trim()) {
+           chatChannelRef.current.track({ isTyping: true, typingTo: adminId });
+        } else {
+           chatChannelRef.current.track({ isTyping: false });
+        }
+     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file || !userId) return;
+
+     setIsUploading(true);
+     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+
+     try {
+        const { error: uploadError } = await supabase.storage
+          .from('chat-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) {
+           toastError('Upload failed: ' + uploadError.message);
+           return;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(fileName);
+
+        // Send a message with the attachment URL
+        sendMessage(publicUrl, file.type.startsWith('image/') ? 'image' : 'file', file.name);
+     } catch (err) {
+        toastError('Unexpected upload error');
+     } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+     }
+  };
+
+  const sendMessage = async (customContent?: string, type: 'text' | 'image' | 'file' = 'text', fileName?: string) => {
+    const content = customContent || newMessage.trim();
+    if (!content || !userId) return;
 
     // Use default System Support ID if no adminId found
     const targetAdminId = adminId || '00000000-0000-0000-0000-000000000000';
-    const content = newMessage.trim();
 
     // Optimistic Update
     const tempId = Math.random().toString(36).substring(7);
@@ -184,6 +262,13 @@ export function FloatingChat() {
       } else if (data) {
         // Replace temp message with real one
         setMessages(prev => prev.map(m => m.id === tempId ? (data as Message) : m));
+
+        // Auto-response trigger (if student sends a text message)
+        if (type === 'text') {
+           setTimeout(async () => {
+              await sendAutoResponseAction(userId);
+           }, 2000);
+        }
       }
     } catch (err) {
       const error = err as Error;
@@ -309,7 +394,8 @@ export function FloatingChat() {
                          <p className="text-[10px] max-w-[150px] mt-1 italic">Ask anything about your curriculum or assignments.</p>
                       </div>
                     ) : (
-                      messages.map((msg) => (
+                      <>
+                        {messages.map((msg) => (
                         <div
                           key={msg.id}
                           className={cn(
@@ -325,7 +411,28 @@ export function FloatingChat() {
                                 : "bg-muted text-foreground rounded-tl-none border"
                             )}
                           >
-                            {msg.content}
+                            {msg.content.startsWith('https://') && (msg.content.includes('chat-attachments')) ? (
+                               <div className="space-y-2">
+                                  {msg.content.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                     <img
+                                        src={msg.content}
+                                        alt="Attachment"
+                                        className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                        onClick={() => window.open(msg.content, '_blank')}
+                                     />
+                                  ) : (
+                                     <a
+                                        href={msg.content}
+                                        target="_blank"
+                                        className="flex items-center gap-2 underline decoration-dotted underline-offset-4"
+                                     >
+                                        <Download className="h-4 w-4" /> Download File
+                                     </a>
+                                  )}
+                               </div>
+                            ) : (
+                               msg.content
+                            )}
                           </div>
                           <div className={cn(
                              "flex items-center gap-1 mt-1 px-1",
@@ -343,7 +450,15 @@ export function FloatingChat() {
                              )}
                           </div>
                         </div>
-                      ))
+                      ))}
+                      {isAdminTyping && (
+                         <div className="flex flex-col max-w-[80%] items-start animate-pulse">
+                            <div className="bg-muted text-foreground p-2 rounded-2xl rounded-tl-none border text-[10px] font-bold italic">
+                               Admin is typing...
+                            </div>
+                         </div>
+                      )}
+                      </>
                     )}
                   </CardContent>
                   <CardFooter className="p-3 border-t bg-muted/30 shrink-0">
@@ -352,13 +467,30 @@ export function FloatingChat() {
                         e.preventDefault();
                         sendMessage();
                       }}
-                      className="flex w-full gap-2"
+                      className="flex w-full gap-2 items-center"
                     >
+                      <input
+                        type="file"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-muted-foreground hover:text-primary"
+                        disabled={isUploading || isSending}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                         {isUploading ? <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                      </Button>
                       <Input
                         placeholder="Type a message..."
                         className="h-9 text-xs focus-visible:ring-primary"
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={(e) => handleTyping(e.target.value)}
+                        disabled={isUploading}
                       />
                       <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={isSending}>
                         <Send className={cn("h-4 w-4", isSending && "animate-pulse")} />

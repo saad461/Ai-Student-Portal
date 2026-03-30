@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -15,7 +16,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   Users,
   MessageCircle,
-  Check,
   Clock,
   Plus,
   Search,
@@ -33,7 +33,10 @@ import {
   Calendar,
   SendHorizontal,
   X,
-  CheckCheck
+  CheckCheck,
+  Paperclip,
+  ImageIcon,
+  Download
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -83,7 +86,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check } from 'lucide-react';
 
 interface Resource {
   id?: string;
@@ -153,6 +156,11 @@ export default function AdminDashboard() {
   const [studentVideoSessions, setStudentVideoSessions] = useState<Record<string, unknown>[]>([]);
   const [ringingSession, setRingingSession] = useState<Record<string, unknown> | null>(null);
   const [activeCallSessionId, setActiveCallSessionId] = useState<string | null>(null);
+  const [typingStudents, setTypingStudents] = useState<Record<string, boolean>>({});
+  const [onlineStudents, setOnlineStudents] = useState<Record<string, boolean>>({});
+  const [isChatUploading, setIsChatUploading] = useState(false);
+  const chatChannelRef = useRef<any>(null);
+  const chatFileRef = useRef<HTMLInputElement>(null);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
   const [studentTab, setStudentTab] = useState<'submissions' | 'activity'>('submissions');
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
@@ -168,6 +176,11 @@ export default function AdminDashboard() {
   const [isResourceUploading, setIsResourceUploading] = useState(false);
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+  }, []);
 
   const fetchVideoSessions = useCallback(async (studentId: string) => {
     const { data } = await supabase
@@ -261,7 +274,29 @@ export default function AdminDashboard() {
       }
 
       const chatChannel = supabase
-        .channel('admin_realtime_chat')
+        .channel('support_presence', {
+           config: {
+              presence: {
+                 key: adminId,
+              },
+           },
+        })
+        .on('presence', { event: 'sync' }, () => {
+           const state = chatChannel.presenceState();
+           const typing: Record<string, boolean> = {};
+           const online: Record<string, boolean> = {};
+           Object.keys(state).forEach(uid => {
+              const userState = state[uid];
+              if (userState && Array.isArray(userState)) {
+                 online[uid] = true;
+                 if (userState.some((s: any) => s.isTyping && s.typingTo === adminId)) {
+                    typing[uid] = true;
+                 }
+              }
+           });
+           setTypingStudents(typing);
+           setOnlineStudents(online);
+        })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
            // Track when student reads our messages
            const msg = payload.new as Record<string, unknown>;
@@ -278,12 +313,15 @@ export default function AdminDashboard() {
           const newMsg = payload.new as Record<string, unknown>;
 
           // Browser Notification for new messages from students
-          if (newMsg.receiver_id === adminId && !document.hasFocus()) {
-             const student = students.find(s => s.id === newMsg.sender_id);
-             if ("Notification" in window && Notification.permission === "granted") {
-                new Notification(`New Message from ${student?.full_name || 'Student'}`, {
-                   body: (newMsg.content as string).substring(0, 100)
-                });
+          if (newMsg.receiver_id === adminId) {
+             audioRef.current?.play().catch(() => {});
+             if (!document.hasFocus()) {
+                const student = students.find(s => s.id === newMsg.sender_id);
+                if ("Notification" in window && Notification.permission === "granted") {
+                   new Notification(`New Message from ${student?.full_name || 'Student'}`, {
+                      body: (newMsg.content as string).substring(0, 100)
+                   });
+                }
              }
           }
 
@@ -292,6 +330,8 @@ export default function AdminDashboard() {
           }
         })
         .subscribe();
+
+      chatChannelRef.current = chatChannel;
 
       const videoChannel = supabase
         .channel('admin_video_calls')
@@ -336,10 +376,52 @@ export default function AdminDashboard() {
     if (selectedChatStudent) await fetchVideoSessions(selectedChatStudent);
   };
 
-  const handleSendChat = async () => {
-    if (!newChatInput.trim() || !selectedChatStudent || !adminId) return;
+  const handleTyping = (val: string) => {
+     setNewChatInput(val);
+     if (chatChannelRef.current) {
+        if (val.trim() && selectedChatStudent) {
+           chatChannelRef.current.track({ isTyping: true, typingTo: selectedChatStudent });
+        } else {
+           chatChannelRef.current.track({ isTyping: false });
+        }
+     }
+  };
 
-    const content = newChatInput.trim();
+  const handleChatFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file || !selectedChatStudent || !adminId) return;
+
+     setIsChatUploading(true);
+     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+
+     try {
+        const { error: uploadError } = await supabase.storage
+          .from('chat-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) {
+           toastError('Upload failed: ' + uploadError.message);
+           return;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(fileName);
+
+        // Send a message with the attachment URL
+        handleSendChat(publicUrl);
+     } catch (err) {
+        toastError('Unexpected upload error');
+     } finally {
+        setIsChatUploading(false);
+        if (chatFileRef.current) chatFileRef.current.value = '';
+     }
+  };
+
+  const handleSendChat = async (customContent?: string) => {
+    const content = customContent || newChatInput.trim();
+    if (!content || !selectedChatStudent || !adminId) return;
+
     // Optimistic Update
     const tempId = Math.random().toString(36).substring(7);
     const optimisticMsg = {
@@ -615,7 +697,12 @@ export default function AdminDashboard() {
                             selectedChatStudent === s.id && "bg-primary/5 border-r-4 border-r-primary"
                          )}
                        >
-                          <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold">{s.full_name[0]}</div>
+                          <div className="relative">
+                             <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold">{s.full_name[0]}</div>
+                             {onlineStudents[s.id] && (
+                                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                             )}
+                          </div>
                           <div className="flex-1 min-w-0">
                              <div className="font-bold text-sm truncate">{s.full_name}</div>
                              <div className="text-[10px] text-muted-foreground truncate italic">Real-time Chat</div>
@@ -635,8 +722,20 @@ export default function AdminDashboard() {
                     <>
                        <div className="p-4 border-b flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
                           <div className="flex items-center gap-3">
-                             <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">{students.find(s => s.id === selectedChatStudent)?.full_name[0]}</div>
-                             <h3 className="font-bold">{students.find(s => s.id === selectedChatStudent)?.full_name}</h3>
+                             <div className="relative">
+                                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">{students.find(s => s.id === selectedChatStudent)?.full_name[0]}</div>
+                                {onlineStudents[selectedChatStudent] && (
+                                   <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                                )}
+                             </div>
+                             <div>
+                                <h3 className="font-bold leading-none">{students.find(s => s.id === selectedChatStudent)?.full_name}</h3>
+                                {onlineStudents[selectedChatStudent] ? (
+                                   <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest animate-pulse">Online</span>
+                                ) : (
+                                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Offline</span>
+                                )}
+                             </div>
                           </div>
                           <div className="flex gap-2">
                              <Dialog>
@@ -710,7 +809,8 @@ export default function AdminDashboard() {
                                 <p className="text-sm font-bold">No messages yet with this student.</p>
                              </div>
                           ) : (
-                             chatMessages.map(msg => (
+                             <>
+                             {chatMessages.map(msg => (
                                 <div key={msg.id as string} className={cn(
                                    "flex flex-col max-w-[70%]",
                                    msg.sender_id === adminId ? "ml-auto items-end" : "items-start"
@@ -719,7 +819,28 @@ export default function AdminDashboard() {
                                       "p-3 rounded-2xl text-sm font-medium shadow-sm",
                                       msg.sender_id === adminId ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-slate-100 dark:bg-slate-800 text-foreground rounded-tl-none border"
                                    )}>
-                                      {msg.content as string}
+                                      {(msg.content as string).startsWith('https://') && (msg.content as string).includes('chat-attachments') ? (
+                                         <div className="space-y-2">
+                                            {(msg.content as string).match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                               <img
+                                                  src={msg.content as string}
+                                                  alt="Attachment"
+                                                  className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity max-h-60"
+                                                  onClick={() => window.open(msg.content as string, '_blank')}
+                                               />
+                                            ) : (
+                                               <a
+                                                  href={msg.content as string}
+                                                  target="_blank"
+                                                  className="flex items-center gap-2 underline decoration-dotted underline-offset-4"
+                                               >
+                                                  <Download className="h-4 w-4" /> Download File
+                                               </a>
+                                            )}
+                                         </div>
+                                      ) : (
+                                         msg.content as string
+                                      )}
                                    </div>
                                    <div className={cn(
                                       "flex items-center gap-1 mt-1 px-1",
@@ -737,18 +858,43 @@ export default function AdminDashboard() {
                                       )}
                                    </div>
                                 </div>
-                             ))
+                             ))}
+                             {selectedChatStudent && typingStudents[selectedChatStudent] && (
+                                <div className="flex flex-col max-w-[70%] items-start animate-pulse">
+                                   <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-2xl rounded-tl-none border text-[10px] font-bold italic">
+                                      Student is typing...
+                                   </div>
+                                </div>
+                             )}
+                             </>
                           )}
                        </div>
                        <div className="p-4 border-t bg-slate-50/30 dark:bg-slate-800/10">
-                          <form onSubmit={(e) => { e.preventDefault(); handleSendChat(); }} className="flex gap-2">
+                          <form onSubmit={(e) => { e.preventDefault(); handleSendChat(); }} className="flex gap-2 items-center">
+                             <input
+                                type="file"
+                                className="hidden"
+                                ref={chatFileRef}
+                                onChange={handleChatFileUpload}
+                             />
+                             <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-12 w-12 shrink-0 text-muted-foreground hover:text-primary"
+                                disabled={isChatUploading}
+                                onClick={() => chatFileRef.current?.click()}
+                             >
+                                {isChatUploading ? <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Paperclip className="h-5 w-5" />}
+                             </Button>
                              <Input
                                 placeholder="Type your response..."
                                 className="h-12 text-sm focus-visible:ring-primary"
                                 value={newChatInput}
-                                onChange={(e) => setNewChatInput(e.target.value)}
+                                onChange={(e) => handleTyping(e.target.value)}
+                                disabled={isChatUploading}
                              />
-                             <Button type="submit" size="icon" className="h-12 w-12 shrink-0">
+                             <Button type="submit" size="icon" className="h-12 w-12 shrink-0" disabled={isChatUploading}>
                                 <SendHorizontal className="h-5 w-5" />
                              </Button>
                           </form>
