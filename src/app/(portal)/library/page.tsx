@@ -12,8 +12,7 @@ import {
   Zap,
   ChevronRight,
   CheckCircle2,
-  Sparkles,
-  Download
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -125,11 +124,10 @@ export default function LibraryPage() {
   );
 
   const handleOpenResource = (resource: Resource) => {
-    if (!resource.external_url) return;
     const isPDFUrl = isPDF(resource.external_url);
 
     if (isPDFUrl) {
-      window.open(resource.external_url, '_blank');
+      router.push(`/library/view/${resource.id}`);
     } else {
        // Non-PDF, trigger download
        handleDownload(resource);
@@ -221,16 +219,11 @@ export default function LibraryPage() {
                     <CardTitle className="text-sm sm:text-xl font-bold leading-tight group-hover:text-primary transition-colors line-clamp-1">{res.title}</CardTitle>
                     <CardDescription className="hidden sm:line-clamp-2">{res.description}</CardDescription>
                   </CardHeader>
-                  <CardContent className="p-3 sm:p-6 flex flex-col gap-2 border-t pt-2 sm:pt-4">
+                  <CardContent className="p-3 sm:p-6 flex justify-between items-center border-t pt-2 sm:pt-4">
                     {isOwned ? (
-                      <div className="flex w-full gap-1 sm:gap-2">
-                        <Button variant="outline" size="sm" className="flex-1 font-bold uppercase tracking-tighter group-hover:bg-primary group-hover:text-primary-foreground transition-all text-[8px] sm:text-xs px-1 sm:px-2" onClick={(e) => { e.stopPropagation(); handleOpenResource(res); }}>
-                          {isPDF(res.external_url) ? 'Open PDF' : 'Open'}
-                        </Button>
-                        <Button variant="secondary" size="sm" className="flex-1 font-bold uppercase tracking-tighter text-[8px] sm:text-xs px-1 sm:px-2" onClick={(e) => { e.stopPropagation(); handleDownload(res); }}>
-                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Download
-                        </Button>
-                      </div>
+                      <Button variant="outline" size="sm" className="w-full font-bold uppercase tracking-tighter group-hover:bg-primary group-hover:text-primary-foreground transition-all text-[9px] sm:text-xs" onClick={() => handleOpenResource(res)}>
+                        Open {isPDF(res.external_url) ? 'PDF' : 'Resource'} <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
+                      </Button>
                     ) : (
                       <div className="flex w-full gap-1 sm:gap-2">
                         <div className="flex-1 bg-muted/50 rounded-lg flex items-center justify-center font-black text-[9px] sm:text-sm">
