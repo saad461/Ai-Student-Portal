@@ -708,43 +708,114 @@ export default function AdminDashboard() {
               </div>
            </div>
         ) : activeTab === 'courses' ? (
-          <div className="space-y-8">
+          <div className="space-y-12">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold">Manage Courses</h2>
-                <p className="text-sm text-muted-foreground">Add and manage different training programs.</p>
+                <h2 className="text-2xl font-bold">Course Management</h2>
+                <p className="text-sm text-muted-foreground">Organize your curriculum into Parent Courses, Sub-Courses, and Standalone programs.</p>
               </div>
               <Button onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}>
-                <Plus className="h-4 w-4 mr-2" /> Add Course
+                <Plus className="h-4 w-4 mr-2" /> Create New Course
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map(course => (
-                <Card key={course.id} className="overflow-hidden group">
-                  <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
-                     {course.thumbnail_url ? (
-                       <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
-                     ) : (
-                       <div className="w-full h-full flex items-center justify-center text-slate-400">
-                          <BookOpen className="h-12 w-12" />
-                       </div>
-                     )}
-                     <div className="absolute top-2 right-2 flex gap-1">
-                        <Button variant="secondary" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
-                     </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-bold text-lg">{course.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{course.description || 'No description provided.'}</p>
-                    <div className="flex justify-between items-center mt-4">
-                       <Badge variant="outline">{course.slug}</Badge>
-                       <span className="text-xs text-muted-foreground font-medium">Index: {course.index}</span>
+            {/* Parent Courses */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-slate-400 uppercase tracking-widest">
+                <Layers className="h-5 w-5" /> Parent Courses
+              </h3>
+              <div className="grid grid-cols-1 gap-6">
+                {courses.filter(c => !c.parent_id && courses.some(sub => sub.parent_id === c.id)).map(parent => (
+                  <Card key={parent.id} className="overflow-hidden border-2">
+                    <div className="p-6 bg-slate-50 dark:bg-slate-900 border-b flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                          <Layout className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-black">{parent.name}</h4>
+                          <p className="text-sm text-muted-foreground">{parent.description || 'Parent container for sub-courses.'}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setEditingCourse({ parent_id: parent.id, index: courses.filter(c => c.parent_id === parent.id).length + 1, name: '', slug: '' })}>
+                          <Plus className="h-4 w-4 mr-2" /> Add Sub-Course
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingCourse(parent)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteCourse(parent.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <CardContent className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                          <div key={sub.id} className="group relative p-4 rounded-xl border bg-card hover:shadow-md transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tighter">Sub-Course</Badge>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingCourse(sub)}><Edit className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteCourse(sub.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                              </div>
+                            </div>
+                            <h5 className="font-bold">{sub.name}</h5>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{sub.description}</p>
+                            <div className="mt-4 flex items-center justify-between">
+                              <span className="text-[10px] font-mono text-muted-foreground">{sub.slug}</span>
+                              <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
+                                setSelectedCourseId(sub.id);
+                                setActiveTab('structure');
+                              }}>Manage Content <ChevronRight className="h-3 w-3 ml-1" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Standalone Courses */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-slate-400 uppercase tracking-widest">
+                <BookOpen className="h-5 w-5" /> Standalone Courses
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {courses.filter(c => !c.parent_id && !courses.some(sub => sub.parent_id === c.id)).map(course => (
+                  <Card key={course.id} className="overflow-hidden group flex flex-col">
+                    <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
+                       {course.thumbnail_url ? (
+                         <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
+                       ) : (
+                         <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <BookOpen className="h-12 w-12" />
+                         </div>
+                       )}
+                       <div className="absolute top-2 right-2 flex gap-1">
+                          <Button variant="secondary" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
+                       </div>
+                    </div>
+                    <CardContent className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-bold text-lg">{course.name}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1 flex-1">{course.description || 'No description provided.'}</p>
+                      <div className="flex justify-between items-center mt-4">
+                         <Badge variant="outline" className="text-[10px]">{course.slug}</Badge>
+                         <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
+                            setSelectedCourseId(course.id);
+                            setActiveTab('structure');
+                          }}>Manage <ChevronRight className="h-3 w-3 ml-1" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                <button
+                  onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}
+                  className="border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-slate-400 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all space-y-2"
+                >
+                  <Plus className="h-8 w-8" />
+                  <span className="font-bold uppercase tracking-tighter text-sm">Create New Program</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : activeTab === 'students' ? (
@@ -789,27 +860,51 @@ export default function AdminDashboard() {
                      value={selectedCourseId}
                      onChange={(e) => setSelectedCourseId(e.target.value)}
                    >
-                     {parentCourses.map(parent => (
-                       <optgroup key={parent.id} label={parent.name}>
-                         <option value={parent.id}>{parent.name} (Main)</option>
-                         {courses.filter(c => c.parent_id === parent.id).map(sub => (
-                           <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
-                         ))}
-                       </optgroup>
-                     ))}
+                     {parentCourses.map(parent => {
+                       const hasChildren = courses.some(c => c.parent_id === parent.id);
+                       return (
+                        <optgroup key={parent.id} label={parent.name}>
+                          {/* If it's a parent course container, mark it clearly */}
+                          <option value={parent.id}>{parent.name} {hasChildren ? '(Parent Container)' : '(Standalone)'}</option>
+                          {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                            <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                          ))}
+                        </optgroup>
+                       );
+                     })}
                      {courses.filter(c => !c.parent_id && !parentCourses.find(pc => pc.id === c.id)).map(standalone => (
                        <option key={standalone.id} value={standalone.id}>{standalone.name}</option>
                      ))}
                    </select>
                 </div>
               </div>
-              <Button onClick={() => setEditingModule({ course_id: selectedCourseId, index: modules.filter(m => m.course_id === selectedCourseId).length + 1, name: '' })}>
-                <Plus className="h-4 w-4 mr-2" /> Add Module
-              </Button>
+              {/* Only show Add Module if the selected course is a Sub-Course or Standalone (not a Parent with children) */}
+              {(!courses.some(c => c.parent_id === selectedCourseId)) && (
+                <Button onClick={() => setEditingModule({ course_id: selectedCourseId, index: modules.filter(m => m.course_id === selectedCourseId).length + 1, name: '' })}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Module
+                </Button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-              {modules.filter(m => m.course_id === selectedCourseId).map(mod => (
+            {/* If a Parent Course is selected, show its sub-courses instead of modules */}
+            {courses.some(c => c.parent_id === selectedCourseId) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {courses.filter(c => c.parent_id === selectedCourseId).map(sub => (
+                  <Card key={sub.id} className="group hover:border-primary transition-all cursor-pointer" onClick={() => setSelectedCourseId(sub.id)}>
+                    <CardHeader>
+                      <Badge variant="outline" className="w-fit mb-2">Sub-Course</Badge>
+                      <CardTitle className="flex justify-between items-center">
+                        {sub.name}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-2">{modules.filter(m => m.course_id === sub.id).length} Modules defined.</p>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {modules.filter(m => m.course_id === selectedCourseId).map(mod => (
                 <Card key={mod.id} className="overflow-hidden">
                   <div className="bg-slate-100 dark:bg-slate-900 p-4 flex justify-between items-center border-b">
                     <div className="flex items-center gap-3">
@@ -854,6 +949,7 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+            )}
           </div>
         ) : activeTab === 'curriculum' ? (
           <div className="space-y-12">
@@ -867,18 +963,25 @@ export default function AdminDashboard() {
                      value={selectedCourseId}
                      onChange={(e) => setSelectedCourseId(e.target.value)}
                    >
-                     {parentCourses.map(parent => (
-                       <optgroup key={parent.id} label={parent.name}>
-                         <option value={parent.id}>{parent.name} (Main)</option>
-                         {courses.filter(c => c.parent_id === parent.id).map(sub => (
-                           <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
-                         ))}
-                       </optgroup>
+                     {parentCourses.map(parent => {
+                        const hasChildren = courses.some(c => c.parent_id === parent.id);
+                        return (
+                          <optgroup key={parent.id} label={parent.name}>
+                            <option value={parent.id}>{parent.name} {hasChildren ? '(Parent Container)' : '(Standalone)'}</option>
+                            {courses.filter(c => c.parent_id === parent.id).map(sub => (
+                              <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                            ))}
+                          </optgroup>
+                        );
+                     })}
+                     {courses.filter(c => !c.parent_id && !parentCourses.find(pc => pc.id === c.id)).map(standalone => (
+                       <option key={standalone.id} value={standalone.id}>{standalone.name}</option>
                      ))}
                    </select>
                 </div>
               </div>
-              <Button onClick={() => {
+              {(!courses.some(c => c.parent_id === selectedCourseId)) && (
+                <Button onClick={() => {
                 const courseModules = modules.filter(m => m.course_id === selectedCourseId).sort((a,b) => a.index - b.index);
                 const lastMod = courseModules[courseModules.length - 1];
                 const lastSub = subModules.filter(s => s.module_id === lastMod?.id).pop();
@@ -899,8 +1002,24 @@ export default function AdminDashboard() {
               }}>
                 <Plus className="h-4 w-4 mr-2" /> Add New Lecture
               </Button>
+              )}
             </div>
-            {modules.filter(m => m.course_id === selectedCourseId).length > 0 ? modules.filter(m => m.course_id === selectedCourseId).map(mod => {
+            {courses.some(c => c.parent_id === selectedCourseId) ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {courses.filter(c => c.parent_id === selectedCourseId).map(sub => (
+                    <Card key={sub.id} className="group hover:border-primary transition-all cursor-pointer" onClick={() => setSelectedCourseId(sub.id)}>
+                      <CardHeader>
+                        <Badge variant="outline" className="w-fit mb-2">Sub-Course</Badge>
+                        <CardTitle className="flex justify-between items-center">
+                          {sub.name}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-2">{curriculum.filter(i => i.course_id === sub.id).length} Lectures & Tasks.</p>
+                      </CardHeader>
+                    </Card>
+                  ))}
+               </div>
+            ) : modules.filter(m => m.course_id === selectedCourseId).length > 0 ? modules.filter(m => m.course_id === selectedCourseId).map(mod => {
               const moduleSubModules = subModules.filter(s => s.module_id === mod.id);
               const moduleLectures = curriculum.filter(i => i.module_id === mod.id || (!i.module_id && i.week === mod.index && (i.course_id === selectedCourseId || !i.course_id)));
 
@@ -1012,7 +1131,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               );
-            }) : (
+            }) : !courses.some(c => c.parent_id === selectedCourseId) && (
               <div className="p-12 text-center border-2 border-dashed rounded-xl">
                  <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
                  <p className="text-slate-500">Create some Modules first in the &quot;Course Structure&quot; tab.</p>
@@ -1704,17 +1823,20 @@ export default function AdminDashboard() {
                 <div className="space-y-2"><Label>Slug</Label><Input value={editingCourse?.slug || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, slug: e.target.value }))} /></div>
               </div>
               <div className="space-y-2">
-                <Label>Parent Course (Optional)</Label>
+                <Label>Course Hierarchy</Label>
                 <select
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded font-medium"
                   value={editingCourse?.parent_id || ''}
                   onChange={(e) => setEditingCourse(prev => ({ ...prev!, parent_id: e.target.value || undefined }))}
                 >
-                  <option value="">No Parent (This is a Parent Course)</option>
-                  {parentCourses.filter(c => c.id !== editingCourse?.id).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                  <option value="">Standalone / Parent Course Container</option>
+                  {courses.filter(c => c.id !== editingCourse?.id && !c.parent_id).map(c => (
+                    <option key={c.id} value={c.id}>Sub-Course of: {c.name}</option>
                   ))}
                 </select>
+                <p className="text-[10px] text-muted-foreground mt-1 italic">
+                  Note: A Parent Course container should not have modules/lectures directly. It only groups sub-courses.
+                </p>
               </div>
               <div className="space-y-2"><Label>Index</Label><Input type="number" value={editingCourse?.index || 1} onChange={(e) => setEditingCourse(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
               <div className="space-y-2"><Label>Description</Label><Textarea value={editingCourse?.description || ''} onChange={(e) => setEditingCourse(prev => ({ ...prev!, description: e.target.value }))} /></div>
