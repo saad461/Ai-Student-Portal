@@ -283,19 +283,19 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const MarkdownComponents = {
     h1: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h1 id={id} className="text-4xl font-black mt-12 mb-6 text-slate-900 dark:text-white pb-2 border-b-2 border-slate-100 dark:border-slate-800">{children}</h1>;
+      return <h1 id={id} className="text-4xl font-black mt-12 mb-6 text-slate-800 dark:text-white pb-2 border-b-2 border-slate-100 dark:border-slate-800">{children}</h1>;
     },
     h2: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-800 dark:text-slate-100 pb-1 border-b border-slate-100 dark:border-slate-800">{children}</h2>;
+      return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-700 dark:text-slate-100 pb-1 border-b border-slate-100 dark:border-slate-800">{children}</h2>;
     },
     h3: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
-      return <h3 id={id} className="text-2xl font-bold mt-8 mb-4 text-slate-800 dark:text-slate-200">{children}</h3>;
+      return <h3 id={id} className="text-2xl font-bold mt-8 mb-4 text-slate-700 dark:text-slate-200">{children}</h3>;
     },
-    p: ({ children }: { children?: React.ReactNode }) => <p className="text-lg leading-relaxed mb-6 text-slate-600 dark:text-slate-400 font-medium">{children}</p>,
+    p: ({ children }: { children?: React.ReactNode }) => <p className="text-lg leading-relaxed mb-6 text-slate-500 dark:text-slate-400 font-normal">{children}</p>,
     ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
-    ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-medium text-slate-600 dark:text-slate-400">{children}</ol>,
+    ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-normal text-slate-500 dark:text-slate-400">{children}</ol>,
     li: ({ children, ordered, node }: { children?: React.ReactNode; ordered?: boolean; node?: Record<string, unknown> }) => {
       // Check if it's a task list item
       const childrenNodes = (node?.children as Record<string, unknown>[]) || [];
@@ -308,12 +308,12 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       return (
         <li className="text-lg flex items-start gap-3 mb-2">
           {!ordered && <div className="h-2 w-2 rounded-full bg-primary mt-2.5 shrink-0" />}
-          <span className="text-slate-600 dark:text-slate-400 font-medium">{children}</span>
+          <span className="text-slate-500 dark:text-slate-400 font-normal">{children}</span>
         </li>
       );
     },
-    strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-black text-slate-900 dark:text-white">{children}</strong>,
-    em: ({ children }: { children?: React.ReactNode }) => <em className="italic text-primary/80 font-medium">{children}</em>,
+    strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-bold text-slate-800 dark:text-white">{children}</strong>,
+    em: ({ children }: { children?: React.ReactNode }) => <em className="italic text-primary/80 font-normal">{children}</em>,
     a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
       <a
         href={href}
@@ -352,7 +352,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     ),
     thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
     th: ({ children }: { children?: React.ReactNode }) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
-    td: ({ children }: { children?: React.ReactNode }) => <td className="p-4 border-b text-slate-600 dark:text-slate-400 text-sm md:text-base">{children}</td>,
+    td: ({ children }: { children?: React.ReactNode }) => <td className="p-4 border-b text-slate-500 dark:text-slate-400 text-sm md:text-base font-normal">{children}</td>,
   };
 
   const isDirectVideo = (url: string) => {

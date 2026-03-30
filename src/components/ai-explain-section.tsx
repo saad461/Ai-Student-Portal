@@ -215,7 +215,7 @@ export function AIExplainSection({ lectureTitle, lectureContent }: AIExplainSect
                   <div className="space-y-6">
                     <div>
                        <Badge variant="outline" className="mb-4 text-[10px] uppercase font-bold text-slate-400">Original Paragraph {i+1}</Badge>
-                       <p className="text-slate-600 dark:text-slate-400 font-medium leading-relaxed italic border-l-4 border-slate-100 dark:border-slate-800 pl-4">
+                       <p className="text-slate-500 dark:text-slate-400 font-normal leading-relaxed italic border-l-4 border-slate-100 dark:border-slate-800 pl-4">
                           {item.original}
                        </p>
                     </div>
@@ -230,7 +230,7 @@ export function AIExplainSection({ lectureTitle, lectureContent }: AIExplainSect
                             AI is explaining this part...
                          </div>
                        ) : (
-                         <div className="prose prose-sm dark:prose-invert max-w-none text-slate-900 dark:text-white font-bold leading-relaxed text-lg">
+                         <div className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-white font-bold leading-relaxed text-lg">
                            <ReactMarkdown>{item.explanation}</ReactMarkdown>
                          </div>
                        )}
