@@ -89,7 +89,18 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isActive, isOpen]);
 
+  const saveCurrentSegment = useCallback(() => {
+    if (sessionStartTimeRef.current !== null) {
+      const elapsed = sessionStartTimeRef.current - timeLeft;
+      if (elapsed > 0) {
+        onSaveSession(elapsed);
+      }
+      sessionStartTimeRef.current = null;
+    }
+  }, [timeLeft, onSaveSession]);
+
   const handleViolation = async (type: string) => {
+    saveCurrentSegment();
     setIsActive(false);
     setLastViolationType(type);
     setIsViolationOpen(true);
@@ -165,9 +176,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
 
   useEffect(() => {
     if (!isOpen) {
-      if (isActive && sessionStartTimeRef.current !== null) {
-        onSaveSession(sessionStartTimeRef.current - timeLeft);
-      }
+      saveCurrentSegment();
       stopBinauralBeats();
       stopAmbient();
       setIsActive(false);
@@ -179,7 +188,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
         setTimeLeft((prev) => {
           const next = prev - 1;
           if (next <= 0) {
-            onSaveSession(sessionStartTimeRef.current! - 0);
+            saveCurrentSegment();
             success("Focus Session Complete! 60 minutes logged.");
             onClose();
             return 0;
@@ -190,7 +199,7 @@ export function FocusRoom({ isOpen, onClose, onSaveSession, moduleIndex, moduleN
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, isActive, onSaveSession, onClose, success]);
+  }, [isOpen, isActive, saveCurrentSegment, onClose, success]);
 
   // Binaural Beats Logic
   const startBinauralBeats = () => {
