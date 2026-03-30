@@ -125,14 +125,9 @@ export default function LibraryPage() {
 
   const handleOpenResource = (resource: Resource) => {
     const isPDFUrl = isPDF(resource.external_url);
-    const isMobile = window.innerWidth < 768;
 
     if (isPDFUrl) {
-       if (isMobile) {
-          window.open(resource.external_url, '_blank');
-       } else {
-          router.push(`/library/view/${resource.id}`);
-       }
+      router.push(`/library/view/${resource.id}`);
     } else {
        // Non-PDF, trigger download
        handleDownload(resource);

@@ -117,18 +117,36 @@ export default function ResourceViewPage() {
         </div>
       </div>
 
-      {/* PDF Iframe */}
-      <div className="flex-1 relative bg-slate-800">
-        <iframe
-          src={`${resource.external_url}#toolbar=1`}
+      {/* PDF Viewer Container */}
+      <div className="flex-1 relative bg-slate-800 overflow-hidden">
+        <object
+          data={resource.external_url}
+          type="application/pdf"
           className="w-full h-full border-none shadow-2xl"
-          title={resource.title}
-        />
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-slate-900 text-slate-300">
+            <FileText className="h-16 w-16 mb-4 opacity-20" />
+            <h3 className="text-xl font-bold mb-2">PDF Preview Unavailable</h3>
+            <p className="text-sm mb-6 max-w-md opacity-60">
+              Your browser doesn&apos;t support embedded PDF viewing. No worries! You can view it in your native PDF app or download it.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button size="lg" asChild className="font-bold uppercase tracking-tighter">
+                <a href={resource.external_url} target="_blank" rel="noopener noreferrer">
+                  Open in New Tab
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" onClick={handleDownload} className="font-bold uppercase tracking-tighter">
+                <Download className="h-4 w-4 mr-2" /> Download Now
+              </Button>
+            </div>
+          </div>
+        </object>
 
-        {/* Fullscreen Mobile Alert or similar if needed, but per requirements we use dedicated page for desktop */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 md:hidden">
+        {/* Mobile Help Text */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:hidden pointer-events-none">
            <p className="bg-black/60 backdrop-blur-md text-white text-[10px] px-4 py-2 rounded-full font-bold uppercase tracking-widest border border-white/20">
-              Pinch to zoom supported in native view
+              Scroll or Pinch to navigate PDF
            </p>
         </div>
       </div>
