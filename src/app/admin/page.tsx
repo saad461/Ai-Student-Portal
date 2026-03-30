@@ -1962,7 +1962,19 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-2">
                          <Label>Description</Label>
-                         <Textarea value={editingItem.attached_assignment?.description || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, attached_assignment: { ...prev!.attached_assignment!, description: e.target.value, title: prev!.attached_assignment?.title || '', requirements: prev!.attached_assignment?.requirements || [] } }))} />
+                         <RichTextEditor
+                            key={`assignment-desc-${editingItem.id}`}
+                            content={editingItem.attached_assignment?.description || ''}
+                            onChange={(content) => setEditingItem(prev => ({
+                               ...prev!,
+                               attached_assignment: {
+                                  ...prev!.attached_assignment!,
+                                  description: content,
+                                  title: prev!.attached_assignment?.title || '',
+                                  requirements: prev!.attached_assignment?.requirements || []
+                               }
+                            }))}
+                         />
                       </div>
                       <div className="space-y-2">
                          <Label>Requirements (One per line)</Label>
