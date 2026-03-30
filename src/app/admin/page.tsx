@@ -431,7 +431,7 @@ export default function AdminDashboard() {
   if (loading) return <div className="p-8 text-center">Loading Admin Controls...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8">
       {activeCallSessionId && adminId && (
          <VideoCallRoom
            sessionId={activeCallSessionId}
@@ -439,40 +439,40 @@ export default function AdminDashboard() {
            onClose={() => setActiveCallSessionId(null)}
          />
       )}
-      <div className="max-w-7xl mx-auto space-y-8">
-        <header className="flex justify-between items-start">
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
+        <header className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-slate-500">Manage students and curriculum progression.</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-sm md:text-base text-slate-500">Manage students and curriculum progression.</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={async () => {
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={async () => {
               const res = await seedCurriculumAction();
               if (res.success) success('Curriculum seeded successfully!');
               else toastError('Error: ' + JSON.stringify(res.error));
             }}>
-              <Database className="h-4 w-4 mr-2" /> Seed Curriculum
+              <Database className="h-4 w-4 mr-2" /> Seed
             </Button>
-            <Button variant="outline" onClick={async () => {
+            <Button variant="outline" size="sm" onClick={async () => {
               await adminLogoutAction();
               localStorage.removeItem('admin_auth');
               router.push('/admin/login');
             }}>
-              Logout Admin
+              Logout
             </Button>
           </div>
         </header>
 
-        <div className="flex gap-4 border-b pb-4 overflow-x-auto">
-          <Button variant={activeTab === 'students' ? 'default' : 'ghost'} onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-2" /> Students</Button>
-          <Button variant={activeTab === 'courses' ? 'default' : 'ghost'} onClick={() => setActiveTab('courses')}><Layers className="h-4 w-4 mr-2" /> Courses</Button>
-          <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-2" /> Structure</Button>
-          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-2" /> Content</Button>
-          <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-2" /> Attendance</Button>
-          <Button variant={activeTab === 'library' ? 'default' : 'ghost'} onClick={() => setActiveTab('library')}><Library className="h-4 w-4 mr-2" /> Library</Button>
-          <Button variant={activeTab === 'challenges' ? 'default' : 'ghost'} onClick={() => setActiveTab('challenges')}><Trophy className="h-4 w-4 mr-2" /> Challenges</Button>
-          <Button variant={activeTab === 'support' ? 'default' : 'ghost'} onClick={() => setActiveTab('support')}><MessageCircle className="h-4 w-4 mr-2" /> Support</Button>
-          <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-2" /> Insights</Button>
+        <div className="flex gap-2 border-b pb-4 overflow-x-auto no-scrollbar scroll-smooth">
+          <Button variant={activeTab === 'students' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-1 md:mr-2" /> Students</Button>
+          <Button variant={activeTab === 'courses' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('courses')}><Layers className="h-4 w-4 mr-1 md:mr-2" /> Courses</Button>
+          <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-1 md:mr-2" /> Structure</Button>
+          <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-1 md:mr-2" /> Content</Button>
+          <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-1 md:mr-2" /> Attendance</Button>
+          <Button variant={activeTab === 'library' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('library')}><Library className="h-4 w-4 mr-1 md:mr-2" /> Library</Button>
+          <Button variant={activeTab === 'challenges' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('challenges')}><Trophy className="h-4 w-4 mr-1 md:mr-2" /> Challenges</Button>
+          <Button variant={activeTab === 'support' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('support')}><MessageCircle className="h-4 w-4 mr-1 md:mr-2" /> Support</Button>
+          <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-1 md:mr-2" /> Insights</Button>
         </div>
 
         <Dialog open={!!ringingSession} onOpenChange={(o) => !o && setRingingSession(null)}>
@@ -516,8 +516,8 @@ export default function AdminDashboard() {
         </Dialog>
 
         {activeTab === 'support' ? (
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 h-[700px]">
-              <div className="md:col-span-1 bg-white dark:bg-slate-900 rounded-2xl border flex flex-col overflow-hidden">
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8 h-auto md:h-[700px]">
+              <div className="md:col-span-1 bg-white dark:bg-slate-900 rounded-2xl border flex flex-col overflow-hidden h-[300px] md:h-auto">
                  <div className="p-4 border-b">
                     <h3 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Chat History</h3>
                  </div>
@@ -666,14 +666,14 @@ export default function AdminDashboard() {
               </div>
            </div>
         ) : activeTab === 'courses' ? (
-          <div className="space-y-12">
-            <div className="flex justify-between items-center">
+          <div className="space-y-8 md:space-y-12">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-2xl font-bold">Course Management</h2>
-                <p className="text-sm text-muted-foreground">Organize your curriculum into Parent Courses, Sub-Courses, and Standalone programs.</p>
+                <h2 className="text-xl md:text-2xl font-bold">Course Management</h2>
+                <p className="text-xs md:text-sm text-muted-foreground">Organize your curriculum into Parent Courses, Sub-Courses, and Standalone programs.</p>
               </div>
-              <Button onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}>
-                <Plus className="h-4 w-4 mr-2" /> Create New Course
+              <Button size="sm" className="w-full sm:w-auto" onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}>
+                <Plus className="h-4 w-4 mr-2" /> Create New
               </Button>
             </div>
 
@@ -778,8 +778,8 @@ export default function AdminDashboard() {
           </div>
         ) : activeTab === 'students' ? (
             <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2"><Users className="h-5 w-5" /> All Profiles</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2 shrink-0"><Users className="h-5 w-5" /> All Profiles</h2>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                   <Input placeholder="Search students..." className="pl-9" />
@@ -788,14 +788,14 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 gap-4">
                 {students.map((student: StudentProfile) => (
                   <Card key={student.id}>
-                    <CardContent className="p-6 flex items-center justify-between">
+                    <CardContent className="p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg">{student.full_name[0]}</div>
-                        <div><p className="font-bold">{student.full_name}</p><p className="text-xs text-slate-500">Joined {new Date(student.enrollment_date).toLocaleDateString()}</p></div>
+                        <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg">{student.full_name[0]}</div>
+                        <div><p className="font-bold text-sm md:text-base">{student.full_name}</p><p className="text-[10px] md:text-xs text-slate-500">Joined {new Date(student.enrollment_date).toLocaleDateString()}</p></div>
                       </div>
-                      <div className="flex items-center gap-8">
-                        <div className="text-center"><p className="text-xs text-slate-500 uppercase tracking-wider">Submissions</p><p className="font-bold">{student.submissions?.length || 0}</p></div>
-                        <Badge variant={student.is_pro ? "default" : "secondary"}>{student.is_pro ? 'PRO' : 'BASIC'}</Badge>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-8 w-full sm:w-auto border-t sm:border-0 pt-4 sm:pt-0">
+                        <div className="text-center"><p className="text-[10px] text-slate-500 uppercase tracking-wider">Submissions</p><p className="font-bold text-sm">{student.submissions?.length || 0}</p></div>
+                        <Badge variant={student.is_pro ? "default" : "secondary"} className="text-[10px]">{student.is_pro ? 'PRO' : 'BASIC'}</Badge>
                         <Button variant="ghost" size="icon" onClick={() => setViewingStudent(student)}><FileText className="h-4 w-4" /></Button>
                       </div>
                     </CardContent>
@@ -805,14 +805,14 @@ export default function AdminDashboard() {
             </div>
         ) : activeTab === 'structure' ? (
           <div className="space-y-8">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full sm:w-auto">
                 <div>
-                  <h2 className="text-2xl font-bold">Structure</h2>
-                  <p className="text-sm text-muted-foreground">Modules & Sub-Modules.</p>
+                  <h2 className="text-xl md:text-2xl font-bold">Structure</h2>
+                  <p className="text-xs md:text-sm text-muted-foreground">Modules & Sub-Modules.</p>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border">
-                   <Label className="pl-3 text-xs font-bold uppercase text-slate-500">Course:</Label>
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border w-full sm:w-auto">
+                   <Label className="pl-3 text-[10px] font-bold uppercase text-slate-500">Course:</Label>
                    <select
                      className="bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
                      value={selectedCourseId}
@@ -900,9 +900,9 @@ export default function AdminDashboard() {
                 </Card>
               ))}
               {modules.length === 0 && (
-                <div className="p-12 text-center border-2 border-dashed rounded-xl">
-                  <Layout className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                  <p className="text-slate-500">No modules created yet. Start by adding your first module.</p>
+                <div className="p-6 md:p-12 text-center border-2 border-dashed rounded-xl">
+                  <Layout className="h-10 w-10 md:h-12 md:w-12 mx-auto text-slate-300 mb-4" />
+                  <p className="text-sm md:text-base text-slate-500">No modules created yet. Start by adding your first module.</p>
                   <Button variant="outline" className="mt-4" onClick={() => setEditingModule({ index: 1, name: '' })}>Add First Module</Button>
                 </div>
               )}
@@ -911,11 +911,11 @@ export default function AdminDashboard() {
           </div>
         ) : activeTab === 'curriculum' ? (
           <div className="space-y-12">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-6">
-                <div><h2 className="text-2xl font-bold">Content</h2><p className="text-sm text-muted-foreground">Lectures & Tasks.</p></div>
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border">
-                   <Label className="pl-3 text-xs font-bold uppercase text-slate-500">Course:</Label>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full sm:w-auto">
+                <div><h2 className="text-xl md:text-2xl font-bold">Content</h2><p className="text-xs md:text-sm text-muted-foreground">Lectures & Tasks.</p></div>
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border w-full sm:w-auto">
+                   <Label className="pl-3 text-[10px] font-bold uppercase text-slate-500">Course:</Label>
                    <select
                      className="bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
                      value={selectedCourseId}
@@ -1100,37 +1100,44 @@ export default function AdminDashboard() {
         ) : activeTab === 'attendance' ? (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold flex items-center gap-2"><Clock className="h-5 w-5" /> Attendance Log</h2>
-            <Card>
-              <Table>
-                <TableHeader><TableRow><TableHead>Student</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {attendance.map((record) => (
-                    <TableRow key={record.id as string}><TableCell>{(record.profiles as Record<string, unknown>)?.full_name as string}</TableCell><TableCell>{new Date(record.date as string).toLocaleDateString()}</TableCell><TableCell><Badge className="bg-green-600">PRESENT</Badge></TableCell></TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Student</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Status</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {attendance.map((record) => (
+                      <TableRow key={record.id as string}>
+                        <TableCell className="font-medium">{(record.profiles as Record<string, unknown>)?.full_name as string}</TableCell>
+                        <TableCell className="whitespace-nowrap">{new Date(record.date as string).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right"><Badge className="bg-green-600 text-[10px]">PRESENT</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </div>
         ) : activeTab === 'library' ? (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold flex items-center gap-2"><Library className="h-5 w-5" /> Library Management</h2>
-              <Button onClick={() => setEditingResource({ title: '', type: 'book', price_points: 0, is_published: true })}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2"><Library className="h-5 w-5" /> Library</h2>
+              <Button size="sm" className="w-full sm:w-auto" onClick={() => setEditingResource({ title: '', type: 'book', price_points: 0, is_published: true })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Resource
               </Button>
             </div>
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {resources.map((res) => (
                     <TableRow key={res.id}>
                       <TableCell className="font-bold">{res.title}</TableCell>
@@ -1141,43 +1148,46 @@ export default function AdminDashboard() {
                           {res.is_published ? 'Published' : 'Draft'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => setEditingResource(res)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteResource(res.id!)}><Trash2 className="h-4 w-4" /></Button>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1 md:gap-2">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingResource(res)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteResource(res.id!)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </div>
         ) : activeTab === 'challenges' ? (
            <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-xl font-semibold flex items-center gap-2"><Trophy className="h-5 w-5" /> Daily Challenges</h2>
-              <Button onClick={() => setEditingChallenge({ title: '', difficulty: 'easy', points_reward: 50, active_date: new Date().toISOString().split('T')[0] })}>
+              <Button size="sm" className="w-full sm:w-auto" onClick={() => setEditingChallenge({ title: '', difficulty: 'easy', points_reward: 50, active_date: new Date().toISOString().split('T')[0] })}>
                 <Plus className="h-4 w-4 mr-2" /> Add Challenge
               </Button>
             </div>
-            <Card>
-              <Table>
-                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Title</TableHead><TableHead>Difficulty</TableHead><TableHead>Reward</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Title</TableHead><TableHead>Difficulty</TableHead><TableHead>Reward</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  <TableBody>
                   {challenges.map((ch) => (
                     <TableRow key={ch.id}>
                       <TableCell>{ch.active_date}</TableCell>
                       <TableCell className="font-bold">{ch.title}</TableCell>
                       <TableCell><Badge variant={ch.difficulty === 'hard' ? 'destructive' : ch.difficulty === 'medium' ? 'default' : 'secondary'}>{ch.difficulty}</Badge></TableCell>
                       <TableCell>{ch.points_reward} pts</TableCell>
-                      <TableCell>
-                         <Button variant="ghost" size="icon" onClick={() => setEditingChallenge(ch)}><Edit className="h-4 w-4" /></Button>
+                      <TableCell className="text-right">
+                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingChallenge(ch)}><Edit className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </div>
         ) : (
@@ -1189,35 +1199,35 @@ export default function AdminDashboard() {
                </div>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 <Card className="bg-blue-500 text-white border-none shadow-xl">
                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                      <CardTitle className="text-[10px] md:text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
                         <Users className="h-4 w-4" /> Active Students
                       </CardTitle>
-                      <div className="text-3xl font-black">{students.length}</div>
+                      <div className="text-2xl md:text-3xl font-black">{students.length}</div>
                    </CardHeader>
-                   <CardContent className="text-xs opacity-90">Total enrolled across all courses.</CardContent>
+                   <CardContent className="text-[10px] md:text-xs opacity-90">Total enrolled across all courses.</CardContent>
                 </Card>
                 <Card className="bg-emerald-500 text-white border-none shadow-xl">
                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                      <CardTitle className="text-[10px] md:text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
                         <Check className="h-4 w-4" /> Avg Completion
                       </CardTitle>
-                      <div className="text-3xl font-black">
+                      <div className="text-2xl md:text-3xl font-black">
                          {students.length > 0 ? Math.round(students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0) / (students.length * curriculum.length || 1) * 100) : 0}%
                       </div>
                    </CardHeader>
-                   <CardContent className="text-xs opacity-90">Average progress per student.</CardContent>
+                   <CardContent className="text-[10px] md:text-xs opacity-90">Average progress per student.</CardContent>
                 </Card>
-                <Card className="bg-purple-600 text-white border-none shadow-xl">
+                <Card className="bg-purple-600 text-white border-none shadow-xl sm:col-span-2 md:col-span-1">
                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+                      <CardTitle className="text-[10px] md:text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
                         <TrendingUp className="h-4 w-4" /> Total Submissions
                       </CardTitle>
-                      <div className="text-3xl font-black">{students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0)}</div>
+                      <div className="text-2xl md:text-3xl font-black">{students.reduce((acc, s) => acc + (s.submissions?.length || 0), 0)}</div>
                    </CardHeader>
-                   <CardContent className="text-xs opacity-90">Total assignments & quizzes turned in.</CardContent>
+                   <CardContent className="text-[10px] md:text-xs opacity-90">Total assignments & quizzes turned in.</CardContent>
                 </Card>
              </div>
 
@@ -1279,21 +1289,21 @@ export default function AdminDashboard() {
         )}
 
         <Dialog open={!!viewingStudent} onOpenChange={(open) => !open && setViewingStudent(null)}>
-          <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl w-[95vw] md:w-full max-h-[85vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
-               <div className="flex justify-between items-center pr-8">
+               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pr-8">
                   <DialogTitle>Student Profile: {viewingStudent?.full_name}</DialogTitle>
-                  <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                  <div className="flex gap-1 p-1 bg-muted rounded-lg w-full sm:w-auto">
                      <Button
                         variant={studentTab === 'submissions' ? 'secondary' : 'ghost'}
                         size="sm"
-                        className="text-xs font-bold"
+                        className="flex-1 sm:flex-none text-[10px] md:text-xs font-bold"
                         onClick={() => setStudentTab('submissions')}
                      >Submissions</Button>
                      <Button
                         variant={studentTab === 'activity' ? 'secondary' : 'ghost'}
                         size="sm"
-                        className="text-xs font-bold"
+                        className="flex-1 sm:flex-none text-[10px] md:text-xs font-bold"
                         onClick={() => setStudentTab('activity')}
                      >Activity Log</Button>
                   </div>
@@ -1396,7 +1406,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
-          <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
+          <DialogContent className="max-w-4xl w-[95vw] md:w-full overflow-y-auto max-h-[90vh] p-4 md:p-6">
             <DialogHeader><DialogTitle>{editingItem?.id?.startsWith('new-') ? 'Add' : 'Edit'} Curriculum Item</DialogTitle></DialogHeader>
             <div className="flex flex-col gap-8 py-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1750,7 +1760,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingModule} onOpenChange={(open) => !open && setEditingModule(null)}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] md:max-w-lg">
             <DialogHeader><DialogTitle>{editingModule?.id ? 'Edit' : 'Add'} Module</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Module Index</Label><Input type="number" value={editingModule?.index || 1} onChange={(e) => setEditingModule(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
@@ -1762,7 +1772,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingSubModule} onOpenChange={(open) => !open && setEditingSubModule(null)}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] md:max-w-lg">
             <DialogHeader><DialogTitle>{editingSubModule?.id ? 'Edit' : 'Add'} Sub-Module</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Sub-Module Index</Label><Input type="number" value={editingSubModule?.index || 1} onChange={(e) => setEditingSubModule(prev => ({ ...prev!, index: parseInt(e.target.value) }))} /></div>
@@ -1773,7 +1783,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingCourse} onOpenChange={(open) => !open && setEditingCourse(null)}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] md:max-w-lg">
             <DialogHeader><DialogTitle>{editingCourse?.id ? 'Edit' : 'Add'} Course</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1805,7 +1815,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingResource} onOpenChange={(open) => !open && setEditingResource(null)}>
-          <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+          <DialogContent className="max-w-3xl w-[95vw] md:w-full overflow-y-auto max-h-[90vh]">
             <DialogHeader><DialogTitle>{editingResource?.id ? 'Edit' : 'Add'} Library Resource</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1933,7 +1943,7 @@ export default function AdminDashboard() {
         </Dialog>
 
         <Dialog open={!!editingChallenge} onOpenChange={(open) => !open && setEditingChallenge(null)}>
-          <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
+          <DialogContent className="max-w-4xl w-[95vw] md:w-full overflow-y-auto max-h-[90vh]">
             <DialogHeader><DialogTitle>{editingChallenge?.id ? 'Edit' : 'Add'} Daily Challenge</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-3 gap-4">
