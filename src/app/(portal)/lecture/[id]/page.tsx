@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Video,
   CheckCircle2,
@@ -51,7 +50,7 @@ interface Submission {
     quiz_completed?: boolean;
     quiz_score?: number;
     assignment_submitted?: boolean;
-    knowledge_check_answer?: string;
+    knowledge_check_answers?: Record<string, string>;
   };
 }
 
@@ -65,7 +64,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   const [submittingId, setSubmittingId] = useState(false);
   const [githubUrl, setGithubUrl] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'assignment' | 'quiz' | 'explain'>('theory');
+  const [activeTab, setActiveTab] = useState<'theory' | 'video' | 'knowledge' | 'assignment' | 'quiz' | 'explain'>('theory');
   const [userPerks, setUserPerks] = useState<Record<string, unknown>[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [readTimeSeconds, setReadTimeSeconds] = useState(0);
@@ -207,12 +206,15 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     const updatedData = { ...currentData, ...newData };
 
     // Check if everything is done
-    const isKnowledgeCheckDone = lecture?.knowledge_check_question ? (!!updatedData.knowledge_check_answer) : true;
-    const isTheoryDoneNow = updatedData.theory_read && isKnowledgeCheckDone;
+    const checks = lecture?.knowledge_checks || [];
+    const answers = (updatedData.knowledge_check_answers as Record<string, string>) || {};
+    const isKnowledgeCheckDone = checks.length > 0 ? checks.every(c => !!answers[c.id]) : true;
+
+    const isTheoryDoneNow = !!updatedData.theory_read;
     const isQuizDone = lecture?.attached_quiz ? updatedData.quiz_completed : true;
     const isAssignmentDone = lecture?.attached_assignment ? (updatedData.assignment_submitted || !!githubUrl) : true;
 
-    const isFullyCompleted = isTheoryDoneNow && isQuizDone && isAssignmentDone;
+    const isFullyCompleted = isTheoryDoneNow && isKnowledgeCheckDone && isQuizDone && isAssignmentDone;
 
     const { error } = await supabase.from('submissions').upsert({
       student_id: user.id,
@@ -246,12 +248,19 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     return readTimeSeconds >= (effectiveReadMinutes * 60);
   }, [effectiveReadMinutes, readTimeSeconds]);
 
-  const knowledgeCheckAnswer = (submission?.completion_data as Record<string, unknown>)?.knowledge_check_answer as string || '';
-  const isKnowledgeCheckMet = !lecture?.knowledge_check_question || !!knowledgeCheckAnswer;
+  const knowledgeCheckAnswers = useMemo(() => {
+    return (submission?.completion_data as Record<string, unknown>)?.knowledge_check_answers as Record<string, string> || {};
+  }, [submission?.completion_data]);
+
+  const isKnowledgeCheckMet = useMemo(() => {
+    const checks = lecture?.knowledge_checks || [];
+    if (checks.length === 0) return true;
+    return checks.every(c => !!knowledgeCheckAnswers[c.id]);
+  }, [lecture?.knowledge_checks, knowledgeCheckAnswers]);
 
   const isAssignmentDone = submission?.completion_data?.assignment_submitted || !!submission?.github_url;
   const isQuizDone = submission?.completion_data?.quiz_completed;
-  const isFullyDone = isTheoryDone && (lecture?.attached_assignment ? isAssignmentDone : true) && (lecture?.attached_quiz ? isQuizDone : true);
+  const isFullyDone = isTheoryDone && isKnowledgeCheckMet && (lecture?.attached_assignment ? isAssignmentDone : true) && (lecture?.attached_quiz ? isQuizDone : true);
 
   const prevItem = useMemo(() => {
     if (!lecture) return null;
@@ -491,6 +500,21 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <Sparkles className="h-4 w-4 mr-2" /> AI Explain
             </Button>
 
+            {lecture.knowledge_checks && lecture.knowledge_checks.length > 0 && (
+              <Button
+                variant="ghost"
+                className={cn(
+                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  activeTab === 'knowledge' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
+                  !isTheoryDone && "opacity-50 cursor-not-allowed"
+                )}
+                onClick={() => isTheoryDone && setActiveTab('knowledge')}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" /> Knowledge Check
+                {isKnowledgeCheckMet && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
+              </Button>
+            )}
+
             {lecture.video_url && (
               <Button
                 variant="ghost"
@@ -605,52 +629,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             No theory content provided for this lecture yet.
                           </div>
                         )}
-
-                        {lecture.knowledge_check_question && (
-                          <div className="mt-12 p-8 bg-emerald-50 dark:bg-emerald-950/20 rounded-3xl border-2 border-emerald-100 dark:border-emerald-900/30 animate-in slide-in-from-bottom-4 duration-700">
-                             <div className="flex items-center gap-3 mb-6">
-                                <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center text-white">
-                                   <Zap className="h-6 w-6" />
-                                </div>
-                                <div>
-                                   <h3 className="text-xl font-black text-emerald-900 dark:text-emerald-100 uppercase tracking-tight">Quick Knowledge Check</h3>
-                                   <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">Show us what you&apos;ve learned!</p>
-                                </div>
-                             </div>
-
-                             <div className="space-y-6">
-                                <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border shadow-sm">
-                                   <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{lecture.knowledge_check_question}</p>
-                                </div>
-
-                                <div className="space-y-3">
-                                   <Label className="text-xs font-black uppercase tracking-widest text-emerald-700">Your Answer:</Label>
-                                   <RichTextEditor
-                                      content={knowledgeCheckAnswer}
-                                      onChange={(content) => {
-                                         // Don't auto-update completion here to avoid too many writes,
-                                         // let the user click the "Mastered" button which will save everything.
-                                         // However, for UX we should probably save periodically or local state.
-                                         // Given the existing updateCompletion logic, let's keep it simple for now.
-                                         // We'll update the submission locally and then save on button click.
-                                         setSubmission(prev => {
-                                            if (!prev) return null;
-                                            const currentCompletion = (prev.completion_data as Record<string, unknown>) || {};
-                                            return {
-                                               ...prev,
-                                               completion_data: {
-                                                  ...currentCompletion,
-                                                  knowledge_check_answer: content
-                                               }
-                                            } as unknown as Submission;
-                                         });
-                                      }}
-                                      placeholder="Explain in your own words..."
-                                   />
-                                </div>
-                             </div>
-                          </div>
-                        )}
                       </div>
                       {!isTheoryDone && (
                         <div className="space-y-4">
@@ -697,17 +675,13 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                           )}
                           <Button
                             onClick={() => {
-                               const currentData = (submission?.completion_data || {}) as Record<string, unknown>;
-                               updateCompletion({
-                                  ...currentData,
-                                  theory_read: true,
-                                  knowledge_check_answer: (submission?.completion_data as Record<string, unknown>)?.knowledge_check_answer || ''
-                               });
+                               updateCompletion({ theory_read: true });
                                logActivityAction('theory_mastered', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
-                               if (lecture?.attached_assignment) setActiveTab('assignment');
+                               if (lecture?.knowledge_checks?.length) setActiveTab('knowledge');
+                               else if (lecture?.attached_assignment) setActiveTab('assignment');
                                else if (lecture?.attached_quiz) setActiveTab('quiz');
                             }}
-                            disabled={!isReadTimeMet || !isKnowledgeCheckMet}
+                            disabled={!isReadTimeMet}
                             size="lg"
                             className={cn(
                               "w-full h-24 text-xl font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 group",
@@ -717,17 +691,10 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             )}
                           >
                             {isReadTimeMet ? (
-                               isKnowledgeCheckMet ? (
-                                <div className="flex items-center gap-3">
-                                  <span>I have mastered the theory</span>
-                                  <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
-                                </div>
-                               ) : (
-                                <div className="flex items-center gap-2">
-                                  <Lock className="h-5 w-5" />
-                                  <span>Answer the knowledge check to proceed</span>
-                                </div>
-                               )
+                              <div className="flex items-center gap-3">
+                                <span>I have mastered the theory</span>
+                                <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                              </div>
                             ) : (
                               <div className="flex flex-col items-center">
                                 <div className="flex items-center gap-2">
@@ -824,6 +791,88 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                       )}
                    </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'knowledge' && (
+              <div className="space-y-12 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+                 <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-black uppercase tracking-tight">Knowledge Check</h2>
+                    <p className="text-muted-foreground">Answer the following questions to demonstrate your understanding.</p>
+                 </div>
+
+                 <div className="space-y-16">
+                    {lecture.knowledge_checks?.map((check, idx) => (
+                      <div key={check.id} className="space-y-6">
+                         <div className="flex items-start gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black shrink-0">
+                               {idx + 1}
+                            </div>
+                            <div className="flex-1 pt-1">
+                               <div className="prose prose-slate dark:prose-invert max-w-none mb-6">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                     {check.question}
+                                  </ReactMarkdown>
+                               </div>
+
+                               <RichTextEditor
+                                  content={knowledgeCheckAnswers[check.id] || ''}
+                                  onChange={(content) => {
+                                     setSubmission(prev => {
+                                        if (!prev) return null;
+                                        const currentCompletion = (prev.completion_data as Record<string, unknown>) || {};
+                                        const currentAnswers = (currentCompletion.knowledge_check_answers as Record<string, string>) || {};
+                                        return {
+                                           ...prev,
+                                           completion_data: {
+                                              ...currentCompletion,
+                                              knowledge_check_answers: {
+                                                 ...currentAnswers,
+                                                 [check.id]: content
+                                              }
+                                           }
+                                        } as unknown as Submission;
+                                     });
+                                  }}
+                                  placeholder="Type your answer here..."
+                               />
+                            </div>
+                         </div>
+                      </div>
+                    ))}
+                 </div>
+
+                 <div className="pt-12 border-t flex flex-col items-center gap-6">
+                    <Button
+                       size="lg"
+                       className="h-16 px-12 rounded-2xl font-black uppercase tracking-widest shadow-xl"
+                       disabled={!isKnowledgeCheckMet}
+                       onClick={() => {
+                          updateCompletion({
+                             knowledge_check_answers: knowledgeCheckAnswers
+                          });
+                          if (lecture?.attached_assignment) setActiveTab('assignment');
+                          else if (lecture?.attached_quiz) setActiveTab('quiz');
+                       }}
+                    >
+                       {isKnowledgeCheckMet ? (
+                          <div className="flex items-center gap-3">
+                             <span>Confirm Answers</span>
+                             <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                       ) : (
+                          <div className="flex items-center gap-2">
+                             <Lock className="h-4 w-4" />
+                             <span>Complete all questions to proceed</span>
+                          </div>
+                       )}
+                    </Button>
+                    {!isKnowledgeCheckMet && (
+                       <p className="text-xs text-muted-foreground font-bold uppercase animate-pulse">
+                          All questions must be answered to continue.
+                       </p>
+                    )}
+                 </div>
               </div>
             )}
 
