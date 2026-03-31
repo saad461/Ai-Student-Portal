@@ -42,7 +42,7 @@ export interface CurriculumItem {
   required_read_minutes?: number;
   content?: { level: number; text: string; id: string }[];
   theory_content?: string;
-  knowledge_check_question?: string;
+  knowledge_checks?: { id: string; question: string }[];
   video_url?: string;
   enable_compiler?: boolean;
   compiler_initial_code?: {

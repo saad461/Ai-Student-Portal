@@ -105,7 +105,7 @@ export async function saveCurriculumItemAction(item: Record<string, unknown>) {
       sub_module_id: (item.sub_module_id && item.sub_module_id !== '') ? item.sub_module_id : null,
       course_id: (item.course_id && item.course_id !== '') ? item.course_id : null,
       module_id: (item.module_id && item.module_id !== '') ? item.module_id : null,
-      knowledge_check_question: item.knowledge_check_question || null
+      knowledge_checks: item.knowledge_checks || []
     };
 
     const { data, error } = await supabaseAdmin

@@ -1861,16 +1861,61 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    <div className="space-y-2 border-t pt-4">
-                      <Label className="text-lg font-bold flex items-center gap-2">
-                        <CheckCheck className="h-5 w-5 text-emerald-500" /> Quick Knowledge Check
-                      </Label>
-                      <p className="text-xs text-muted-foreground mb-2">Write a question that students must answer after reading the theory.</p>
-                      <Input
-                        placeholder="e.g. What is the difference between inline and block elements?"
-                        value={editingItem.knowledge_check_question || ''}
-                        onChange={(e) => setEditingItem(prev => ({ ...prev!, knowledge_check_question: e.target.value }))}
-                      />
+                    <div className="space-y-4 border-t pt-6">
+                      <div className="flex justify-between items-center">
+                         <Label className="text-lg font-bold flex items-center gap-2">
+                           <CheckCheck className="h-5 w-5 text-emerald-500" /> Knowledge Checks
+                         </Label>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                              const current = editingItem.knowledge_checks || [];
+                              setEditingItem(prev => ({
+                                 ...prev!,
+                                 knowledge_checks: [...current, { id: Math.random().toString(36).substring(7), question: '' }]
+                              }));
+                           }}
+                         >
+                           <Plus className="h-4 w-4 mr-1" /> Add Question
+                         </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Add questions that students must answer using the rich text editor.</p>
+
+                      <div className="space-y-6">
+                         {editingItem.knowledge_checks?.map((check, idx) => (
+                           <Card key={check.id} className="p-4 bg-slate-50 dark:bg-slate-900 border-dashed">
+                              <div className="flex justify-between items-center mb-2">
+                                 <Badge variant="outline">Question #{idx + 1}</Badge>
+                                 <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive"
+                                    onClick={() => {
+                                       const filtered = editingItem.knowledge_checks?.filter((_, i) => i !== idx);
+                                       setEditingItem(prev => ({ ...prev!, knowledge_checks: filtered }));
+                                    }}
+                                 >
+                                    <Trash2 className="h-4 w-4" />
+                                 </Button>
+                              </div>
+                              <RichTextEditor
+                                 content={check.question}
+                                 onChange={(content) => {
+                                    const updated = [...(editingItem.knowledge_checks || [])];
+                                    updated[idx] = { ...updated[idx], question: content };
+                                    setEditingItem(prev => ({ ...prev!, knowledge_checks: updated }));
+                                 }}
+                                 placeholder="Write your question here..."
+                              />
+                           </Card>
+                         ))}
+                         {(!editingItem.knowledge_checks || editingItem.knowledge_checks.length === 0) && (
+                            <div className="text-center py-8 border-2 border-dashed rounded-xl text-muted-foreground italic">
+                               No knowledge checks added yet.
+                            </div>
+                         )}
+                      </div>
                     </div>
 
                     <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
