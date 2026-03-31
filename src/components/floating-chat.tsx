@@ -47,6 +47,8 @@ export function FloatingChat() {
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(true);
   const [isAdminTyping, setIsAdminTyping] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [adminPresence, setAdminPresence] = useState<{ online: boolean; last_seen?: string }>({ online: false });
+  const [adminProfile, setAdminProfile] = useState<any>(null);
   const chatChannelRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,6 +68,20 @@ export function FloatingChat() {
     if (data) setVideoSessions(data as VideoSession[]);
   };
 
+  const formatTimeAgo = (date: string | null | undefined) => {
+    if (!date) return '';
+    const now = new Date();
+    const past = new Date(date);
+    const diffInMs = now.getTime() - past.getTime();
+    const diffInMins = Math.floor(diffInMs / (1000 * 60));
+
+    if (diffInMins < 1) return 'Just now';
+    if (diffInMins < 60) return `${diffInMins}m ago`;
+    const diffInHours = Math.floor(diffInMins / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    return past.toLocaleDateString();
+  };
+
   useEffect(() => {
     const setup = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -76,6 +92,11 @@ export function FloatingChat() {
       // Use the dedicated System Support profile for all student chats
       const systemAdminId = '00000000-0000-0000-0000-000000000000';
       setAdminId(systemAdminId);
+
+      // Fetch Admin Profile for last_seen
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', systemAdminId).single();
+      if (profile) setAdminProfile(profile);
+
       setIsLoadingAdmin(false);
 
       if (user.id) {
@@ -102,16 +123,21 @@ export function FloatingChat() {
           })
           .on('presence', { event: 'sync' }, () => {
              const state = channel.presenceState();
-             // Check if admin is typing in this student's channel
-             // The fixed ID is 0000...
+
+             // Track Admin Presence
              const adminState = state[systemAdminId];
              if (adminState && Array.isArray(adminState)) {
+                const latest = adminState[adminState.length - 1] as any;
+                setAdminPresence({ online: true, last_seen: latest.last_seen });
+
+                // Check if admin is typing in this student's channel
                 if (adminState.some((s: any) => s.isTyping && s.typingTo === user.id)) {
                    setIsAdminTyping(true);
                 } else {
                    setIsAdminTyping(false);
                 }
              } else {
+                setAdminPresence({ online: false });
                 setIsAdminTyping(false);
              }
           })
@@ -163,6 +189,17 @@ export function FloatingChat() {
           .subscribe();
 
         chatChannelRef.current = channel;
+
+        // Track our own presence immediately
+        channel.subscribe(async (status) => {
+           if (status === 'SUBSCRIBED') {
+              await channel.track({
+                online_at: new Date().toISOString(),
+                last_seen: new Date().toISOString()
+              });
+           }
+        });
+
         setIsLoadingAdmin(false);
         return () => {
           supabase.removeChannel(channel);
@@ -230,6 +267,10 @@ export function FloatingChat() {
     // Use default System Support ID if no adminId found
     const targetAdminId = adminId || '00000000-0000-0000-0000-000000000000';
 
+    // Trigger browser notification for Admin if they are not focused
+    // Since we can't directly trigger a notification on the admin's machine from the student's client,
+    // we rely on the Admin's Postgres subscription which is already implemented in admin/page.tsx.
+
     // Optimistic Update
     const tempId = Math.random().toString(36).substring(7);
     const optimisticMsg: Message = {
@@ -279,7 +320,7 @@ export function FloatingChat() {
     }
   };
 
-  const markAsRead = async () => {
+  const markAsRead = useCallback(async () => {
     if (!userId || !adminId) return;
     await supabase
       .from('chat_messages')
@@ -287,11 +328,11 @@ export function FloatingChat() {
       .eq('receiver_id', userId)
       .eq('sender_id', adminId);
     setUnreadCount(0);
-  };
+  }, [userId, adminId]);
 
   useEffect(() => {
     if (isOpen) markAsRead();
-  }, [isOpen]);
+  }, [isOpen, markAsRead]);
 
   const requestVideoCall = async () => {
      if (!scheduledAt || !userId) return;
@@ -351,12 +392,23 @@ export function FloatingChat() {
             <Card className="w-[calc(100vw-3rem)] md:w-96 shadow-2xl border-primary/20 overflow-hidden flex flex-col h-[500px]">
               <CardHeader className="p-4 bg-primary text-primary-foreground flex flex-row justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
-                   <div className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                      <User className="h-4 w-4" />
+                   <div className="relative">
+                      <div className="h-8 w-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                         <User className="h-4 w-4" />
+                      </div>
+                      {adminPresence.online && (
+                         <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-emerald-400 rounded-full border-2 border-primary" />
+                      )}
                    </div>
                    <div>
                       <CardTitle className="text-sm font-bold">Admin Support</CardTitle>
-                      <p className="text-[10px] opacity-80 font-medium">Real-time Assistance</p>
+                      <p className="text-[10px] opacity-80 font-medium">
+                         {adminPresence.online ? (
+                            <span className="text-emerald-300 font-bold animate-pulse">Online Now</span>
+                         ) : (
+                            adminProfile?.last_seen ? `Active ${formatTimeAgo(adminProfile.last_seen)}` : "Real-time Assistance"
+                         )}
+                      </p>
                    </div>
                 </div>
                 <div className="flex gap-1">

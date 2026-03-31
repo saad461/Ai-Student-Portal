@@ -7,25 +7,40 @@
    - Network:      http://192.168.0.2:3000
 
  ✓ Starting...
- ✓ Ready in 2.1s
+ ✓ Ready in 2s
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 18.5s (2913 modules)
+ GET /dashboard 200 in 22755ms
+ POST /dashboard 200 in 239ms
+ POST /dashboard 200 in 58ms
+ GET /dashboard 200 in 215ms
+ POST /dashboard 200 in 39ms
+ POST /dashboard 200 in 33ms
+ GET /dashboard 200 in 191ms
+ POST /dashboard 200 in 55ms
+ POST /dashboard 200 in 43ms
+ GET /dashboard 200 in 180ms
+ POST /dashboard 200 in 43ms
+ POST /dashboard 200 in 36ms
+ GET /dashboard 200 in 195ms
+ POST /dashboard 200 in 47ms
+ POST /dashboard 200 in 41ms
+ GET /dashboard 200 in 195ms
+ POST /dashboard 200 in 39ms
+ POST /dashboard 200 in 33ms
+ GET /dashboard 200 in 186ms
+ POST /dashboard 200 in 34ms
+ POST /dashboard 200 in 44ms
+ GET /dashboard 200 in 181ms
+ POST /dashboard 200 in 39ms
+ POST /dashboard 200 in 36ms
  ○ Compiling /admin ...
- ✓ Compiled /admin in 17.1s (2296 modules)
- GET /admin 200 in 19232ms
- GET /admin 200 in 366ms
- POST /admin 200 in 244ms
- POST /admin 200 in 51ms
- POST /admin 200 in 53ms
- POST /admin 200 in 53ms
- POST /admin 200 in 30ms
- ○ Compiling /lecture/[id] ...
- ✓ Compiled /lecture/[id] in 5.9s (3078 modules)
- GET /admin 200 in 890ms
- GET /lecture/m1-l1 200 in 9712ms
- POST /lecture/m1-l1 200 in 239ms
- POST /lecture/m1-l1 200 in 35ms
- ✓ Compiled in 20.8s (2649 modules)
- ✓ Compiled in 3.5s (2649 modules)
- ✓ Compiled in 1240ms (1414 modules)
- ✓ Compiled in 1285ms (1414 modules)
- ✓ Compiled in 2.3s (1414 modules)
- ✓ Compiled in 1045ms (1414 modules)
+ ✓ Compiled /admin in 5s (3290 modules)
+ GET /admin 200 in 5940ms
+ ⨯ [Error: aborted] { code: 'ECONNRESET', digest: '1052313065' }
+ GET /admin 200 in 179ms
+ POST /admin 200 in 216ms
+ POST /admin 200 in 54ms
+ POST /admin 200 in 47ms
+ POST /admin 200 in 39ms
+ ✓ Compiled in 1855ms (3290 modules)
