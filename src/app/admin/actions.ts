@@ -104,7 +104,8 @@ export async function saveCurriculumItemAction(item: Record<string, unknown>) {
       required_read_minutes: parseInt(String(item.required_read_minutes)) || 0,
       sub_module_id: (item.sub_module_id && item.sub_module_id !== '') ? item.sub_module_id : null,
       course_id: (item.course_id && item.course_id !== '') ? item.course_id : null,
-      module_id: (item.module_id && item.module_id !== '') ? item.module_id : null
+      module_id: (item.module_id && item.module_id !== '') ? item.module_id : null,
+      knowledge_check_question: item.knowledge_check_question || null
     };
 
     const { data, error } = await supabaseAdmin

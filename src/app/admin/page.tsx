@@ -1861,6 +1861,18 @@ export default function AdminDashboard() {
                       />
                     </div>
 
+                    <div className="space-y-2 border-t pt-4">
+                      <Label className="text-lg font-bold flex items-center gap-2">
+                        <CheckCheck className="h-5 w-5 text-emerald-500" /> Quick Knowledge Check
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">Write a question that students must answer after reading the theory.</p>
+                      <Input
+                        placeholder="e.g. What is the difference between inline and block elements?"
+                        value={editingItem.knowledge_check_question || ''}
+                        onChange={(e) => setEditingItem(prev => ({ ...prev!, knowledge_check_question: e.target.value }))}
+                      />
+                    </div>
+
                     <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
                       <div className="flex justify-between items-center">
                          <div>
