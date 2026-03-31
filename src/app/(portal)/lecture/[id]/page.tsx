@@ -249,14 +249,19 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
   }, [effectiveReadMinutes, readTimeSeconds]);
 
   const knowledgeCheckAnswers = useMemo(() => {
-    return (submission?.completion_data as Record<string, unknown>)?.knowledge_check_answers as Record<string, string> || {};
+    const data = (submission?.completion_data as Record<string, unknown>) || {};
+    return (data.knowledge_check_answers as Record<string, string>) || {};
   }, [submission?.completion_data]);
 
+  const checks = useMemo(() => {
+    if (Array.isArray(lecture?.knowledge_checks)) return lecture.knowledge_checks;
+    return [];
+  }, [lecture?.knowledge_checks]);
+
   const isKnowledgeCheckMet = useMemo(() => {
-    const checks = lecture?.knowledge_checks || [];
     if (checks.length === 0) return true;
     return checks.every(c => !!knowledgeCheckAnswers[c.id]);
-  }, [lecture?.knowledge_checks, knowledgeCheckAnswers]);
+  }, [checks, knowledgeCheckAnswers]);
 
   const isAssignmentDone = submission?.completion_data?.assignment_submitted || !!submission?.github_url;
   const isQuizDone = submission?.completion_data?.quiz_completed;
@@ -489,18 +494,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               </Button>
             )}
 
-            <Button
-              variant="ghost"
-              className={cn(
-                "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
-                activeTab === 'explain' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
-              )}
-              onClick={() => setActiveTab('explain')}
-            >
-              <Sparkles className="h-4 w-4 mr-2" /> AI Explain
-            </Button>
-
-            {lecture.knowledge_checks && lecture.knowledge_checks.length > 0 && (
+            {checks.length > 0 && (
               <Button
                 variant="ghost"
                 className={cn(
@@ -514,6 +508,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                 {isKnowledgeCheckMet && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
               </Button>
             )}
+
+            <Button
+              variant="ghost"
+              className={cn(
+                "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                activeTab === 'explain' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground"
+              )}
+              onClick={() => setActiveTab('explain')}
+            >
+              <Sparkles className="h-4 w-4 mr-2" /> AI Explain
+            </Button>
 
             {lecture.video_url && (
               <Button
@@ -677,7 +682,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             onClick={() => {
                                updateCompletion({ theory_read: true });
                                logActivityAction('theory_mastered', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
-                               if (lecture?.knowledge_checks?.length) setActiveTab('knowledge');
+                               if (checks.length > 0) setActiveTab('knowledge');
                                else if (lecture?.attached_assignment) setActiveTab('assignment');
                                else if (lecture?.attached_quiz) setActiveTab('quiz');
                             }}
@@ -802,7 +807,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                  </div>
 
                  <div className="space-y-16">
-                    {lecture.knowledge_checks?.map((check, idx) => (
+                    {checks.map((check, idx) => (
                       <div key={check.id} className="space-y-6">
                          <div className="flex items-start gap-4">
                             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black shrink-0">

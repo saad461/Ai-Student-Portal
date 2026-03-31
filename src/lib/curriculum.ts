@@ -183,6 +183,10 @@ export const CURRICULUM: CurriculumItem[] = [
     module_index: 1,
     module_name: 'HTML Foundation',
     lecture_index: 1,
+    knowledge_checks: [
+      { id: 'q1', question: 'What does HTML stand for?' },
+      { id: 'q2', question: 'Why is semantic HTML important?' }
+    ],
     theory_content: `<h1>Welcome to Learn HTML!</h1>
 <p>This HTML course for web developers provides a <strong>solid overview</strong> for developers, from <em>novice to expert</em> level HTML.</p>
 <p>HyperText Markup Language, or HTML, is the <u>backbone of the web</u>, providing the content, as well as the structure of that content, that you see displayed in your web browser.</p>

@@ -87,6 +87,7 @@ create table curriculum (
   required_read_minutes integer default 0,
   content jsonb, -- For quiz questions, task instructions, or custom ToC for lectures
   theory_content text,
+  knowledge_checks jsonb default '[]'::jsonb,
   video_url text,
   attached_assignment jsonb,
   attached_quiz jsonb,
