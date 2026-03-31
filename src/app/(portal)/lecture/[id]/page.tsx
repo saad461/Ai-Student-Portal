@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Video,
   CheckCircle2,
@@ -36,6 +37,7 @@ import { useChat } from '@/components/chat-context';
 import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
 import { logActivityAction } from '@/app/admin/actions';
+import { RichTextEditor } from '@/components/rich-text-editor';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -49,6 +51,7 @@ interface Submission {
     quiz_completed?: boolean;
     quiz_score?: number;
     assignment_submitted?: boolean;
+    knowledge_check_answer?: string;
   };
 }
 
@@ -204,11 +207,12 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     const updatedData = { ...currentData, ...newData };
 
     // Check if everything is done
-    const isTheoryDone = updatedData.theory_read;
+    const isKnowledgeCheckDone = lecture?.knowledge_check_question ? (!!updatedData.knowledge_check_answer) : true;
+    const isTheoryDoneNow = updatedData.theory_read && isKnowledgeCheckDone;
     const isQuizDone = lecture?.attached_quiz ? updatedData.quiz_completed : true;
     const isAssignmentDone = lecture?.attached_assignment ? (updatedData.assignment_submitted || !!githubUrl) : true;
 
-    const isFullyCompleted = isTheoryDone && isQuizDone && isAssignmentDone;
+    const isFullyCompleted = isTheoryDoneNow && isQuizDone && isAssignmentDone;
 
     const { error } = await supabase.from('submissions').upsert({
       student_id: user.id,
@@ -226,13 +230,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const handleMarkTheoryRead = () => {
-    updateCompletion({ theory_read: true });
-    logActivityAction('theory_mastered', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
-    if (lecture?.attached_assignment) setActiveTab('assignment');
-    else if (lecture?.attached_quiz) setActiveTab('quiz');
-  };
-
   const handleAssignmentSubmit = async () => {
     setSubmittingId(true);
     await updateCompletion({ assignment_submitted: true });
@@ -248,6 +245,10 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     if (effectiveReadMinutes <= 0) return true;
     return readTimeSeconds >= (effectiveReadMinutes * 60);
   }, [effectiveReadMinutes, readTimeSeconds]);
+
+  const knowledgeCheckAnswer = (submission?.completion_data as Record<string, unknown>)?.knowledge_check_answer as string || '';
+  const isKnowledgeCheckMet = !lecture?.knowledge_check_question || !!knowledgeCheckAnswer;
+
   const isAssignmentDone = submission?.completion_data?.assignment_submitted || !!submission?.github_url;
   const isQuizDone = submission?.completion_data?.quiz_completed;
   const isFullyDone = isTheoryDone && (lecture?.attached_assignment ? isAssignmentDone : true) && (lecture?.attached_quiz ? isQuizDone : true);
@@ -604,6 +605,52 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             No theory content provided for this lecture yet.
                           </div>
                         )}
+
+                        {lecture.knowledge_check_question && (
+                          <div className="mt-12 p-8 bg-emerald-50 dark:bg-emerald-950/20 rounded-3xl border-2 border-emerald-100 dark:border-emerald-900/30 animate-in slide-in-from-bottom-4 duration-700">
+                             <div className="flex items-center gap-3 mb-6">
+                                <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                                   <Zap className="h-6 w-6" />
+                                </div>
+                                <div>
+                                   <h3 className="text-xl font-black text-emerald-900 dark:text-emerald-100 uppercase tracking-tight">Quick Knowledge Check</h3>
+                                   <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">Show us what you&apos;ve learned!</p>
+                                </div>
+                             </div>
+
+                             <div className="space-y-6">
+                                <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border shadow-sm">
+                                   <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{lecture.knowledge_check_question}</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                   <Label className="text-xs font-black uppercase tracking-widest text-emerald-700">Your Answer:</Label>
+                                   <RichTextEditor
+                                      content={knowledgeCheckAnswer}
+                                      onChange={(content) => {
+                                         // Don't auto-update completion here to avoid too many writes,
+                                         // let the user click the "Mastered" button which will save everything.
+                                         // However, for UX we should probably save periodically or local state.
+                                         // Given the existing updateCompletion logic, let's keep it simple for now.
+                                         // We'll update the submission locally and then save on button click.
+                                         setSubmission(prev => {
+                                            if (!prev) return null;
+                                            const currentCompletion = (prev.completion_data as Record<string, unknown>) || {};
+                                            return {
+                                               ...prev,
+                                               completion_data: {
+                                                  ...currentCompletion,
+                                                  knowledge_check_answer: content
+                                               }
+                                            } as unknown as Submission;
+                                         });
+                                      }}
+                                      placeholder="Explain in your own words..."
+                                   />
+                                </div>
+                             </div>
+                          </div>
+                        )}
                       </div>
                       {!isTheoryDone && (
                         <div className="space-y-4">
@@ -649,8 +696,18 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             </div>
                           )}
                           <Button
-                            onClick={handleMarkTheoryRead}
-                            disabled={!isReadTimeMet}
+                            onClick={() => {
+                               const currentData = (submission?.completion_data || {}) as Record<string, unknown>;
+                               updateCompletion({
+                                  ...currentData,
+                                  theory_read: true,
+                                  knowledge_check_answer: (submission?.completion_data as Record<string, unknown>)?.knowledge_check_answer || ''
+                               });
+                               logActivityAction('theory_mastered', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
+                               if (lecture?.attached_assignment) setActiveTab('assignment');
+                               else if (lecture?.attached_quiz) setActiveTab('quiz');
+                            }}
+                            disabled={!isReadTimeMet || !isKnowledgeCheckMet}
                             size="lg"
                             className={cn(
                               "w-full h-24 text-xl font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 group",
@@ -660,10 +717,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             )}
                           >
                             {isReadTimeMet ? (
-                              <div className="flex items-center gap-3">
-                                <span>I have mastered the theory</span>
-                                <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
-                              </div>
+                               isKnowledgeCheckMet ? (
+                                <div className="flex items-center gap-3">
+                                  <span>I have mastered the theory</span>
+                                  <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                                </div>
+                               ) : (
+                                <div className="flex items-center gap-2">
+                                  <Lock className="h-5 w-5" />
+                                  <span>Answer the knowledge check to proceed</span>
+                                </div>
+                               )
                             ) : (
                               <div className="flex flex-col items-center">
                                 <div className="flex items-center gap-2">
