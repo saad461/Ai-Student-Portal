@@ -1589,14 +1589,65 @@ export default function AdminDashboard() {
                                   </div>
                                </div>
                                <div className="flex justify-end gap-2 border-t pt-4">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                                    onClick={async () => {
+                                      const lecture = curriculum.find(c => c.id === sub.curriculum_id);
+                                      if (!lecture) return;
+
+                                      setIsSaving(true);
+                                      try {
+                                        const knowledgeChecks = lecture.knowledge_checks?.map(check => ({
+                                          question: check.question,
+                                          answer: (sub as any).completion_data?.knowledge_check_answers?.[check.id] || ''
+                                        })) || [];
+
+                                        const response = await fetch('/api/review', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            githubUrl: sub.github_url,
+                                            assignmentTitle: lecture.attached_assignment?.title || lecture.title,
+                                            assignmentDescription: lecture.attached_assignment?.description || lecture.description,
+                                            knowledgeChecks,
+                                            lectureTitle: lecture.title
+                                          })
+                                        });
+
+                                        if (response.ok) {
+                                          const review = await response.json();
+                                          const res = await reviewSubmissionAction(
+                                            sub.id,
+                                            review.feedback,
+                                            review.score,
+                                            review.status,
+                                            review.sections,
+                                            review.mistakes,
+                                            review.improvements
+                                          );
+                                          if (res.success) {
+                                            success('Real AI Review generated and saved!');
+                                            fetchAdminData();
+                                          }
+                                        }
+                                      } catch (err) {
+                                        toastError("Failed to trigger real AI review.");
+                                      } finally {
+                                        setIsSaving(false);
+                                      }
+                                  }}>
+                                    <Bot className="h-3 w-3 mr-2" /> Run Real AI Review
+                                  </Button>
                                   <Button variant="outline" size="sm" onClick={async () => {
                                      const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
                                      if (res.success) {
-                                        success('AI Review generated!');
+                                        success('Mock Review generated!');
                                         fetchAdminData();
                                      }
                                   }}>
-                                    <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
+                                    Mock AI Grade
                                   </Button>
                                </div>
                             </CardContent>
