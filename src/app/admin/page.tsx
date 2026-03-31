@@ -35,6 +35,7 @@ import {
   X,
   CheckCheck,
   Paperclip,
+  ImageIcon,
   Download
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -85,7 +86,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, MousePointer2, LogIn, MonitorOff, Check, Github } from 'lucide-react';
+import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check } from 'lucide-react';
 
 interface Resource {
   id?: string;
@@ -1566,7 +1567,7 @@ export default function AdminDashboard() {
                                   <span className="text-xs font-bold text-muted-foreground">{new Date(sub.submitted_at).toLocaleString()}</span>
                                </div>
                                <div className="flex gap-2">
-                                  {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><Github className="h-3 w-3 mr-2" /> Repo</a></Button>}
+                                  {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><GithubIcon className="h-3 w-3 mr-2" /> Repo</a></Button>}
                                   <Badge className={cn(
                                     sub.status === 'reviewed' ? 'bg-green-600' :
                                     sub.status === 'priority_review' ? 'bg-red-600 animate-pulse' :
@@ -2010,74 +2011,35 @@ export default function AdminDashboard() {
                 )}
 
                 {(editingItem?.type === 'assignment' || editingItem?.type === 'lecture') && (
-                   <div className="space-y-6 border-t pt-6">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-lg flex items-center gap-2"><Github className="h-5 w-5 text-blue-600" /> Attached Assignment</h4>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="has-assignment"
-                            checked={!!editingItem.attached_assignment}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setEditingItem(prev => ({
-                                  ...prev!,
-                                  attached_assignment: { title: '', description: '', requirements: [] }
-                                }));
-                              } else {
-                                setEditingItem(prev => ({ ...prev!, attached_assignment: undefined }));
-                              }
-                            }}
-                          />
-                          <Label htmlFor="has-assignment" className="text-xs">Enable Assignment</Label>
-                        </div>
+                   <div className="space-y-4 border-t pt-6">
+                      <h4 className="font-bold text-lg flex items-center gap-2"><Plus className="h-4 w-4" /> Attached Assignment</h4>
+                      <div className="space-y-2">
+                         <Label>Assignment Title</Label>
+                         <Input value={editingItem.attached_assignment?.title || ''} onChange={(e) => setEditingItem(prev => ({ ...prev!, attached_assignment: { ...prev!.attached_assignment!, title: e.target.value, description: prev!.attached_assignment?.description || '', requirements: prev!.attached_assignment?.requirements || [] } }))} />
                       </div>
-
-                      {editingItem.attached_assignment && (
-                        <div className="space-y-4 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30 animate-in fade-in slide-in-from-top-2">
-                          <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-blue-600">Assignment Title</Label>
-                            <Input
-                              placeholder="e.g. Building a Landing Page"
-                              value={editingItem.attached_assignment?.title || ''}
-                              onChange={(e) => setEditingItem(prev => ({
-                                ...prev!,
-                                attached_assignment: { ...prev!.attached_assignment!, title: e.target.value }
-                              }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-blue-600">Description (Markdown Supported)</Label>
-                            <RichTextEditor
-                                key={`assignment-desc-${editingItem.id}`}
-                                content={editingItem.attached_assignment?.description || ''}
-                                onChange={(content) => setEditingItem(prev => ({
-                                  ...prev!,
-                                  attached_assignment: {
-                                      ...prev!.attached_assignment!,
-                                      description: content
-                                  }
-                                }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-blue-600">Implementation Checklist (One requirement per line)</Label>
-                            <Textarea
-                                placeholder="Requirement 1&#10;Requirement 2&#10;Requirement 3"
-                                className="min-h-[120px] font-medium"
-                                value={editingItem.attached_assignment?.requirements?.join('\n') || ''}
-                                onChange={(e) => setEditingItem(prev => ({
-                                  ...prev!,
-                                  attached_assignment: {
-                                    ...prev!.attached_assignment!,
-                                    requirements: e.target.value.split('\n').filter(r => r.trim())
-                                  }
-                                }))}
-                            />
-                            <p className="text-[10px] text-muted-foreground italic">These will appear as numbered steps in the assignment section.</p>
-                          </div>
-                        </div>
-                      )}
+                      <div className="space-y-2">
+                         <Label>Description</Label>
+                         <RichTextEditor
+                            key={`assignment-desc-${editingItem.id}`}
+                            content={editingItem.attached_assignment?.description || ''}
+                            onChange={(content) => setEditingItem(prev => ({
+                               ...prev!,
+                               attached_assignment: {
+                                  ...prev!.attached_assignment!,
+                                  description: content,
+                                  title: prev!.attached_assignment?.title || '',
+                                  requirements: prev!.attached_assignment?.requirements || []
+                               }
+                            }))}
+                         />
+                      </div>
+                      <div className="space-y-2">
+                         <Label>Requirements (One per line)</Label>
+                         <Textarea
+                            value={editingItem.attached_assignment?.requirements?.join('\n') || ''}
+                            onChange={(e) => setEditingItem(prev => ({ ...prev!, attached_assignment: { ...prev!.attached_assignment!, requirements: e.target.value.split('\n').filter(r => r.trim()), title: prev!.attached_assignment?.title || '', description: prev!.attached_assignment?.description || '' } }))}
+                         />
+                      </div>
                    </div>
                 )}
 

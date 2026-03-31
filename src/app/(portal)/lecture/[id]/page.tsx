@@ -37,7 +37,7 @@ import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
 import { logActivityAction } from '@/app/admin/actions';
 import { RichTextEditor } from '@/components/rich-text-editor';
-import ReactMarkdown, { type Components } from 'react-markdown';
+import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 
@@ -290,25 +290,25 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     </main>
   );
 
-  const MarkdownComponents: Components = {
-    h1: ({ children }) => {
+  const MarkdownComponents = {
+    h1: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h1 id={id} className="text-4xl font-black mt-12 mb-6 text-slate-800 dark:text-white pb-2 border-b-2 border-slate-100 dark:border-slate-800">{children}</h1>;
     },
-    h2: ({ children }) => {
+    h2: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h2 id={id} className="text-3xl font-extrabold mt-10 mb-5 text-slate-700 dark:text-slate-100 pb-1 border-b border-slate-100 dark:border-slate-800">{children}</h2>;
     },
-    h3: ({ children }) => {
+    h3: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
       return <h3 id={id} className="text-2xl font-bold mt-8 mb-4 text-slate-700 dark:text-slate-200">{children}</h3>;
     },
-    p: ({ children }) => <p className="text-lg leading-relaxed mb-6 text-slate-500 dark:text-slate-400 font-normal">{children}</p>,
-    ul: ({ children }) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
-    ol: ({ children }) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-normal text-slate-500 dark:text-slate-400">{children}</ol>,
-    li: ({ children, node }) => {
+    p: ({ children }: { children?: React.ReactNode }) => <p className="text-lg leading-relaxed mb-6 text-slate-500 dark:text-slate-400 font-normal">{children}</p>,
+    ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-none pl-2 mb-8 space-y-4">{children}</ul>,
+    ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-8 mb-8 space-y-4 text-lg font-normal text-slate-500 dark:text-slate-400">{children}</ol>,
+    li: ({ children, ordered, node }: { children?: React.ReactNode; ordered?: boolean; node?: Record<string, unknown> }) => {
       // Check if it's a task list item
-      const childrenNodes = (node?.children as Array<{ tagName?: string }>) || [];
+      const childrenNodes = (node?.children as Record<string, unknown>[]) || [];
       const isTask = childrenNodes.some((c) => c.tagName === 'input');
 
       if (isTask) {
@@ -317,14 +317,14 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
 
       return (
         <li className="text-lg flex items-start gap-3 mb-2">
-          <div className="h-2 w-2 rounded-full bg-primary mt-2.5 shrink-0" />
+          {!ordered && <div className="h-2 w-2 rounded-full bg-primary mt-2.5 shrink-0" />}
           <span className="text-slate-500 dark:text-slate-400 font-normal">{children}</span>
         </li>
       );
     },
-    strong: ({ children }) => <strong className="font-bold text-slate-800 dark:text-white">{children}</strong>,
-    em: ({ children }) => <em className="italic text-primary/80 font-normal">{children}</em>,
-    a: ({ href, children }) => (
+    strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-bold text-slate-800 dark:text-white">{children}</strong>,
+    em: ({ children }: { children?: React.ReactNode }) => <em className="italic text-primary/80 font-normal">{children}</em>,
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
       <a
         href={href}
         target="_blank"
@@ -334,29 +334,24 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         {children}
       </a>
     ),
-    code: ({ children, className }) => {
-      const isBlock = /language-(\w+)/.test(className || '');
-      return isBlock ? (
-        <div className="relative my-8 group">
-          <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-          <pre className="relative bg-slate-900 text-slate-50 p-6 rounded-xl overflow-x-auto font-mono text-sm border border-slate-800 shadow-2xl">
-            <code className={className}>{children}</code>
-          </pre>
-        </div>
-      ) : (
-        <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">
-          {children}
-        </code>
-      );
-    },
+    code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => (
+      inline
+        ? <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">{children}</code>
+        : <div className="relative my-8 group">
+            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <pre className="relative bg-slate-900 text-slate-50 p-6 rounded-xl overflow-x-auto font-mono text-sm border border-slate-800 shadow-2xl">
+              <code>{children}</code>
+            </pre>
+          </div>
+    ),
     blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className="border-l-8 border-primary bg-primary/5 p-6 rounded-r-2xl italic my-8 text-xl text-slate-700 dark:text-slate-300 font-medium shadow-inner">
         {children}
       </blockquote>
     ),
-    img: ({ src, alt }) => (
+    img: ({ src, alt }: { src?: string; alt?: string }) => (
       <div className="my-10 text-center">
-        <img src={src as string} alt={alt} className="rounded-3xl shadow-2xl mx-auto border-4 border-white dark:border-slate-800 max-w-full h-auto" />
+        <img src={src} alt={alt} className="rounded-3xl shadow-2xl mx-auto border-4 border-white dark:border-slate-800 max-w-full h-auto" />
         {alt && <p className="mt-4 text-sm text-muted-foreground font-bold italic">Above: {alt}</p>}
       </div>
     ),
@@ -368,40 +363,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
     th: ({ children }: { children?: React.ReactNode }) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
     td: ({ children }: { children?: React.ReactNode }) => <td className="p-4 border-b text-slate-500 dark:text-slate-400 text-sm md:text-base font-normal">{children}</td>,
-  };
-
-  const AssignmentMarkdownComponents: Components = {
-    p: ({ children }) => <p className="text-lg leading-relaxed mb-4 text-blue-50 font-medium">{children}</p>,
-    strong: ({ children }) => <strong className="font-black text-white">{children}</strong>,
-    em: ({ children }) => <em className="italic text-blue-200 font-normal">{children}</em>,
-    a: ({ href, children }) => (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-white font-bold underline decoration-white/30 hover:decoration-white transition-all underline-offset-4"
-      >
-        {children}
-      </a>
-    ),
-    h1: ({ children }) => <h1 className="text-3xl font-black mb-6 text-white">{children}</h1>,
-    h2: ({ children }) => <h2 className="text-2xl font-bold mb-4 text-white">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-xl font-bold mb-3 text-white">{children}</h3>,
-    ul: ({ children }) => <ul className="list-disc pl-5 mb-4 text-blue-50 space-y-2">{children}</ul>,
-    ol: ({ children }) => <ol className="list-decimal pl-5 mb-4 text-blue-50 space-y-2">{children}</ol>,
-    li: ({ children }) => <li className="text-blue-50">{children}</li>,
-    code: ({ children, className }) => {
-      const isBlock = /language-(\w+)/.test(className || '');
-      return isBlock ? (
-        <pre className="bg-blue-900/50 text-white p-4 rounded-xl overflow-x-auto font-mono text-sm my-4 border border-blue-700/50">
-          <code className={className}>{children}</code>
-        </pre>
-      ) : (
-        <code className="bg-blue-800/50 text-white px-1.5 py-0.5 rounded text-sm font-mono">
-          {children}
-        </code>
-      );
-    },
   };
 
   const isDirectVideo = (url: string) => {
@@ -659,7 +620,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             rehypePlugins={[rehypeRaw]}
-                            components={MarkdownComponents}
+                            components={MarkdownComponents as Record<string, unknown>}
                           >
                             {lecture.theory_content}
                           </ReactMarkdown>
@@ -947,39 +908,27 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto">
                 <Card className="border-blue-200 bg-blue-50/30 dark:bg-blue-950/10 rounded-3xl overflow-hidden border-none shadow-lg">
                    <CardHeader className="bg-blue-600 text-white p-8">
-                      <CardTitle className="flex items-center gap-3 text-2xl mb-4">
+                      <CardTitle className="flex items-center gap-3 text-2xl">
                         <Github className="h-8 w-8" />
                         {lecture.attached_assignment?.title || 'Lecture Assignment'}
                       </CardTitle>
-                      <div className="prose prose-invert max-w-none">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeRaw]}
-                          components={AssignmentMarkdownComponents}
-                        >
-                          {lecture.attached_assignment?.description || ''}
-                        </ReactMarkdown>
-                      </div>
+                      <CardDescription className="text-blue-100 text-lg">{lecture.attached_assignment?.description}</CardDescription>
                    </CardHeader>
-                   {lecture.attached_assignment?.requirements && lecture.attached_assignment.requirements.length > 0 && (
-                     <CardContent className="p-8 space-y-6 bg-white dark:bg-slate-900">
-                        <div className="space-y-6">
-                           <div className="flex items-center gap-3">
-                              <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
-                              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 shrink-0">Implementation Checklist</p>
-                              <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
-                           </div>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <CardContent className="p-8 space-y-6 bg-white dark:bg-slate-900">
+                      {lecture.attached_assignment?.requirements && (
+                        <div className="space-y-4">
+                           <p className="text-sm font-black uppercase tracking-widest text-slate-400">Implementation Checklist:</p>
+                           <div className="grid grid-cols-1 gap-3">
                               {lecture.attached_assignment.requirements.map((req, i) => (
-                                <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 transition-colors group">
-                                   <div className="h-8 w-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-sm font-black shrink-0 group-hover:scale-110 transition-transform">{i+1}</div>
-                                   <span className="text-slate-700 dark:text-slate-300 font-semibold leading-relaxed pt-1">{req}</span>
+                                <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                   <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i+1}</div>
+                                   <span className="text-slate-700 dark:text-slate-300 font-medium">{req}</span>
                                 </div>
                               ))}
                            </div>
                         </div>
-                     </CardContent>
-                   )}
+                      )}
+                   </CardContent>
                 </Card>
 
                 <Card className="rounded-3xl border-none shadow-xl overflow-hidden">
