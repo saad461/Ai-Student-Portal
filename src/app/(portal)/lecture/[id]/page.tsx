@@ -970,11 +970,32 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto">
                 <Card className="border-blue-200 bg-blue-50/30 dark:bg-blue-950/10 rounded-3xl overflow-hidden border-none shadow-lg">
                    <CardHeader className="bg-blue-600 text-white p-8">
-                      <CardTitle className="flex items-center gap-3 text-2xl">
+                      <CardTitle className="flex items-center gap-3 text-2xl mb-4">
                         <Github className="h-8 w-8" />
                         {lecture.attached_assignment?.title || 'Lecture Assignment'}
                       </CardTitle>
-                      <CardDescription className="text-blue-100 text-lg">{lecture.attached_assignment?.description}</CardDescription>
+                      <div className="prose prose-invert max-w-none">
+                         <ReactMarkdown
+                           remarkPlugins={[remarkGfm]}
+                           rehypePlugins={[rehypeRaw]}
+                           components={{
+                             p: ({ children }) => <p className="text-lg leading-relaxed mb-4 text-blue-50 font-medium">{children}</p>,
+                             h1: ({ children }) => <h1 className="text-2xl font-black mb-4 text-white uppercase tracking-tight">{children}</h1>,
+                             h2: ({ children }) => <h2 className="text-xl font-extrabold mb-3 text-white">{children}</h2>,
+                             h3: ({ children }) => <h3 className="text-lg font-bold mb-2 text-white">{children}</h3>,
+                             strong: ({ children }) => <strong className="font-bold text-white underline decoration-white/30">{children}</strong>,
+                             a: ({ href, children }) => (
+                               <a href={href} target="_blank" rel="noopener noreferrer" className="text-white font-black underline underline-offset-4 decoration-white/50 hover:decoration-white transition-all">
+                                 {children}
+                               </a>
+                             ),
+                             ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-blue-50">{children}</ul>,
+                             li: ({ children }) => <li className="text-blue-50">{children}</li>,
+                           }}
+                         >
+                            {lecture.attached_assignment?.description || ''}
+                         </ReactMarkdown>
+                      </div>
                    </CardHeader>
                    <CardContent className="p-8 space-y-6 bg-white dark:bg-slate-900">
                       {lecture.attached_assignment?.requirements && (
