@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, User, Phone, Video, Calendar, Check, CheckCheck, Paperclip, ImageIcon, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';

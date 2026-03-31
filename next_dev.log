@@ -44,3 +44,4 @@
  POST /admin 200 in 47ms
  POST /admin 200 in 39ms
  ✓ Compiled in 1855ms (3290 modules)
+ ✓ Compiled in 8.1s (3290 modules)
