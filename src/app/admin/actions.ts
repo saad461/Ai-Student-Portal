@@ -163,93 +163,15 @@ export async function reviewSubmissionAction(submissionId: string, feedback: str
     .select();
 
   if (!error && data?.[0]) {
-    const sub = data[0];
     await createNotificationAction(
-      sub.student_id,
+      data[0].student_id,
       'Submission Reviewed',
       `Your assignment has been reviewed with a score of ${score}/100.`,
       status === 'passed' ? 'success' : 'warning'
     );
-
-    // Award Sparks for manual review
-    const sparks = Math.floor(score / 20);
-    if (sparks > 0 && status === 'passed') {
-      const { data: lecture } = await supabaseAdmin.from('curriculum').select('title').eq('id', sub.curriculum_id).single();
-      await rewardStudentAction(
-        sparks * 10,
-        `Lecture Mastery (Manual): ${lecture?.title || 'Unknown'}`,
-        'lecture_completion',
-        sub.curriculum_id,
-        sub.student_id
-      );
-    }
   }
 
   return { success: !error, data: data?.[0], error };
-}
-
-export async function saveAIReviewAction(
-  curriculumId: string,
-  review: {
-    score: number;
-    feedback: string;
-    status: string;
-    sections: Record<string, unknown>;
-    mistakes: string[];
-    improvements: string[];
-  }
-) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-  const cookieStore = await cookies();
-  const supabase = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: {
-      getAll() { return cookieStore.getAll() },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-        } catch { /* ignore */ }
-      },
-    },
-  });
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Unauthorized' };
-
-  // 1. Update submission using service role
-  const { data: subData, error: subError } = await supabaseAdmin
-    .from('submissions')
-    .update({
-      ai_score: review.score,
-      ai_feedback: review.feedback,
-      ai_status: review.status,
-      ai_sections: review.sections,
-      ai_mistakes: review.mistakes,
-      ai_improvements: review.improvements,
-      status: 'reviewed'
-    })
-    .eq('student_id', user.id)
-    .eq('curriculum_id', curriculumId)
-    .select();
-
-  if (subError) return { success: false, error: subError.message };
-
-  // 2. Award Sparks
-  const sparks = Math.floor(review.score / 20);
-  if (sparks > 0) {
-    const { data: lecture } = await supabaseAdmin.from('curriculum').select('title').eq('id', curriculumId).single();
-    await rewardStudentAction(
-      sparks * 10,
-      `Lecture Mastery: ${lecture?.title || 'Unknown'}`,
-      'lecture_completion',
-      curriculumId
-    );
-  }
-
-  return { success: true, data: subData?.[0] };
 }
 
 export async function deleteModuleAction(id: string) {
@@ -402,47 +324,39 @@ export async function uploadResourceFileAction(formData: FormData) {
   return { success: true, url: publicUrl, fileName: file.name };
 }
 
-export async function rewardStudentAction(amount: number, reason: string, sourceType: string, sourceId: string, studentId?: string) {
+export async function rewardStudentAction(amount: number, reason: string, sourceType: string, sourceId: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  let targetStudentId = studentId;
-
-  if (!targetStudentId) {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch { /* ignore */ }
-        },
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {
+          // ignore
+        }
       },
-    });
+    },
+  });
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Unauthorized' };
-    targetStudentId = user.id;
-  } else {
-    // If studentId is provided, we must be an admin
-    const isAdmin = await authorizeAdmin();
-    if (!isAdmin) return { success: false, error: 'Unauthorized' };
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Unauthorized' };
 
   // Validate allowed reward amounts per source type to prevent console hacking
   let validatedAmount = amount;
 
   if (sourceType === 'attendance') validatedAmount = 10;
-  if (sourceType === 'daily_bounty') validatedAmount = Math.min(amount, 50);
-  if (sourceType === 'game') validatedAmount = Math.min(amount, 10);
-  if (sourceType === 'lecture_completion') validatedAmount = Math.min(amount, 50); // Max 5 Sparks (50 XP)
+  if (sourceType === 'daily_bounty') validatedAmount = Math.min(amount, 50); // Sanity check
+  if (sourceType === 'game') validatedAmount = Math.min(amount, 10); // Games only give small rewards
 
   // XP Booster check
-  const { data: profileData } = await supabaseAdmin.from('profiles').select('total_points, xp_booster_until').eq('id', targetStudentId).single();
+  const { data: profileData } = await supabaseAdmin.from('profiles').select('total_points, xp_booster_until').eq('id', user.id).single();
   if (profileData?.xp_booster_until && new Date(profileData.xp_booster_until) > new Date()) {
     validatedAmount *= 2;
     reason += " (2x Booster Active)";
@@ -452,7 +366,7 @@ export async function rewardStudentAction(amount: number, reason: string, source
   const { data: existing } = await supabaseAdmin
     .from('reward_log')
     .select('id')
-    .eq('student_id', targetStudentId)
+    .eq('student_id', user.id)
     .eq('source_type', sourceType)
     .eq('source_id', sourceId)
     .single();
@@ -461,7 +375,7 @@ export async function rewardStudentAction(amount: number, reason: string, source
 
   // 2. Log reward
   const { error: logError } = await supabaseAdmin.from('reward_log').insert({
-    student_id: targetStudentId,
+    student_id: user.id,
     amount: validatedAmount,
     reason,
     source_type: sourceType,
@@ -472,7 +386,7 @@ export async function rewardStudentAction(amount: number, reason: string, source
 
   // 3. Update profile using SQL increment to prevent race conditions
   const { error: profileError } = await supabaseAdmin.rpc('increment_points', {
-    user_id: targetStudentId,
+    user_id: user.id,
     amount: validatedAmount
   });
 
@@ -482,7 +396,7 @@ export async function rewardStudentAction(amount: number, reason: string, source
     await supabaseAdmin
       .from('profiles')
       .update({ total_points: (profileData?.total_points || 0) + validatedAmount })
-      .eq('id', targetStudentId);
+      .eq('id', user.id);
   }
 
   return { success: true, alreadyRewarded: false };
