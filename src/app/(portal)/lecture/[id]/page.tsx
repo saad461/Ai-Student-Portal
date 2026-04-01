@@ -24,7 +24,10 @@ import {
   Zap,
   Link as LinkIcon,
   Terminal,
-  ExternalLink
+  ExternalLink,
+  Bot,
+  X,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
@@ -35,7 +38,7 @@ import { CodeCompiler } from '@/components/code-compiler';
 import { useChat } from '@/components/chat-context';
 import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
-import { logActivityAction } from '@/app/admin/actions';
+import { logActivityAction, rewardStudentAction } from '@/app/admin/actions';
 import { RichTextEditor } from '@/components/rich-text-editor';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -45,6 +48,14 @@ interface Submission {
   id: string;
   github_url: string;
   status: string;
+  ai_score?: number;
+  ai_feedback?: string;
+  ai_sections?: {
+    knowledge_check?: { score: number; feedback: string };
+    assignment?: { score: number; feedback: string };
+  };
+  ai_mistakes?: string[];
+  ai_improvements?: string[];
   completion_data: {
     theory_read?: boolean;
     quiz_completed?: boolean;
@@ -215,6 +226,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     const isAssignmentDone = lecture?.attached_assignment ? (updatedData.assignment_submitted || !!githubUrl) : true;
 
     const isFullyCompleted = isTheoryDoneNow && isKnowledgeCheckDone && isQuizDone && isAssignmentDone;
+    const wasAlreadyDone = submission?.status === 'submitted' || submission?.status === 'reviewed';
 
     const { error } = await supabase.from('submissions').upsert({
       student_id: user.id,
@@ -225,10 +237,60 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     }, { onConflict: 'student_id,curriculum_id' });
 
     if (!error) {
-      if (isFullyCompleted && !submission?.completion_data?.theory_read) { // Just finished
+      if (isFullyCompleted && !wasAlreadyDone) {
          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+         triggerAIReview(updatedData);
       }
       fetchData();
+    }
+  };
+
+  const triggerAIReview = async (updatedData: { knowledge_check_answers?: Record<string, string> }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !lecture) return;
+
+      const knowledgeChecks = lecture.knowledge_checks?.map(check => ({
+        question: check.question,
+        answer: updatedData.knowledge_check_answers?.[check.id] || ''
+      })) || [];
+
+      const response = await fetch('/api/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          githubUrl: githubUrl,
+          assignmentTitle: lecture.attached_assignment?.title || lecture.title,
+          assignmentDescription: lecture.attached_assignment?.description || lecture.description,
+          knowledgeChecks,
+          lectureTitle: lecture.title
+        })
+      });
+
+      if (response.ok) {
+        const review = await response.json();
+
+        // Save review to database
+        await supabase.from('submissions').update({
+          ai_score: review.score,
+          ai_feedback: review.feedback,
+          ai_status: review.status,
+          ai_sections: review.sections,
+          ai_mistakes: review.mistakes,
+          ai_improvements: review.improvements,
+          status: 'reviewed'
+        }).eq('student_id', user.id).eq('curriculum_id', resolvedParams.id);
+
+        // Award sparks: 20 score = 1 spark (1 spark = 10 XP)
+        const sparks = Math.floor(review.score / 20);
+        if (sparks > 0) {
+          await rewardStudentAction(sparks * 10, `Lecture Mastery: ${lecture.title}`, 'lecture_completion', resolvedParams.id);
+        }
+
+        fetchData();
+      }
+    } catch (err) {
+      console.error("AI Review Trigger Error:", err);
     }
   };
 
@@ -908,11 +970,32 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto">
                 <Card className="border-blue-200 bg-blue-50/30 dark:bg-blue-950/10 rounded-3xl overflow-hidden border-none shadow-lg">
                    <CardHeader className="bg-blue-600 text-white p-8">
-                      <CardTitle className="flex items-center gap-3 text-2xl">
+                      <CardTitle className="flex items-center gap-3 text-2xl mb-4">
                         <Github className="h-8 w-8" />
                         {lecture.attached_assignment?.title || 'Lecture Assignment'}
                       </CardTitle>
-                      <CardDescription className="text-blue-100 text-lg">{lecture.attached_assignment?.description}</CardDescription>
+                      <div className="prose prose-invert max-w-none">
+                         <ReactMarkdown
+                           remarkPlugins={[remarkGfm]}
+                           rehypePlugins={[rehypeRaw]}
+                           components={{
+                             p: ({ children }) => <p className="text-lg leading-relaxed mb-4 text-blue-50 font-medium">{children}</p>,
+                             h1: ({ children }) => <h1 className="text-2xl font-black mb-4 text-white uppercase tracking-tight">{children}</h1>,
+                             h2: ({ children }) => <h2 className="text-xl font-extrabold mb-3 text-white">{children}</h2>,
+                             h3: ({ children }) => <h3 className="text-lg font-bold mb-2 text-white">{children}</h3>,
+                             strong: ({ children }) => <strong className="font-bold text-white underline decoration-white/30">{children}</strong>,
+                             a: ({ href, children }) => (
+                               <a href={href} target="_blank" rel="noopener noreferrer" className="text-white font-black underline underline-offset-4 decoration-white/50 hover:decoration-white transition-all">
+                                 {children}
+                               </a>
+                             ),
+                             ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-blue-50">{children}</ul>,
+                             li: ({ children }) => <li className="text-blue-50">{children}</li>,
+                           }}
+                         >
+                            {lecture.attached_assignment?.description || ''}
+                         </ReactMarkdown>
+                      </div>
                    </CardHeader>
                    <CardContent className="p-8 space-y-6 bg-white dark:bg-slate-900">
                       {lecture.attached_assignment?.requirements && (
@@ -999,17 +1082,103 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
           </div>
 
           {isFullyDone && (
-            <div className="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 flex flex-col items-center text-center gap-4">
-               <div className="h-16 w-16 rounded-full bg-green-500 flex items-center justify-center">
-                  <CheckCircle2 className="h-10 w-10 text-white" />
-               </div>
-               <div>
-                  <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">Lecture Mastered!</h3>
-                  <p className="text-green-600/80">You have completed all requirements for this module.</p>
-               </div>
-               <Button asChild variant="outline" className="border-green-500 text-green-700 hover:bg-green-500 hover:text-white">
-                  <Link href="/curriculum">Continue learning</Link>
-               </Button>
+            <div className="space-y-8 animate-in zoom-in-95 duration-500">
+               {submission?.status === 'reviewed' && submission?.ai_score !== undefined ? (
+                 <Card className="overflow-hidden border-none shadow-2xl bg-white dark:bg-slate-900 rounded-3xl">
+                    <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-8">
+                       <div className="flex justify-between items-center">
+                          <div>
+                             <CardTitle className="text-3xl font-black uppercase tracking-tight">Lecture Mastered!</CardTitle>
+                             <CardDescription className="text-emerald-50 text-lg">Your performance has been reviewed by AI.</CardDescription>
+                          </div>
+                          <div className="text-center">
+                             <div className="text-5xl font-black">{submission.ai_score}</div>
+                             <div className="text-[10px] font-bold uppercase tracking-widest opacity-80">Final Score</div>
+                          </div>
+                       </div>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-8">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          {submission.ai_sections?.knowledge_check && (
+                             <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                   <h4 className="font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                                      <CheckCircle2 className="h-5 w-5 text-emerald-500" /> Knowledge Check
+                                   </h4>
+                                   <Badge variant="secondary">{submission.ai_sections.knowledge_check.score}/100</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground italic">{submission.ai_sections.knowledge_check.feedback}</p>
+                             </div>
+                          )}
+                          {submission.ai_sections?.assignment && (
+                             <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                   <h4 className="font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                                      <Github className="h-5 w-5 text-blue-500" /> Assignment
+                                   </h4>
+                                   <Badge variant="secondary">{submission.ai_sections.assignment.score}/100</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground italic">{submission.ai_sections.assignment.feedback}</p>
+                             </div>
+                          )}
+                       </div>
+
+                       {submission.ai_mistakes && submission.ai_mistakes.length > 0 && (
+                          <div className="space-y-4">
+                             <h4 className="font-black text-xs uppercase tracking-widest text-red-500 flex items-center gap-2">
+                                <X className="h-4 w-4" /> Identified Mistakes
+                             </h4>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {submission.ai_mistakes.map((m, i) => (
+                                   <div key={i} className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-sm text-red-800 dark:text-red-300 font-medium">
+                                      {m}
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+                       )}
+
+                       {submission.ai_improvements && submission.ai_improvements.length > 0 && (
+                          <div className="space-y-4">
+                             <h4 className="font-black text-xs uppercase tracking-widest text-emerald-500 flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4" /> Suggested Improvements
+                             </h4>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {submission.ai_improvements.map((m, i) => (
+                                   <div key={i} className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-sm text-emerald-800 dark:text-emerald-300 font-medium">
+                                      {m}
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+                       )}
+
+                       <div className="pt-8 border-t flex flex-col items-center gap-4">
+                          <div className="flex items-center gap-2 text-amber-600 font-black uppercase tracking-widest">
+                             <Zap className="h-6 w-6 fill-amber-500" /> +{Math.floor(submission.ai_score / 20)} Student Sparks Earned
+                          </div>
+                          <Button asChild size="lg" className="rounded-2xl px-12 h-16 text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20">
+                             <Link href="/curriculum">Continue to Next Lecture</Link>
+                          </Button>
+                       </div>
+                    </CardContent>
+                 </Card>
+               ) : (
+                 <div className="p-12 rounded-3xl bg-white dark:bg-slate-900 border flex flex-col items-center text-center gap-6 shadow-xl">
+                    <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center text-primary animate-pulse">
+                       <Bot className="h-12 w-12" />
+                    </div>
+                    <div>
+                       <h3 className="text-3xl font-black uppercase tracking-tight">AI Review in Progress</h3>
+                       <p className="text-muted-foreground max-w-md mx-auto mt-2">Our AI is currently analyzing your work and generating personalized feedback. This usually takes about 10-15 seconds.</p>
+                    </div>
+                    <div className="flex gap-2">
+                       <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                       <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                       <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                    </div>
+                 </div>
+               )}
             </div>
           )}
         </div>

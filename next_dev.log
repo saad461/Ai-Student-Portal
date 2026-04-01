@@ -2,9 +2,10 @@
 > student-portal@0.1.0 dev
 > next dev
 
+ ⚠ Port 3000 is in use by an unknown process, using available port 3002 instead.
    ▲ Next.js 15.5.14
-   - Local:        http://localhost:3000
-   - Network:      http://192.168.0.2:3000
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.0.2:3002
 
  ✓ Starting...
  ✓ Ready in 2s
@@ -45,3 +46,4 @@
  POST /admin 200 in 39ms
  ✓ Compiled in 1855ms (3290 modules)
  ✓ Compiled in 8.1s (3290 modules)
+ ✓ Ready in 2.1s
