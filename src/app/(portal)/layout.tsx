@@ -30,16 +30,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   return (
     <ChatProvider>
-      <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30 overflow-x-hidden" style={{ '--editor-sticky-top': '64px' } as React.CSSProperties}>
+      <div className="flex flex-col lg:flex-row min-h-screen bg-muted/30 overflow-x-hidden">
         <ActivityTracker />
         <AttendanceTracker />
         <Sidebar />
-        <div className="flex-1 flex flex-col min-w-0 relative">
-          <PortalNavbar />
-          <main className="flex-1 w-full relative">
-            {children}
-          </main>
-        </div>
+        <PortalNavbar />
+        <main className="flex-1 w-full relative min-w-0">
+          {children}
+        </main>
         <SkillShop />
         <ChatManager />
       </div>
