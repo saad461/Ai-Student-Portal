@@ -151,7 +151,8 @@ export async function reviewSubmissionAction(
     assignment?: { score: number; feedback: string };
   },
   mistakes?: string[],
-  improvements?: string[]
+  improvements?: string[],
+  manualSections?: Record<string, unknown>
 ) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
@@ -171,6 +172,7 @@ export async function reviewSubmissionAction(
       ai_sections: sections,
       ai_mistakes: mistakes,
       ai_improvements: improvements,
+      manual_sections: manualSections || {},
       status: status === 'passed' ? 'reviewed' : 'extra_task_assigned'
     })
     .eq('id', submissionId)

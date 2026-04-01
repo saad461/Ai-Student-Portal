@@ -21,6 +21,7 @@ interface Submission {
   };
   ai_mistakes?: string[];
   ai_improvements?: string[];
+  manual_sections?: Record<string, Record<string, string>>;
   submitted_at: string;
 }
 
@@ -153,6 +154,19 @@ export default function GradesPage() {
                                     <span className="text-muted-foreground">{sub.ai_sections.knowledge_check.score}/100</span>
                                  </div>
                                  <p className="text-xs text-muted-foreground leading-relaxed">{sub.ai_sections.knowledge_check.feedback}</p>
+                                 {sub.manual_sections && Object.keys(sub.manual_sections).filter(k => k !== 'assignment').length > 0 && (
+                                    <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30 space-y-3">
+                                       <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Question Feedback</div>
+                                       {Object.entries(sub.manual_sections).filter(([k]) => k !== 'assignment').map(([qId, val]) => (
+                                          (val.mistakes || val.improvements) && (
+                                             <div key={qId} className="space-y-1">
+                                                {val.mistakes && <p className="text-[11px] text-red-600 dark:text-red-400"><strong>Mistake:</strong> {val.mistakes}</p>}
+                                                {val.improvements && <p className="text-[11px] text-emerald-600 dark:text-emerald-400"><strong>Tip:</strong> {val.improvements}</p>}
+                                             </div>
+                                          )
+                                       ))}
+                                    </div>
+                                 )}
                               </div>
                            )}
                            {sub.ai_sections?.assignment && (
@@ -162,6 +176,13 @@ export default function GradesPage() {
                                     <span className="text-muted-foreground">{sub.ai_sections.assignment.score}/100</span>
                                  </div>
                                  <p className="text-xs text-muted-foreground leading-relaxed">{sub.ai_sections.assignment.feedback}</p>
+                                 {sub.manual_sections?.assignment && (
+                                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-2">
+                                       <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Instructor Review</div>
+                                       {sub.manual_sections.assignment.mistakes && <p className="text-[11px] text-red-600 dark:text-red-400"><strong>Mistakes:</strong> {sub.manual_sections.assignment.mistakes}</p>}
+                                       {sub.manual_sections.assignment.improvements && <p className="text-[11px] text-emerald-600 dark:text-emerald-400"><strong>Improvements:</strong> {sub.manual_sections.assignment.improvements}</p>}
+                                    </div>
+                                 )}
                               </div>
                            )}
                         </div>

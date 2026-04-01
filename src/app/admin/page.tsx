@@ -112,6 +112,7 @@ interface DailyChallenge {
 
 interface StudentSubmission {
   id: string;
+  student_id: string;
   curriculum_id: string;
   status: string;
   submitted_at: string;
@@ -125,6 +126,7 @@ interface StudentSubmission {
   };
   ai_mistakes?: string[];
   ai_improvements?: string[];
+  manual_sections?: Record<string, any>;
   completion_data?: {
     theory_read?: boolean;
     quiz_completed?: boolean;
@@ -162,7 +164,8 @@ export default function AdminDashboard() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support' | 'submissions'>('students');
+  const [submissionFilter, setSubmissionFilter] = useState<'all' | 'pending' | 'mastered'>('all');
 
   const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, unknown>[]>([]);
@@ -187,6 +190,26 @@ export default function AdminDashboard() {
   const [editingCourse, setEditingCourse] = useState<Partial<Course> | null>(null);
   const [editingResource, setEditingResource] = useState<Partial<Resource> | null>(null);
   const [editingChallenge, setEditingChallenge] = useState<Partial<DailyChallenge> | null>(null);
+  const [reviewingSubmission, setReviewingSubmission] = useState<StudentSubmission | null>(null);
+  const [granularMistakes, setGranularMistakes] = useState<Record<string, string>>({});
+  const [granularImprovements, setGranularImprovements] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (reviewingSubmission) {
+      const mistakes: Record<string, string> = {};
+      const improvements: Record<string, string> = {};
+
+      if (reviewingSubmission.manual_sections) {
+        Object.entries(reviewingSubmission.manual_sections).forEach(([key, val]: [string, any]) => {
+          mistakes[`${reviewingSubmission.id}-${key}`] = val.mistakes || '';
+          improvements[`${reviewingSubmission.id}-${key}`] = val.improvements || '';
+        });
+      }
+
+      setGranularMistakes(prev => ({ ...prev, ...mistakes }));
+      setGranularImprovements(prev => ({ ...prev, ...improvements }));
+    }
+  }, [reviewingSubmission]);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const resourceFileRef = useRef<HTMLInputElement>(null);
   const thumbnailFileRef = useRef<HTMLInputElement>(null);
@@ -652,6 +675,7 @@ export default function AdminDashboard() {
           <Button variant={activeTab === 'attendance' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('attendance')}><Clock className="h-4 w-4 mr-1 md:mr-2" /> Attendance</Button>
           <Button variant={activeTab === 'library' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('library')}><Library className="h-4 w-4 mr-1 md:mr-2" /> Library</Button>
           <Button variant={activeTab === 'challenges' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('challenges')}><Trophy className="h-4 w-4 mr-1 md:mr-2" /> Challenges</Button>
+          <Button variant={activeTab === 'submissions' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('submissions')}><Send className="h-4 w-4 mr-1 md:mr-2" /> Submissions</Button>
           <Button variant={activeTab === 'support' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('support')}><MessageCircle className="h-4 w-4 mr-1 md:mr-2" /> Support</Button>
           <Button variant={activeTab === 'insights' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('insights')}><TrendingUp className="h-4 w-4 mr-1 md:mr-2" /> Insights</Button>
         </div>
@@ -1452,7 +1476,7 @@ export default function AdminDashboard() {
               </div>
             </Card>
           </div>
-        ) : (
+        ) : activeTab === 'insights' ? (
           <div className="space-y-8 animate-in fade-in duration-500">
              <div className="flex justify-between items-end">
                <div>
@@ -1547,6 +1571,84 @@ export default function AdminDashboard() {
                    </CardContent>
                 </Card>
              </div>
+          </div>
+        ) : activeTab === 'submissions' ? (
+           <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                 <h2 className="text-xl font-semibold flex items-center gap-2"><Send className="h-5 w-5" /> Recent Submissions</h2>
+                 <div className="flex items-center gap-2">
+                    <Badge
+                       variant={submissionFilter === 'all' ? 'default' : 'outline'}
+                       className="cursor-pointer"
+                       onClick={() => setSubmissionFilter('all')}
+                    >All</Badge>
+                    <Badge
+                       variant={submissionFilter === 'pending' ? 'default' : 'secondary'}
+                       className="cursor-pointer"
+                       onClick={() => setSubmissionFilter('pending')}
+                    >Pending</Badge>
+                    <Badge
+                       variant={submissionFilter === 'mastered' ? 'default' : 'outline'}
+                       className={cn("cursor-pointer", submissionFilter === 'mastered' ? "bg-green-600" : "")}
+                       onClick={() => setSubmissionFilter('mastered')}
+                    >Mastered</Badge>
+                 </div>
+              </div>
+              <Card className="overflow-hidden">
+                 <div className="overflow-x-auto">
+                    <Table>
+                       <TableHeader>
+                          <TableRow>
+                             <TableHead>Student</TableHead>
+                             <TableHead>Lecture</TableHead>
+                             <TableHead>Submitted</TableHead>
+                             <TableHead>Score</TableHead>
+                             <TableHead>Status</TableHead>
+                             <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                       </TableHeader>
+                       <TableBody>
+                          {students.flatMap(s => (s.submissions || []).map(sub => ({ ...sub, student_name: s.full_name })))
+                             .filter(sub => {
+                                if (submissionFilter === 'pending') return sub.status === 'submitted' || sub.status === 'priority_review';
+                                if (submissionFilter === 'mastered') return sub.status === 'reviewed';
+                                return true;
+                             })
+                             .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+                             .map((sub) => (
+                                <TableRow key={sub.id}>
+                                   <TableCell className="font-bold">{sub.student_name}</TableCell>
+                                   <TableCell>{curriculum.find(c => c.id === sub.curriculum_id)?.title || 'Unknown'}</TableCell>
+                                   <TableCell className="text-xs text-muted-foreground">{new Date(sub.submitted_at).toLocaleString()}</TableCell>
+                                   <TableCell>
+                                      {sub.ai_score !== undefined ? (
+                                         <Badge variant={sub.ai_score >= 80 ? "default" : "secondary"} className={sub.ai_score >= 80 ? "bg-emerald-600" : ""}>
+                                            {sub.ai_score}/100
+                                         </Badge>
+                                      ) : '-'}
+                                   </TableCell>
+                                   <TableCell>
+                                      <Badge className={cn(
+                                         sub.status === 'reviewed' ? 'bg-green-600' :
+                                         sub.status === 'priority_review' ? 'bg-red-600 animate-pulse' :
+                                         'bg-amber-500'
+                                      )}>{sub.status.toUpperCase()}</Badge>
+                                   </TableCell>
+                                   <TableCell className="text-right">
+                                      <Button size="sm" variant="outline" onClick={() => setReviewingSubmission(sub as any)}>
+                                         <Edit className="h-4 w-4 mr-2" /> Review
+                                      </Button>
+                                   </TableCell>
+                                </TableRow>
+                             ))}
+                       </TableBody>
+                    </Table>
+                 </div>
+              </Card>
+           </div>
+        ) : (
+          <div className="space-y-8 animate-in fade-in duration-500">
+             {/* Insights or other content could go here if needed, currently handled by fallthrough */}
           </div>
         )}
 
@@ -2463,6 +2565,292 @@ export default function AdminDashboard() {
               </div>
             </div>
             <DialogFooter><Button onClick={() => handleSaveChallenge(editingChallenge!)}>Save Challenge</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!reviewingSubmission} onOpenChange={(open) => !open && setReviewingSubmission(null)}>
+          <DialogContent className="max-w-5xl w-[95vw] md:w-full overflow-y-auto max-h-[90vh]">
+             <DialogHeader>
+                <div className="flex justify-between items-center pr-8">
+                   <DialogTitle>Review Submission</DialogTitle>
+                   <Badge variant="outline">{curriculum.find(c => c.id === reviewingSubmission?.curriculum_id)?.title}</Badge>
+                </div>
+             </DialogHeader>
+
+             {reviewingSubmission && (
+                <div className="space-y-12 py-6">
+                   {/* Student Identity */}
+                   <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-xl">
+                         {students.find(s => s.id === reviewingSubmission.student_id)?.full_name[0]}
+                      </div>
+                      <div>
+                         <h4 className="font-bold">{students.find(s => s.id === reviewingSubmission.student_id)?.full_name}</h4>
+                         <p className="text-xs text-muted-foreground">Submitted on {new Date(reviewingSubmission.submitted_at).toLocaleString()}</p>
+                      </div>
+                   </div>
+
+                   {/* Quiz Results if any */}
+                   {reviewingSubmission.completion_data?.quiz_completed && (
+                      <div className="space-y-4">
+                         <h4 className="font-black text-xs uppercase tracking-widest text-purple-500 flex items-center gap-2">
+                            <Trophy className="h-4 w-4" /> Quiz Performance
+                         </h4>
+                         <Card className="border-purple-100 dark:border-purple-900/30 bg-purple-50/30 dark:bg-purple-900/10">
+                            <CardContent className="p-6">
+                               <div className="flex items-center gap-8">
+                                  <div className="text-center">
+                                     <div className="text-4xl font-black text-purple-600">{reviewingSubmission.completion_data.quiz_score || 0}</div>
+                                     <div className="text-[10px] font-bold uppercase text-purple-400">Correct</div>
+                                  </div>
+                                  <div className="flex-1">
+                                     <p className="text-sm font-medium text-purple-900 dark:text-purple-200">
+                                        The student has successfully completed the required quiz for this lecture.
+                                     </p>
+                                  </div>
+                               </div>
+                            </CardContent>
+                         </Card>
+                      </div>
+                   )}
+
+                   {/* Knowledge Checks */}
+                   {reviewingSubmission.completion_data?.knowledge_check_answers && (
+                      <div className="space-y-6">
+                         <h4 className="font-black text-xs uppercase tracking-widest text-emerald-500 flex items-center gap-2">
+                            <CheckCheck className="h-4 w-4" /> Knowledge Check Assessment
+                         </h4>
+                         <div className="space-y-8">
+                            {Object.entries(reviewingSubmission.completion_data.knowledge_check_answers).map(([qId, answer]) => {
+                               const lecture = curriculum.find(c => c.id === reviewingSubmission.curriculum_id);
+                               const question = lecture?.knowledge_checks?.find(k => k.id === qId)?.question;
+                               return (
+                                  <div key={qId} className="space-y-4">
+                                     <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-900 border space-y-4">
+                                        <div className="text-sm font-bold text-slate-500">Q: <span className="text-slate-700 dark:text-slate-200 italic">{question || 'Technical Question'}</span></div>
+                                        <div className="prose prose-slate prose-sm dark:prose-invert max-w-none border-l-4 border-emerald-500/30 pl-4 py-2">
+                                           <div dangerouslySetInnerHTML={{ __html: answer }} />
+                                        </div>
+                                     </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
+                                        <div className="space-y-2">
+                                           <Label className="text-[10px] font-bold uppercase opacity-60">Technical Mistakes</Label>
+                                           <Textarea
+                                             placeholder="Highlight any errors..."
+                                             className="text-xs min-h-[80px]"
+                                             value={granularMistakes[`${reviewingSubmission.id}-${qId}`] || reviewingSubmission.manual_sections?.[qId]?.mistakes || ''}
+                                             onChange={(e) => setGranularMistakes(prev => ({ ...prev, [`${reviewingSubmission.id}-${qId}`]: e.target.value }))}
+                                           />
+                                        </div>
+                                        <div className="space-y-2">
+                                           <Label className="text-[10px] font-bold uppercase opacity-60">Suggested Improvements</Label>
+                                           <Textarea
+                                             placeholder="How can they improve?"
+                                             className="text-xs min-h-[80px]"
+                                             value={granularImprovements[`${reviewingSubmission.id}-${qId}`] || reviewingSubmission.manual_sections?.[qId]?.improvements || ''}
+                                             onChange={(e) => setGranularImprovements(prev => ({ ...prev, [`${reviewingSubmission.id}-${qId}`]: e.target.value }))}
+                                           />
+                                        </div>
+                                     </div>
+                                  </div>
+                               );
+                            })}
+                         </div>
+                      </div>
+                   )}
+
+                   {/* Assignment */}
+                   {reviewingSubmission.github_url && (
+                      <div className="space-y-6 border-t pt-8">
+                         <h4 className="font-black text-xs uppercase tracking-widest text-blue-500 flex items-center gap-2">
+                            <GithubIcon className="h-4 w-4" /> Technical Assignment Review
+                         </h4>
+                         <div className="space-y-6">
+                            <div className="flex items-center justify-between p-6 rounded-3xl bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+                               <div className="space-y-1">
+                                  <h5 className="font-bold text-blue-900 dark:text-blue-100">GitHub Repository</h5>
+                                  <p className="text-xs text-blue-600 dark:text-blue-400 font-mono truncate max-w-md">{reviewingSubmission.github_url}</p>
+                               </div>
+                               <Button variant="default" className="bg-blue-600 hover:bg-blue-700" asChild>
+                                  <a href={reviewingSubmission.github_url} target="_blank"><ExternalLink className="h-4 w-4 mr-2" /> Inspect Code</a>
+                               </Button>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border text-xs">
+                               <Label className="text-[10px] font-bold uppercase opacity-50 block mb-1">Task Description</Label>
+                               <p className="text-slate-600 dark:text-slate-400">
+                                  {curriculum.find(c => c.id === reviewingSubmission.curriculum_id)?.attached_assignment?.description || 'No description available.'}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
+                               <div className="space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase opacity-60 text-blue-600">Code Quality Mistakes</Label>
+                                  <Textarea
+                                    placeholder="Logic errors, anti-patterns..."
+                                    className="text-xs min-h-[100px]"
+                                    value={granularMistakes[`${reviewingSubmission.id}-assignment`] || reviewingSubmission.manual_sections?.assignment?.mistakes || ''}
+                                    onChange={(e) => setGranularMistakes(prev => ({ ...prev, [`${reviewingSubmission.id}-assignment`]: e.target.value }))}
+                                  />
+                               </div>
+                               <div className="space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase opacity-60 text-blue-600">Architectural Improvements</Label>
+                                  <Textarea
+                                    placeholder="Best practices, optimizations..."
+                                    className="text-xs min-h-[100px]"
+                                    value={granularImprovements[`${reviewingSubmission.id}-assignment`] || reviewingSubmission.manual_sections?.assignment?.improvements || ''}
+                                    onChange={(e) => setGranularImprovements(prev => ({ ...prev, [`${reviewingSubmission.id}-assignment`]: e.target.value }))}
+                                  />
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                   )}
+
+                   {/* Final Grading */}
+                   <div className="border-t pt-8 space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                         <div className="md:col-span-2 space-y-2">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Overall Summary Feedback</Label>
+                            <Textarea
+                              className="min-h-[150px] text-sm rounded-2xl"
+                              placeholder="Final thoughts and next steps for the student..."
+                              value={manualFeedback[reviewingSubmission.id] !== undefined ? manualFeedback[reviewingSubmission.id] : (reviewingSubmission.ai_feedback || '')}
+                              onChange={(e) => setManualFeedback(prev => ({ ...prev, [reviewingSubmission.id]: e.target.value }))}
+                            />
+                         </div>
+                         <div className="space-y-6">
+                            <div className="space-y-2">
+                               <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Final Mastery Score</Label>
+                               <div className="relative">
+                                  <Input
+                                    type="number"
+                                    className="text-4xl font-black h-20 rounded-2xl pr-12"
+                                    value={manualScores[reviewingSubmission.id] !== undefined ? manualScores[reviewingSubmission.id] : (reviewingSubmission.ai_score || 0)}
+                                    onChange={(e) => setManualScores(prev => ({ ...prev, [reviewingSubmission.id]: parseInt(e.target.value) }))}
+                                  />
+                                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-300">/100</span>
+                               </div>
+                            </div>
+                            <div className="space-y-2">
+                               <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mastery Status</Label>
+                               <select
+                                 className="w-full h-12 rounded-xl border bg-background text-sm font-bold px-4"
+                                 value={manualStatus[reviewingSubmission.id] !== undefined ? manualStatus[reviewingSubmission.id] : reviewingSubmission.status}
+                                 onChange={(e) => setManualStatus(prev => ({ ...prev, [reviewingSubmission.id]: e.target.value }))}
+                               >
+                                  <option value="submitted">Submitted (Pending)</option>
+                                  <option value="reviewed">Mastered (Pass)</option>
+                                  <option value="extra_task_assigned">Extra Task (Fail)</option>
+                               </select>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+             )}
+
+             <DialogFooter className="flex flex-col sm:flex-row gap-4 border-t pt-6">
+                <Button
+                   variant="outline"
+                   className="flex-1 h-12 rounded-xl bg-primary/5 text-primary border-primary/20"
+                   disabled={isSaving}
+                   onClick={async () => {
+                     if (!reviewingSubmission) return;
+                     const lecture = curriculum.find(c => c.id === reviewingSubmission.curriculum_id);
+                     if (!lecture) return;
+
+                     setIsSaving(true);
+                     try {
+                        const knowledgeChecks = lecture.knowledge_checks?.map(check => ({
+                           question: check.question,
+                           answer: reviewingSubmission.completion_data?.knowledge_check_answers?.[check.id] || ''
+                        })) || [];
+
+                        const response = await fetch('/api/review', {
+                           method: 'POST',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({
+                              githubUrl: reviewingSubmission.github_url,
+                              assignmentTitle: lecture.attached_assignment?.title || lecture.title,
+                              assignmentDescription: lecture.attached_assignment?.description || lecture.description,
+                              knowledgeChecks,
+                              lectureTitle: lecture.title
+                           })
+                        });
+
+                        if (response.ok) {
+                           const review = await response.json();
+                           setManualFeedback(prev => ({ ...prev, [reviewingSubmission.id]: review.feedback }));
+                           setManualScores(prev => ({ ...prev, [reviewingSubmission.id]: review.score }));
+                           setManualStatus(prev => ({ ...prev, [reviewingSubmission.id]: review.status === 'passed' ? 'reviewed' : 'extra_task_assigned' }));
+                           setAiReviewData(prev => ({ ...prev, [reviewingSubmission.id]: review }));
+
+                           // Also pre-populate granular if AI provides them (optional mapping logic here if needed)
+                           success('AI Analysis pre-populated the form!');
+                        }
+                     } catch {
+                        toastError("AI review failed.");
+                     } finally {
+                        setIsSaving(false);
+                     }
+                   }}
+                >
+                   <Bot className="h-4 w-4 mr-2" /> Quick AI Pre-fill
+                </Button>
+                <Button
+                   className="flex-[2] h-12 rounded-xl font-bold"
+                   disabled={isSaving}
+                   onClick={async () => {
+                      if (!reviewingSubmission) return;
+                      setIsSaving(true);
+
+                      const manualSec: Record<string, any> = {};
+                      // Collect granular feedback
+                      if (reviewingSubmission.completion_data?.knowledge_check_answers) {
+                         Object.keys(reviewingSubmission.completion_data.knowledge_check_answers).forEach(qId => {
+                            manualSec[qId] = {
+                               mistakes: granularMistakes[`${reviewingSubmission.id}-${qId}`],
+                               improvements: granularImprovements[`${reviewingSubmission.id}-${qId}`]
+                            };
+                         });
+                      }
+                      if (reviewingSubmission.github_url) {
+                         manualSec['assignment'] = {
+                            mistakes: granularMistakes[`${reviewingSubmission.id}-assignment`],
+                            improvements: granularImprovements[`${reviewingSubmission.id}-assignment`]
+                         };
+                      }
+
+                      const score = manualScores[reviewingSubmission.id] !== undefined ? manualScores[reviewingSubmission.id] : (reviewingSubmission.ai_score || 0);
+                      const feedback = manualFeedback[reviewingSubmission.id] !== undefined ? manualFeedback[reviewingSubmission.id] : (reviewingSubmission.ai_feedback || '');
+                      const status = manualStatus[reviewingSubmission.id] !== undefined ? manualStatus[reviewingSubmission.id] : reviewingSubmission.status;
+                      const aiData = aiReviewData[reviewingSubmission.id] || {};
+
+                      const res = await reviewSubmissionAction(
+                         reviewingSubmission.id,
+                         feedback,
+                         score,
+                         status === 'extra_task_assigned' ? 'failed' : 'passed',
+                         aiData.sections || reviewingSubmission.ai_sections,
+                         aiData.mistakes || reviewingSubmission.ai_mistakes,
+                         aiData.improvements || reviewingSubmission.ai_improvements,
+                         manualSec
+                      );
+
+                      if (res.success) {
+                         success('Submission successfully graded and student notified.');
+                         setReviewingSubmission(null);
+                         fetchAdminData();
+                      } else {
+                         toastError('Failed to save review.');
+                      }
+                      setIsSaving(false);
+                   }}
+                >
+                   Confirm Review & Award Sparks
+                </Button>
+             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
