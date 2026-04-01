@@ -120,6 +120,19 @@ interface StudentSubmission {
   ai_score?: number;
   ai_feedback?: string;
   ai_status?: string;
+  ai_sections?: {
+    knowledge_check?: { score: number; feedback: string };
+    assignment?: { score: number; feedback: string };
+  };
+  ai_mistakes?: string[];
+  ai_improvements?: string[];
+  completion_data?: {
+    theory_read?: boolean;
+    quiz_completed?: boolean;
+    quiz_score?: number;
+    assignment_submitted?: boolean;
+    knowledge_check_answers?: Record<string, string>;
+  };
 }
 
 interface StudentProfile {
@@ -135,6 +148,11 @@ interface StudentProfile {
 export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
+
+  const [manualScores, setManualScores] = useState<Record<string, number>>({});
+  const [manualFeedback, setManualFeedback] = useState<Record<string, string>>({});
+  const [manualStatus, setManualStatus] = useState<Record<string, string>>({});
+  const [aiReviewData, setAiReviewData] = useState<Record<string, any>>({});
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
@@ -1620,7 +1638,7 @@ export default function AdminDashboard() {
                          <Card key={sub.id} className="overflow-hidden">
                             <CardHeader className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-row justify-between items-center border-b">
                                <div className="flex gap-2 items-center">
-                                  <Badge variant="outline">{sub.curriculum_id}</Badge>
+                                  <Badge variant="outline" className="font-bold text-primary">{curriculum.find(c => c.id === sub.curriculum_id)?.title || sub.curriculum_id}</Badge>
                                   <span className="text-xs font-bold text-muted-foreground">{new Date(sub.submitted_at).toLocaleString()}</span>
                                </div>
                                <div className="flex gap-2">
@@ -1632,17 +1650,79 @@ export default function AdminDashboard() {
                                   )}>{sub.status.toUpperCase()}</Badge>
                                </div>
                             </CardHeader>
-                            <CardContent className="p-4 space-y-4">
-                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">AI Feedback & Grade</Label>
-                                     <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 text-xs font-medium italic min-h-[60px]">
-                                        {sub.ai_feedback || "No AI feedback yet. Grade this submission to trigger AI review."}
+                            <CardContent className="p-6 space-y-8">
+                               {/* Knowledge Check Section */}
+                               {sub.completion_data?.knowledge_check_answers && (
+                                 <div className="space-y-4">
+                                    <h4 className="font-black text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                       <CheckCheck className="h-4 w-4" /> Knowledge Check Answers
+                                    </h4>
+                                    <div className="space-y-4">
+                                       {Object.entries(sub.completion_data.knowledge_check_answers).map(([qId, answer]) => {
+                                          const lecture = curriculum.find(c => c.id === sub.curriculum_id);
+                                          const question = lecture?.knowledge_checks?.find(k => k.id === qId)?.question;
+                                          return (
+                                             <div key={qId} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border">
+                                                <div className="text-xs font-bold text-slate-500 mb-2">Q: <span className="text-slate-700 dark:text-slate-300 italic">{question || 'Unknown Question'}</span></div>
+                                                <div className="prose prose-slate prose-sm dark:prose-invert max-w-none">
+                                                   <div dangerouslySetInnerHTML={{ __html: answer }} />
+                                                </div>
+                                             </div>
+                                          );
+                                       })}
+                                    </div>
+                                 </div>
+                               )}
+
+                               {/* Assignment Section */}
+                               {sub.github_url && (
+                                 <div className="space-y-4 border-t pt-6">
+                                    <h4 className="font-black text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                       <GithubIcon className="h-4 w-4" /> Assignment Description
+                                    </h4>
+                                    <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+                                       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                          {curriculum.find(c => c.id === sub.curriculum_id)?.attached_assignment?.description || 'No description provided.'}
+                                       </p>
+                                    </div>
+                                 </div>
+                               )}
+
+                               {/* Grading Form */}
+                               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-8">
+                                  <div className="md:col-span-2 space-y-4">
+                                     <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Feedback</Label>
+                                        <Textarea
+                                          className="min-h-[120px] text-sm"
+                                          placeholder="Enter technical feedback..."
+                                          value={manualFeedback[sub.id] !== undefined ? manualFeedback[sub.id] : (sub.ai_feedback || '')}
+                                          onChange={(e) => setManualFeedback(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                                        />
                                      </div>
                                   </div>
-                                  <div className="flex flex-col justify-center items-center p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border">
-                                     <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">AI Score</div>
-                                     <div className="text-4xl font-black text-primary">{sub.ai_score || 0}<span className="text-lg text-muted-foreground">/100</span></div>
+                                  <div className="space-y-4">
+                                     <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Score (0-100)</Label>
+                                        <Input
+                                          type="number"
+                                          className="text-2xl font-black h-14"
+                                          value={manualScores[sub.id] !== undefined ? manualScores[sub.id] : (sub.ai_score || 0)}
+                                          onChange={(e) => setManualScores(prev => ({ ...prev, [sub.id]: parseInt(e.target.value) }))}
+                                        />
+                                     </div>
+                                     <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</Label>
+                                        <select
+                                          className="w-full p-3 rounded-lg border bg-background text-sm font-bold"
+                                          value={manualStatus[sub.id] !== undefined ? manualStatus[sub.id] : sub.status}
+                                          onChange={(e) => setManualStatus(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                                        >
+                                           <option value="submitted">Submitted (Pending)</option>
+                                           <option value="reviewed">Reviewed (Pass)</option>
+                                           <option value="extra_task_assigned">Extra Task (Fail)</option>
+                                        </select>
+                                     </div>
                                   </div>
                                </div>
                                <div className="flex justify-end gap-2 border-t pt-4">
@@ -1654,7 +1734,97 @@ export default function AdminDashboard() {
                                      }
                                   }}>
                                     <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
+
+                               <div className="flex flex-col sm:flex-row justify-between gap-4 border-t pt-6">
+                                  <div className="flex gap-2">
+                                     {sub.github_url && (
+                                        <Button variant="outline" size="sm" asChild className="rounded-xl h-10 px-4">
+                                           <a href={sub.github_url} target="_blank">
+                                              <GithubIcon className="h-4 w-4 mr-2" /> Open Repository
+                                           </a>
+                                        </Button>
+                                     )}
+                                  </div>
+                                  <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 rounded-xl h-10 px-4"
+                                    onClick={async () => {
+                                      const lecture = curriculum.find(c => c.id === sub.curriculum_id);
+                                      if (!lecture) return;
+
+                                      setIsSaving(true);
+                                      try {
+                                        const knowledgeChecks = lecture.knowledge_checks?.map(check => ({
+                                          question: check.question,
+                                          answer: sub.completion_data?.knowledge_check_answers?.[check.id] || ''
+                                        })) || [];
+
+                                        const response = await fetch('/api/review', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            githubUrl: sub.github_url,
+                                            assignmentTitle: lecture.attached_assignment?.title || lecture.title,
+                                            assignmentDescription: lecture.attached_assignment?.description || lecture.description,
+                                            knowledgeChecks,
+                                            lectureTitle: lecture.title
+                                          })
+                                        });
+
+                                        if (response.ok) {
+                                          const review = await response.json();
+
+                                          // Update local state to show AI result in form
+                                          setManualFeedback(prev => ({ ...prev, [sub.id]: review.feedback }));
+                                          setManualScores(prev => ({ ...prev, [sub.id]: review.score }));
+                                          setManualStatus(prev => ({ ...prev, [sub.id]: review.status === 'passed' ? 'reviewed' : 'extra_task_assigned' }));
+                                          setAiReviewData(prev => ({ ...prev, [sub.id]: review }));
+
+                                          success('AI Analysis complete! Review the form and save.');
+                                        }
+                                      } catch (err) {
+                                        toastError("Failed to trigger AI review.");
+                                      } finally {
+                                        setIsSaving(false);
+                                      }
+                                  }}>
+                                    <Bot className="h-4 w-4 mr-2" /> Auto Review (AI)
                                   </Button>
+
+                                  <Button
+                                    size="sm"
+                                    className="rounded-xl h-10 px-6 font-bold"
+                                    onClick={async () => {
+                                       setIsSaving(true);
+                                       const score = manualScores[sub.id] !== undefined ? manualScores[sub.id] : (sub.ai_score || 0);
+                                       const feedback = manualFeedback[sub.id] !== undefined ? manualFeedback[sub.id] : (sub.ai_feedback || '');
+                                       const status = manualStatus[sub.id] !== undefined ? manualStatus[sub.id] : sub.status;
+                                       const aiData = aiReviewData[sub.id] || {};
+
+                                       const res = await reviewSubmissionAction(
+                                          sub.id,
+                                          feedback,
+                                          score,
+                                          status === 'extra_task_assigned' ? 'failed' : 'passed',
+                                          aiData.sections || sub.ai_sections,
+                                          aiData.mistakes || sub.ai_mistakes,
+                                          aiData.improvements || sub.ai_improvements
+                                       );
+
+                                       if (res.success) {
+                                          success('Submission graded successfully!');
+                                          fetchAdminData();
+                                       } else {
+                                          toastError('Failed to save grade.');
+                                       }
+                                       setIsSaving(false);
+                                    }}
+                                  >
+                                      
+                                  </Button>
+                               </div>
                                </div>
                             </CardContent>
                          </Card>
