@@ -34,6 +34,7 @@ import { motion } from 'framer-motion';
 import { CodeCompiler } from '@/components/code-compiler';
 import { useChat } from '@/components/chat-context';
 import { AIExplainSection } from '@/components/ai-explain-section';
+import { AICodeReview } from '@/components/code-review';
 import { AudioReader } from '@/components/audio-reader';
 import { logActivityAction } from '@/app/admin/actions';
 import { RichTextEditor } from '@/components/rich-text-editor';
@@ -45,6 +46,9 @@ interface Submission {
   id: string;
   github_url: string;
   status: string;
+  ai_score?: number;
+  ai_feedback?: string;
+  ai_status?: string;
   completion_data: {
     theory_read?: boolean;
     quiz_completed?: boolean;
@@ -214,7 +218,10 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     const isQuizDone = lecture?.attached_quiz ? updatedData.quiz_completed : true;
     const isAssignmentDone = lecture?.attached_assignment ? (updatedData.assignment_submitted || !!githubUrl) : true;
 
-    const isFullyCompleted = isTheoryDoneNow && isKnowledgeCheckDone && isQuizDone && isAssignmentDone;
+    // Check if the current submission status is 'reviewed' or 'passed'
+    const isAlreadyPassed = submission?.status === 'reviewed';
+
+    const isFullyCompleted = (isTheoryDoneNow && isKnowledgeCheckDone && isQuizDone && isAssignmentDone) || isAlreadyPassed;
 
     const { error } = await supabase.from('submissions').upsert({
       student_id: user.id,
@@ -908,11 +915,23 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto">
                 <Card className="border-blue-200 bg-blue-50/30 dark:bg-blue-950/10 rounded-3xl overflow-hidden border-none shadow-lg">
                    <CardHeader className="bg-blue-600 text-white p-8">
-                      <CardTitle className="flex items-center gap-3 text-2xl">
-                        <Github className="h-8 w-8" />
-                        {lecture.attached_assignment?.title || 'Lecture Assignment'}
-                      </CardTitle>
-                      <CardDescription className="text-blue-100 text-lg">{lecture.attached_assignment?.description}</CardDescription>
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="flex items-center gap-3 text-2xl">
+                          <Github className="h-8 w-8" />
+                          {lecture.attached_assignment?.title || 'Lecture Assignment'}
+                        </CardTitle>
+                        {submission?.status && (
+                           <Badge className={cn(
+                              "px-4 py-1 uppercase font-black tracking-widest",
+                              submission.status === 'reviewed' ? "bg-emerald-500" :
+                              submission.status === 'extra_task_assigned' ? "bg-red-500 animate-pulse" :
+                              "bg-blue-400"
+                           )}>
+                              {submission.status.replace('_', ' ')}
+                           </Badge>
+                        )}
+                      </div>
+                      <CardDescription className="text-blue-100 text-lg mt-2">{lecture.attached_assignment?.description}</CardDescription>
                    </CardHeader>
                    <CardContent className="p-8 space-y-6 bg-white dark:bg-slate-900">
                       {lecture.attached_assignment?.requirements && (
@@ -960,6 +979,30 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                     </div>
                   </CardContent>
                 </Card>
+
+                {submission?.ai_feedback && (
+                  <div className="animate-in slide-in-from-top-4 duration-500">
+                    <AICodeReview
+                      githubUrl={submission.github_url}
+                      assignmentTitle={lecture.attached_assignment?.title}
+                    />
+
+                    <Card className="mt-6 border-none shadow-lg rounded-3xl overflow-hidden">
+                      <CardHeader className="bg-slate-50 dark:bg-slate-800/50 p-6 flex flex-row justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="h-6 w-6 text-green-600" />
+                          <CardTitle className="text-lg">Instructor Review</CardTitle>
+                        </div>
+                        <Badge className="bg-primary text-lg px-4 py-1">{submission.ai_score}/100</Badge>
+                      </CardHeader>
+                      <CardContent className="p-8">
+                         <div className="p-6 bg-primary/5 border border-primary/10 rounded-2xl italic text-slate-700 dark:text-slate-300">
+                           &quot;{submission.ai_feedback}&quot;
+                         </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </div>
             )}
 

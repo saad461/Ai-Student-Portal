@@ -132,6 +132,12 @@ interface StudentProfile {
   student_activity?: Record<string, unknown>[];
 }
 
+ interface ManualReviewState {
+   feedback: string;
+   score: number;
+   status: string;
+ }
+
 export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
@@ -166,6 +172,7 @@ export default function AdminDashboard() {
   const chatFileRef = useRef<HTMLInputElement>(null);
   const [viewingStudent, setViewingStudent] = useState<StudentProfile | null>(null);
   const [studentTab, setStudentTab] = useState<'submissions' | 'activity'>('submissions');
+   const [manualReviews, setManualReviews] = useState<Record<string, ManualReviewState>>({});
   const [editingItem, setEditingItem] = useState<Partial<CurriculumItem> | null>(null);
   const [editingModule, setEditingModule] = useState<Partial<Module> | null>(null);
   const [editingSubModule, setEditingSubModule] = useState<Partial<SubModule> | null>(null);
@@ -1645,16 +1652,75 @@ export default function AdminDashboard() {
                                      <div className="text-4xl font-black text-primary">{sub.ai_score || 0}<span className="text-lg text-muted-foreground">/100</span></div>
                                   </div>
                                </div>
-                               <div className="flex justify-end gap-2 border-t pt-4">
-                                  <Button variant="outline" size="sm" onClick={async () => {
-                                     const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
-                                     if (res.success) {
-                                        success('AI Review generated!');
-                                        fetchAdminData();
-                                     }
-                                  }}>
-                                    <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
-                                  </Button>
+                               <div className="space-y-4 border-t pt-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase">Review Feedback</Label>
+                                        <Textarea
+                                          placeholder="Enter constructive feedback..."
+                                          className="text-xs h-20"
+                                          value={manualReviews[sub.id]?.feedback || ''}
+                                          onChange={(e) => setManualReviews(prev => ({
+                                             ...prev,
+                                             [sub.id]: { ...(prev[sub.id] || { score: 80, status: 'passed' }), feedback: e.target.value }
+                                          }))}
+                                        />
+                                     </div>
+                                     <div className="space-y-4">
+                                        <div className="space-y-2">
+                                           <Label className="text-[10px] font-black uppercase">Score (0-100)</Label>
+                                           <Input
+                                             type="number"
+                                             className="h-8 text-xs"
+                                             value={manualReviews[sub.id]?.score || 80}
+                                             onChange={(e) => setManualReviews(prev => ({
+                                                ...prev,
+                                                [sub.id]: { ...(prev[sub.id] || { feedback: '', status: 'passed' }), score: parseInt(e.target.value) }
+                                             }))}
+                                           />
+                                        </div>
+                                        <div className="space-y-2">
+                                           <Label className="text-[10px] font-black uppercase">Status</Label>
+                                           <select
+                                             className="w-full h-8 text-xs rounded-md border border-input bg-background px-3 py-1"
+                                             value={manualReviews[sub.id]?.status || 'passed'}
+                                             onChange={(e) => setManualReviews(prev => ({
+                                                ...prev,
+                                                [sub.id]: { ...(prev[sub.id] || { feedback: '', score: 80 }), status: e.target.value }
+                                             }))}
+                                           >
+                                              <option value="passed">Pass (Mastered)</option>
+                                              <option value="failed">Needs Revision</option>
+                                           </select>
+                                        </div>
+                                     </div>
+                                  </div>
+                                  <div className="flex justify-end gap-2">
+                                     <Button
+                                       size="sm"
+                                       className="h-8 text-[10px] font-bold uppercase"
+                                       disabled={!manualReviews[sub.id]?.feedback}
+                                       onClick={async () => {
+                                          const review = manualReviews[sub.id];
+                                          const res = await reviewSubmissionAction(sub.id, review.feedback, review.score, review.status);
+                                          if (res.success) {
+                                             success('Submission reviewed successfully!');
+                                             fetchAdminData();
+                                          }
+                                       }}
+                                     >
+                                        <Check className="h-3 w-3 mr-2" /> Submit Manual Review
+                                     </Button>
+                                     <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase" onClick={async () => {
+                                        const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
+                                        if (res.success) {
+                                           success('AI Review generated!');
+                                           fetchAdminData();
+                                        }
+                                     }}>
+                                       <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
+                                     </Button>
+                                  </div>
                                </div>
                             </CardContent>
                          </Card>
