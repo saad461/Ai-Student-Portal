@@ -221,10 +221,18 @@ export function FloatingChat() {
   const handleTyping = (val: string) => {
      setNewMessage(val);
      if (chatChannelRef.current) {
+        const timestamp = new Date().toISOString();
         if (val.trim()) {
-           chatChannelRef.current.track({ isTyping: true, typingTo: adminId });
+           chatChannelRef.current.track({
+              isTyping: true,
+              typingTo: adminId,
+              last_seen: timestamp
+           });
         } else {
-           chatChannelRef.current.track({ isTyping: false });
+           chatChannelRef.current.track({
+              isTyping: false,
+              last_seen: timestamp
+           });
         }
      }
   };
