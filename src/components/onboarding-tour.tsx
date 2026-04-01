@@ -16,7 +16,7 @@ interface Step {
 
 const TOUR_STEPS: Step[] = [
   {
-    title: "Welcome to Pro Dev!",
+    title: "Welcome to Daurix!",
     description: "We've upgraded your portal with powerful new tools to help you become a world-class engineer. Let's take a quick look!",
     icon: Rocket
   },

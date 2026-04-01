@@ -86,7 +86,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check } from 'lucide-react';
+import { ExternalLink, Code2, Code, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check } from 'lucide-react';
 
 interface Resource {
   id?: string;
@@ -657,9 +657,14 @@ export default function AdminDashboard() {
       )}
       <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
         <header className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-sm md:text-base text-slate-500">Manage students and curriculum progression.</p>
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Code className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter">Daurix Admin</h1>
+              <p className="text-sm md:text-base text-slate-500 font-medium italic">Command Center</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={async () => {

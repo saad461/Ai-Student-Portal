@@ -52,8 +52,8 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
       <Card className="w-full max-w-md bg-slate-800 text-white border-slate-700">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Admin Portal</CardTitle>
-          <CardDescription className="text-slate-400">Access management controls.</CardDescription>
+          <CardTitle className="text-2xl font-black uppercase tracking-tighter">Daurix Admin</CardTitle>
+          <CardDescription className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Access management controls.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
