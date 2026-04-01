@@ -11,6 +11,11 @@ import { ShieldAlert, Loader2, Mail, Lock, ShieldCheck } from 'lucide-react';
 import { safeEncode, safeDecode } from '@/lib/auth-utils';
 import { logActivityAction } from '@/app/admin/actions';
 
+interface ProfileResult {
+  login_pin?: string;
+  role?: string;
+}
+
 export function PublicLoginForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -54,22 +59,22 @@ export function PublicLoginForm() {
 
       if (authError) throw authError;
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('login_pin, role')
         .eq('id', authData.user.id)
         .single();
 
-      if (profileError || !profile) {
-        if (profile?.role === 'admin') {
-           router.push('/dashboard');
-           return;
-        }
+      const profile = profileData as ProfileResult | null;
+      const userRole = profile?.role;
+      const userPin = profile?.login_pin;
+
+      if (!profile && userRole !== 'admin') {
         await supabase.auth.signOut();
         throw new Error('Security verification failed. Profile not found.');
       }
 
-      if (profile.login_pin && profile.login_pin !== formData.pin) {
+      if (userRole !== 'admin' && userPin && userPin !== formData.pin) {
         await supabase.auth.signOut();
         throw new Error('Invalid Security PIN.');
       }
