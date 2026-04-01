@@ -55,7 +55,6 @@ export function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'My Grades', href: '/grades', icon: Trophy },
     { name: 'Roadmap', href: '/roadmap', icon: Milestone },
     { name: 'Courses', href: '/courses', icon: Layers },
     { name: 'Curriculum', href: '/curriculum', icon: BookOpen },

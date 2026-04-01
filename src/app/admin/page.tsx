@@ -66,6 +66,7 @@ import {
   createNotificationAction,
   deleteCourseAction,
   getAdminDataAction,
+  updateLastSeenAction,
   adminLogoutAction,
   saveResourceAction,
   deleteResourceAction,
@@ -139,6 +140,7 @@ interface StudentProfile {
   full_name: string;
   enrollment_date: string;
   is_pro: boolean;
+  last_seen?: string;
   submissions: StudentSubmission[];
   student_activity?: Record<string, unknown>[];
 }
@@ -286,6 +288,7 @@ export default function AdminDashboard() {
     if (auth !== 'true') router.push('/admin/login');
     else {
       fetchAdminData();
+      updateLastSeenAction();
 
       // Request browser notification permission
       if (typeof window !== 'undefined' && "Notification" in window && Notification.permission !== "granted") {
@@ -309,7 +312,14 @@ export default function AdminDashboard() {
               const userState = state[uid];
               if (userState && Array.isArray(userState)) {
                  online[uid] = true;
-                 metadata[uid] = userState[userState.length - 1];
+                 const latestMetadata = userState[userState.length - 1] as any;
+                 metadata[uid] = latestMetadata;
+
+                 // Update last_seen in the student list locally if presence has a newer timestamp
+                 if (latestMetadata.last_seen) {
+                    setStudents(prev => prev.map(s => s.id === uid ? { ...s, last_seen: latestMetadata.last_seen } : s));
+                 }
+
                  if (userState.some((s: any) => s.isTyping && s.typingTo === adminId)) {
                     typing[uid] = true;
                  }
@@ -322,7 +332,7 @@ export default function AdminDashboard() {
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
            // Track when student reads our messages
            const msg = payload.new as Record<string, unknown>;
-           if (selectedChatStudent && (msg.sender_id === adminId && msg.receiver_id === selectedChatStudent)) {
+           if (selectedChatStudent && (msg.sender_id === adminId || msg.receiver_id === selectedChatStudent)) {
               setChatMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
            }
         })
@@ -358,7 +368,8 @@ export default function AdminDashboard() {
          if (status === 'SUBSCRIBED') {
             await chatChannel.track({
                online_at: new Date().toISOString(),
-               last_seen: new Date().toISOString()
+               last_seen: new Date().toISOString(),
+               role: 'admin'
             });
          }
       });
@@ -411,16 +422,19 @@ export default function AdminDashboard() {
   const handleTyping = (val: string) => {
      setNewChatInput(val);
      if (chatChannelRef.current) {
+        const timestamp = new Date().toISOString();
         if (val.trim() && selectedChatStudent) {
            chatChannelRef.current.track({
               isTyping: true,
               typingTo: selectedChatStudent,
-              last_seen: new Date().toISOString()
+              last_seen: timestamp,
+              role: 'admin'
            });
         } else {
            chatChannelRef.current.track({
               isTyping: false,
-              last_seen: new Date().toISOString()
+              last_seen: timestamp,
+              role: 'admin'
            });
         }
      }
@@ -1711,6 +1725,15 @@ export default function AdminDashboard() {
                                      </div>
                                   </div>
                                </div>
+                               <div className="flex justify-end gap-2 border-t pt-4">
+                                  <Button variant="outline" size="sm" onClick={async () => {
+                                     const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
+                                     if (res.success) {
+                                        success('AI Review generated!');
+                                        fetchAdminData();
+                                     }
+                                  }}>
+                                    <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
 
                                <div className="flex flex-col sm:flex-row justify-between gap-4 border-t pt-6">
                                   <div className="flex gap-2">
@@ -1799,7 +1822,7 @@ export default function AdminDashboard() {
                                        setIsSaving(false);
                                     }}
                                   >
-                                    Save Grade & Feedback
+                                      
                                   </Button>
                                </div>
                                </div>
