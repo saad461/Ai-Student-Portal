@@ -147,6 +147,7 @@ interface StudentProfile {
   is_pro: boolean;
   submissions: StudentSubmission[];
   student_activity?: Record<string, unknown>[];
+  last_seen?: string;
 }
 
 export default function AdminDashboard() {
@@ -373,12 +374,28 @@ export default function AdminDashboard() {
            setTypingStudents(typing);
            setOnlineStudents(online);
            setStudentMetadata(metadata);
+
+           // Update student profiles' last_seen if we have it in presence
+           setStudents(prev => prev.map(s => {
+              if (metadata[s.id]?.last_seen) {
+                 return { ...s, last_seen: metadata[s.id].last_seen };
+              }
+              return s;
+           }));
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
+        .on('postgres_changes', {
+           event: 'UPDATE',
+           schema: 'public',
+           table: 'chat_messages'
+        }, (payload) => {
            // Track when student reads our messages
            const msg = payload.new as Record<string, unknown>;
-           if (selectedChatStudent && (msg.sender_id === adminId && msg.receiver_id === selectedChatStudent)) {
-              setChatMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+           // Check if this message belongs to the current student chat we're viewing
+           if (selectedChatStudent && (
+              (msg.sender_id === adminId && msg.receiver_id === selectedChatStudent) ||
+              (msg.sender_id === selectedChatStudent && msg.receiver_id === adminId)
+           )) {
+              setChatMessages(prev => prev.map(m => m.id === msg.id ? (msg as any) : m));
            }
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
@@ -430,6 +447,14 @@ export default function AdminDashboard() {
         })
         .subscribe();
 
+      const profileChannel = supabase
+        .channel('profile_updates')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+           const updatedProfile = payload.new as any;
+           setStudents(prev => prev.map(s => s.id === updatedProfile.id ? { ...s, last_seen: updatedProfile.last_seen } : s));
+        })
+        .subscribe();
+
       // Polling fallback for chat updates (every 10 seconds)
       const pollInterval = setInterval(async () => {
         if (activeTab === 'support') {
@@ -446,6 +471,7 @@ export default function AdminDashboard() {
       return () => {
         supabase.removeChannel(chatChannel);
         supabase.removeChannel(videoChannel);
+        supabase.removeChannel(profileChannel);
         clearInterval(pollInterval);
       };
     }

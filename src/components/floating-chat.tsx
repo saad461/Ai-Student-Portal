@@ -331,8 +331,10 @@ export function FloatingChat() {
   }, [userId, adminId]);
 
   useEffect(() => {
-    if (isOpen) markAsRead();
-  }, [isOpen, markAsRead]);
+    if (isOpen) {
+      markAsRead();
+    }
+  }, [isOpen, messages.length, markAsRead]);
 
   const requestVideoCall = async () => {
      if (!scheduledAt || !userId) return;
