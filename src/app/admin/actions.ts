@@ -141,7 +141,15 @@ export async function saveModuleAction(module: Record<string, unknown>) {
   return { success: !error, data: data?.[0], error };
 }
 
-export async function reviewSubmissionAction(submissionId: string, feedback: string, score: number, status: string) {
+export async function reviewSubmissionAction(
+  submissionId: string,
+  feedback: string,
+  score: number,
+  status: string,
+  aiSections?: Record<string, unknown>,
+  aiMistakes?: string[],
+  aiImprovements?: string[]
+) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
@@ -157,6 +165,9 @@ export async function reviewSubmissionAction(submissionId: string, feedback: str
       ai_feedback: feedback,
       ai_score: score,
       ai_status: status,
+      ai_sections: aiSections,
+      ai_mistakes: aiMistakes,
+      ai_improvements: aiImprovements,
       status: status === 'passed' ? 'reviewed' : 'extra_task_assigned'
     })
     .eq('id', submissionId)

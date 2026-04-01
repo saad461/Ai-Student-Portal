@@ -35,7 +35,6 @@ import { CodeCompiler } from '@/components/code-compiler';
 import { useChat } from '@/components/chat-context';
 import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
-import { logActivityAction } from '@/app/admin/actions';
 import { logActivityAction, saveAIReviewAction } from '@/app/admin/actions';
 import { RichTextEditor } from '@/components/rich-text-editor';
 import ReactMarkdown from 'react-markdown';

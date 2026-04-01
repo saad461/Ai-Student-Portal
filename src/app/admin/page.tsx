@@ -1734,6 +1734,8 @@ export default function AdminDashboard() {
                                      }
                                   }}>
                                     <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
+                                  </Button>
+                               </div>
 
                                <div className="flex flex-col sm:flex-row justify-between gap-4 border-t pt-6">
                                   <div className="flex gap-2">
@@ -1822,7 +1824,7 @@ export default function AdminDashboard() {
                                        setIsSaving(false);
                                     }}
                                   >
-                                      
+                                     <CheckCheck className="h-4 w-4 mr-2" /> Save Grade
                                   </Button>
                                </div>
                                </div>
