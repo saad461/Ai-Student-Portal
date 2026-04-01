@@ -244,7 +244,7 @@ export function AIExplainSection({ lectureTitle, lectureContent }: AIExplainSect
 
         {/* Sidebar Tools Column */}
         <div className="space-y-8">
-           <div className="sticky top-32 space-y-6">
+           <div className="sticky top-24 space-y-6">
               <Card className="rounded-3xl border-2 border-primary/10 shadow-xl overflow-hidden bg-slate-900 text-white border-none">
                  <CardHeader className="bg-primary p-6">
                     <CardTitle className="text-lg font-black flex items-center gap-2">

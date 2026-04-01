@@ -184,7 +184,7 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBa
   };
 
   return (
-    <div className="flex flex-wrap gap-1 p-2 border-b bg-slate-50 dark:bg-slate-900 sticky top-[var(--editor-sticky-top,0px)] z-10">
+    <div className="flex flex-wrap gap-1 p-2 border-b bg-slate-50 dark:bg-slate-900 sticky top-0 z-10">
       {/* Text Styles */}
       <div className="flex gap-1">
         <Button
