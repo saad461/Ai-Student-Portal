@@ -158,6 +158,7 @@ export default function AdminDashboard() {
   const [activeCallSessionId, setActiveCallSessionId] = useState<string | null>(null);
   const [typingStudents, setTypingStudents] = useState<Record<string, boolean>>({});
   const [onlineStudents, setOnlineStudents] = useState<Record<string, boolean>>({});
+  const [studentMetadata, setStudentMetadata] = useState<Record<string, any>>({});
   const [isChatUploading, setIsChatUploading] = useState(false);
   const chatChannelRef = useRef<any>(null);
   const chatFileRef = useRef<HTMLInputElement>(null);
@@ -285,10 +286,12 @@ export default function AdminDashboard() {
            const state = chatChannel.presenceState();
            const typing: Record<string, boolean> = {};
            const online: Record<string, boolean> = {};
+           const metadata: Record<string, any> = {};
            Object.keys(state).forEach(uid => {
               const userState = state[uid];
               if (userState && Array.isArray(userState)) {
                  online[uid] = true;
+                 metadata[uid] = userState[userState.length - 1];
                  if (userState.some((s: any) => s.isTyping && s.typingTo === adminId)) {
                     typing[uid] = true;
                  }
@@ -296,6 +299,7 @@ export default function AdminDashboard() {
            });
            setTypingStudents(typing);
            setOnlineStudents(online);
+           setStudentMetadata(metadata);
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, (payload) => {
            // Track when student reads our messages
@@ -330,6 +334,16 @@ export default function AdminDashboard() {
           }
         })
         .subscribe();
+
+      // Track our own presence immediately
+      chatChannel.subscribe(async (status) => {
+         if (status === 'SUBSCRIBED') {
+            await chatChannel.track({
+               online_at: new Date().toISOString(),
+               last_seen: new Date().toISOString()
+            });
+         }
+      });
 
       chatChannelRef.current = chatChannel;
 
@@ -380,11 +394,32 @@ export default function AdminDashboard() {
      setNewChatInput(val);
      if (chatChannelRef.current) {
         if (val.trim() && selectedChatStudent) {
-           chatChannelRef.current.track({ isTyping: true, typingTo: selectedChatStudent });
+           chatChannelRef.current.track({
+              isTyping: true,
+              typingTo: selectedChatStudent,
+              last_seen: new Date().toISOString()
+           });
         } else {
-           chatChannelRef.current.track({ isTyping: false });
+           chatChannelRef.current.track({
+              isTyping: false,
+              last_seen: new Date().toISOString()
+           });
         }
      }
+  };
+
+  const formatTimeAgo = (date: string | null | undefined) => {
+    if (!date) return 'Offline';
+    const now = new Date();
+    const past = new Date(date);
+    const diffInMs = now.getTime() - past.getTime();
+    const diffInMins = Math.floor(diffInMs / (1000 * 60));
+
+    if (diffInMins < 1) return 'Just now';
+    if (diffInMins < 60) return `${diffInMins}m ago`;
+    const diffInHours = Math.floor(diffInMins / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    return past.toLocaleDateString();
   };
 
   const handleChatFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -705,7 +740,13 @@ export default function AdminDashboard() {
                           </div>
                           <div className="flex-1 min-w-0">
                              <div className="font-bold text-sm truncate">{s.full_name}</div>
-                             <div className="text-[10px] text-muted-foreground truncate italic">Real-time Chat</div>
+                             <div className="text-[10px] text-muted-foreground truncate italic">
+                                {onlineStudents[s.id] ? (
+                                   <span className="text-emerald-500 font-bold">Online</span>
+                                ) : (
+                                   <span>Active {formatTimeAgo((s as any).last_seen)}</span>
+                                )}
+                             </div>
                           </div>
                           {unreadCounts[s.id] > 0 && (
                              <Badge className="absolute top-4 right-4 h-5 w-5 flex items-center justify-center p-0 rounded-full bg-red-600">
@@ -733,7 +774,9 @@ export default function AdminDashboard() {
                                 {onlineStudents[selectedChatStudent] ? (
                                    <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest animate-pulse">Online</span>
                                 ) : (
-                                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Offline</span>
+                                   <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                                      Active {formatTimeAgo((students.find(s => s.id === selectedChatStudent) as any)?.last_seen)}
+                                   </span>
                                 )}
                              </div>
                           </div>

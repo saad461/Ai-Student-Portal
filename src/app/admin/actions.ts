@@ -845,6 +845,36 @@ export async function markMessagesAsReadAction(studentId: string, adminId: strin
   return { success: !error, error };
 }
 
+export async function updateLastSeenAction() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return { success: false };
+
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {
+          // ignore
+        }
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ last_seen: new Date().toISOString() })
+    .eq('id', user.id);
+
+  return { success: !error };
+}
+
 export async function getUnreadCountsAction(adminId: string) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };

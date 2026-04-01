@@ -8,4 +8,42 @@
    - Network:      http://192.168.0.2:3002
 
  ✓ Starting...
+ ✓ Ready in 2s
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 18.5s (2913 modules)
+ GET /dashboard 200 in 22755ms
+ POST /dashboard 200 in 239ms
+ POST /dashboard 200 in 58ms
+ GET /dashboard 200 in 215ms
+ POST /dashboard 200 in 39ms
+ POST /dashboard 200 in 33ms
+ GET /dashboard 200 in 191ms
+ POST /dashboard 200 in 55ms
+ POST /dashboard 200 in 43ms
+ GET /dashboard 200 in 180ms
+ POST /dashboard 200 in 43ms
+ POST /dashboard 200 in 36ms
+ GET /dashboard 200 in 195ms
+ POST /dashboard 200 in 47ms
+ POST /dashboard 200 in 41ms
+ GET /dashboard 200 in 195ms
+ POST /dashboard 200 in 39ms
+ POST /dashboard 200 in 33ms
+ GET /dashboard 200 in 186ms
+ POST /dashboard 200 in 34ms
+ POST /dashboard 200 in 44ms
+ GET /dashboard 200 in 181ms
+ POST /dashboard 200 in 39ms
+ POST /dashboard 200 in 36ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 5s (3290 modules)
+ GET /admin 200 in 5940ms
+ ⨯ [Error: aborted] { code: 'ECONNRESET', digest: '1052313065' }
+ GET /admin 200 in 179ms
+ POST /admin 200 in 216ms
+ POST /admin 200 in 54ms
+ POST /admin 200 in 47ms
+ POST /admin 200 in 39ms
+ ✓ Compiled in 1855ms (3290 modules)
+ ✓ Compiled in 8.1s (3290 modules)
  ✓ Ready in 2.1s
