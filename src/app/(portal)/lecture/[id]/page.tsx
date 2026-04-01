@@ -38,7 +38,7 @@ import { CodeCompiler } from '@/components/code-compiler';
 import { useChat } from '@/components/chat-context';
 import { AIExplainSection } from '@/components/ai-explain-section';
 import { AudioReader } from '@/components/audio-reader';
-import { logActivityAction, rewardStudentAction } from '@/app/admin/actions';
+import { logActivityAction, saveAIReviewAction } from '@/app/admin/actions';
 import { RichTextEditor } from '@/components/rich-text-editor';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -270,24 +270,19 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       if (response.ok) {
         const review = await response.json();
 
-        // Save review to database
-        await supabase.from('submissions').update({
-          ai_score: review.score,
-          ai_feedback: review.feedback,
-          ai_status: review.status,
-          ai_sections: review.sections,
-          ai_mistakes: review.mistakes,
-          ai_improvements: review.improvements,
-          status: 'reviewed'
-        }).eq('student_id', user.id).eq('curriculum_id', resolvedParams.id);
+        // Securely save review and award sparks via server action
+        const result = await saveAIReviewAction(resolvedParams.id, {
+          score: review.score,
+          feedback: review.feedback,
+          status: review.status,
+          sections: review.sections,
+          mistakes: review.mistakes,
+          improvements: review.improvements
+        });
 
-        // Award sparks: 20 score = 1 spark (1 spark = 10 XP)
-        const sparks = Math.floor(review.score / 20);
-        if (sparks > 0) {
-          await rewardStudentAction(sparks * 10, `Lecture Mastery: ${lecture.title}`, 'lecture_completion', resolvedParams.id);
+        if (result.success) {
+          fetchData();
         }
-
-        fetchData();
       }
     } catch (err) {
       console.error("AI Review Trigger Error:", err);
@@ -298,7 +293,8 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     setSubmittingId(true);
     await updateCompletion({ assignment_submitted: true });
     setSubmittingId(false);
-    if (lecture?.attached_quiz) setActiveTab('quiz');
+    if (lecture?.knowledge_checks?.length) setActiveTab('knowledge');
+    else if (lecture?.attached_quiz) setActiveTab('quiz');
   };
 
   const handleQuizComplete = async (score: number) => {
@@ -562,21 +558,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               <Sparkles className="h-4 w-4 mr-2" /> AI Explain
             </Button>
 
-            {lecture.knowledge_checks && lecture.knowledge_checks.length > 0 && (
-              <Button
-                variant="ghost"
-                className={cn(
-                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
-                  activeTab === 'knowledge' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
-                  !isTheoryDone && "opacity-50 cursor-not-allowed"
-                )}
-                onClick={() => isTheoryDone && setActiveTab('knowledge')}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Knowledge Check
-                {isKnowledgeCheckMet && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
-              </Button>
-            )}
-
             {lecture.video_url && (
               <Button
                 variant="ghost"
@@ -605,15 +586,30 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
               </Button>
             )}
 
+            {lecture.knowledge_checks && lecture.knowledge_checks.length > 0 && (
+              <Button
+                variant="ghost"
+                className={cn(
+                  "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
+                  activeTab === 'knowledge' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
+                  (!isTheoryDone || (lecture.attached_assignment && !isAssignmentDone)) && "opacity-50 cursor-not-allowed"
+                )}
+                onClick={() => isTheoryDone && (!lecture.attached_assignment || isAssignmentDone) && setActiveTab('knowledge')}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" /> Knowledge Check
+                {isKnowledgeCheckMet && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
+              </Button>
+            )}
+
             {lecture.attached_quiz && (
               <Button
                 variant="ghost"
                 className={cn(
                   "rounded-none border-b-2 px-6 h-12 text-sm font-bold uppercase tracking-wider transition-all",
                   activeTab === 'quiz' ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground",
-                  (!isTheoryDone || (lecture.attached_assignment && !isAssignmentDone)) && "opacity-50 cursor-not-allowed"
+                  (!isTheoryDone || (lecture.attached_assignment && !isAssignmentDone) || !isKnowledgeCheckMet) && "opacity-50 cursor-not-allowed"
                 )}
-                onClick={() => isTheoryDone && (!lecture.attached_assignment || isAssignmentDone) && setActiveTab('quiz')}
+                onClick={() => isTheoryDone && (!lecture.attached_assignment || isAssignmentDone) && isKnowledgeCheckMet && setActiveTab('quiz')}
               >
                 <HelpCircle className="h-4 w-4 mr-2" /> Quiz
                 {isQuizDone && <CheckCircle2 className="h-3 w-3 ml-2 text-green-600" />}
@@ -739,8 +735,8 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                             onClick={() => {
                                updateCompletion({ theory_read: true });
                                logActivityAction('theory_mastered', { lecture_id: resolvedParams.id }, `/lecture/${resolvedParams.id}`);
-                               if (lecture?.knowledge_checks?.length) setActiveTab('knowledge');
-                               else if (lecture?.attached_assignment) setActiveTab('assignment');
+                               if (lecture?.attached_assignment) setActiveTab('assignment');
+                               else if (lecture?.knowledge_checks?.length) setActiveTab('knowledge');
                                else if (lecture?.attached_quiz) setActiveTab('quiz');
                             }}
                             disabled={!isReadTimeMet}
@@ -913,8 +909,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                           updateCompletion({
                              knowledge_check_answers: knowledgeCheckAnswers
                           });
-                          if (lecture?.attached_assignment) setActiveTab('assignment');
-                          else if (lecture?.attached_quiz) setActiveTab('quiz');
+                          if (lecture?.attached_quiz) setActiveTab('quiz');
                        }}
                     >
                        {isKnowledgeCheckMet ? (
