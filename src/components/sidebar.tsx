@@ -101,12 +101,12 @@ export function Sidebar() {
         </button>
       </div>
 
-      <div className="px-6 flex justify-between items-center mb-2">
+      <div className="px-6 flex justify-between items-center mb-2 lg:hidden">
          {!isCollapsed && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Alerts</span>}
          <NotificationBell />
       </div>
 
-      <div className="px-4 mt-6">
+      <div className="px-4 mt-6 lg:hidden">
          <GlobalSearch />
       </div>
 

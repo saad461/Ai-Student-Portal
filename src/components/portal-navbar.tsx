@@ -60,24 +60,24 @@ export function PortalNavbar() {
   return (
     <>
       <header className={cn(
-        "lg:hidden sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
         theme === 'pro' ? "border-primary/20" : "border-border"
       )}>
         <div className="flex h-16 items-center justify-between px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
             <Zap className="h-6 w-6 fill-primary" />
             <span className={cn("font-bold", theme === 'pro' && "hacker-text")}>
               {theme === 'pro' ? 'PRO' : 'STUDENT'}
             </span>
           </Link>
 
-          <div id="global-search" className="flex-1 max-w-[200px] mx-4">
+          <div id="global-search" className="flex-1 max-w-[200px] lg:max-w-md mx-4">
              <GlobalSearch />
           </div>
 
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)} className="lg:hidden">
               <Menu className="h-6 w-6" />
             </Button>
           </div>
