@@ -146,9 +146,18 @@ export async function reviewSubmissionAction(
   feedback: string,
   score: number,
   status: string,
+ 
   aiSections?: Record<string, unknown>,
   aiMistakes?: string[],
   aiImprovements?: string[]
+
+  sections?: {
+    knowledge_check?: { score: number; feedback: string };
+    assignment?: { score: number; feedback: string };
+  },
+  mistakes?: string[],
+  improvements?: string[]
+ 
 ) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
@@ -165,9 +174,15 @@ export async function reviewSubmissionAction(
       ai_feedback: feedback,
       ai_score: score,
       ai_status: status,
+ 
       ai_sections: aiSections,
       ai_mistakes: aiMistakes,
       ai_improvements: aiImprovements,
+
+      ai_sections: sections,
+      ai_mistakes: mistakes,
+      ai_improvements: improvements,
+
       status: status === 'passed' ? 'reviewed' : 'extra_task_assigned'
     })
     .eq('id', submissionId)
@@ -931,8 +946,7 @@ export async function markMessagesAsReadAction(studentId: string, adminId: strin
 export async function updateLastSeenAction() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) return { success: false };
+  if (!supabaseUrl || !supabaseAnonKey) return { success: false };
 
   const cookieStore = await cookies();
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -949,24 +963,12 @@ export async function updateLastSeenAction() {
   });
 
   const { data: { user } } = await supabase.auth.getUser();
-  let targetUserId = user?.id;
+  if (!user) return { success: false };
 
-  // If no auth user, check for admin cookie
-  if (!targetUserId) {
-     const adminAccess = cookieStore.get('admin_access');
-     if (adminAccess?.value === 'true') {
-        targetUserId = '00000000-0000-0000-0000-000000000000'; // System Admin ID
-     }
-  }
-
-  if (!targetUserId) return { success: false };
-
-  // Use Service Role to bypass RLS and ensure update succeeds
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
-  const { error } = await supabaseAdmin
+  const { error } = await supabase
     .from('profiles')
     .update({ last_seen: new Date().toISOString() })
-    .eq('id', targetUserId);
+    .eq('id', user.id);
 
   return { success: !error };
 }
