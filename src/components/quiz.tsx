@@ -10,7 +10,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 
 interface QuizModuleProps {
   questions: QuizQuestion[];
-  onComplete: (score: number) => void;
+  onComplete: (score: number, answers: number[]) => void;
   canRetake?: boolean;
   onRetake?: () => void;
 }
@@ -35,7 +35,7 @@ export function QuizModule({ questions, onComplete, canRetake, onRetake }: QuizM
         return curr === questions[idx].correctAnswer ? acc + 1 : acc;
       }, 0);
       setShowResult(true);
-      onComplete(score);
+      onComplete(score, newAnswers);
     }
   };
 

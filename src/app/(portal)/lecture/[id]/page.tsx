@@ -60,6 +60,7 @@ interface Submission {
     theory_read?: boolean;
     quiz_completed?: boolean;
     quiz_score?: number;
+    quiz_answers?: number[];
     assignment_submitted?: boolean;
     knowledge_check_answers?: Record<string, string>;
   };
@@ -297,8 +298,8 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     else if (lecture?.attached_quiz) setActiveTab('quiz');
   };
 
-  const handleQuizComplete = async (score: number) => {
-    await updateCompletion({ quiz_completed: true, quiz_score: score });
+  const handleQuizComplete = async (score: number, answers: number[]) => {
+    await updateCompletion({ quiz_completed: true, quiz_score: score, quiz_answers: answers });
   };
 
   const isReadTimeMet = useMemo(() => {

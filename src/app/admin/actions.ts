@@ -147,8 +147,10 @@ export async function reviewSubmissionAction(
   score: number,
   status: string,
   sections?: {
+    theory?: { score: number; feedback: string };
     knowledge_check?: { score: number; feedback: string };
     assignment?: { score: number; feedback: string };
+    quiz?: { score: number; feedback: string };
   },
   mistakes?: string[],
   improvements?: string[]
@@ -181,16 +183,16 @@ export async function reviewSubmissionAction(
     await createNotificationAction(
       sub.student_id,
       'Submission Reviewed',
-      `Your assignment has been reviewed with a score of ${score}/100.`,
+      `Your work for this lecture has been reviewed with a score of ${score}/100.`,
       status === 'passed' ? 'success' : 'warning'
     );
 
-    // Award Sparks for manual review
+    // Award Sparks for manual review: 20 points = 1 Spark (10 XP)
     const sparks = Math.floor(score / 20);
     if (sparks > 0 && status === 'passed') {
       const { data: lecture } = await supabaseAdmin.from('curriculum').select('title').eq('id', sub.curriculum_id).single();
       await rewardStudentAction(
-        sparks * 10,
+        sparks * 10, // 10 XP per Spark
         `Lecture Mastery (Manual): ${lecture?.title || 'Unknown'}`,
         'lecture_completion',
         sub.curriculum_id,
