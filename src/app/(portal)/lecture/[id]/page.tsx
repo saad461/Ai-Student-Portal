@@ -532,7 +532,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
             )}
           </header>
 
-          <div className="flex gap-2 border-b pb-px overflow-x-auto no-scrollbar sticky top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10 pt-2">
+          <div className="flex gap-2 border-b pb-px overflow-x-auto no-scrollbar sticky top-16 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md z-10 pt-2">
             {lecture.theory_content && (
               <Button
                 variant="ghost"
@@ -772,7 +772,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                 </div>
 
                 <div className="hidden lg:block space-y-6">
-                   <div className="sticky top-24 space-y-6">
+                   <div className="sticky top-32 space-y-6">
                       <Card className="bg-primary/5 border-primary/10 overflow-hidden">
                         <CardHeader className="p-4 bg-primary/10">
                           <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">

@@ -1711,6 +1711,20 @@ export default function AdminDashboard() {
                                      </div>
                                   </div>
                                </div>
+ 
+                               <div className="flex justify-end gap-2 border-t pt-4">
+                                  <Button variant="outline" size="sm" onClick={async () => {
+                                     const res = await reviewSubmissionAction(sub.id, "Excellent work! Your code is clean and follows best practices.", 95, 'passed');
+                                     if (res.success) {
+                                        success('AI Review generated!');
+                                        fetchAdminData();
+                                     }
+                                  }}>
+                                    <Bot className="h-3 w-3 mr-2" /> Mock AI Grade
+                                  </Button>
+                               </div>
+
+ 
 
                                <div className="flex flex-col sm:flex-row justify-between gap-4 border-t pt-6">
                                   <div className="flex gap-2">
@@ -1799,7 +1813,11 @@ export default function AdminDashboard() {
                                        setIsSaving(false);
                                     }}
                                   >
+ 
+                                     <CheckCheck className="h-4 w-4 mr-2" /> Save Grade
+
                                     Save Grade & Feedback
+ 
                                   </Button>
                                </div>
                                </div>
