@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Timer,
   Zap,
-  CheckCircle2,
   ArrowRight,
   Sparkles,
   Bot,

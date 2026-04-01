@@ -7,10 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Captcha } from '@/components/captcha';
-import { ShieldAlert, Loader2, KeyRound, Mail, Lock, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, Loader2, Mail, Lock, ShieldCheck } from 'lucide-react';
 import { safeEncode, safeDecode } from '@/lib/auth-utils';
 import { logActivityAction } from '@/app/admin/actions';
-import { cn } from '@/lib/utils';
 
 export function PublicLoginForm() {
   const router = useRouter();
@@ -87,8 +86,8 @@ export function PublicLoginForm() {
 
       await logActivityAction('login', { method: 'landing_page_form' }, '/');
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
