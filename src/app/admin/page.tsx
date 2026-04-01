@@ -27,6 +27,9 @@ import {
   FilePlus,
   Layers,
   ChevronRight,
+  ChevronDown,
+  CheckCircle2,
+  HelpCircle,
   Layout,
   Video as VideoIcon,
   PhoneCall,
@@ -120,8 +123,10 @@ interface StudentSubmission {
   ai_feedback?: string;
   ai_status?: string;
   ai_sections?: {
+    theory?: { score: number; feedback: string };
     knowledge_check?: { score: number; feedback: string };
     assignment?: { score: number; feedback: string };
+    quiz?: { score: number; feedback: string };
   };
   ai_mistakes?: string[];
   ai_improvements?: string[];
@@ -129,6 +134,7 @@ interface StudentSubmission {
     theory_read?: boolean;
     quiz_completed?: boolean;
     quiz_score?: number;
+    quiz_answers?: number[];
     assignment_submitted?: boolean;
     knowledge_check_answers?: Record<string, string>;
   };
@@ -196,6 +202,55 @@ export default function AdminDashboard() {
   const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const [expandedSubId, setExpandedSubId] = useState<string | null>(null);
+  const [fetchedCode, setFetchedCode] = useState<Record<string, string> | null>(null);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [isFetchingCode, setIsFetchingCode] = useState(false);
+
+  const fetchGitHubCode = async (githubUrl: string) => {
+    setIsFetchingCode(true);
+    setFetchedCode(null);
+    try {
+      const url = new URL(githubUrl);
+      if (url.hostname !== 'github.com') return;
+
+      const parts = url.pathname.split('/').filter(Boolean);
+      if (parts.length < 2) return;
+
+      const [owner, repo] = parts;
+      const branches = ['main', 'master'];
+      const filesToTry = ['index.html', 'style.css', 'script.js', 'App.tsx', 'App.jsx', 'README.md'];
+
+      let branch = 'main';
+      const contents: Record<string, string> = {};
+
+      // Try to find the correct branch
+      for (const b of branches) {
+        const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${b}/README.md`);
+        if (res.ok) {
+          branch = b;
+          break;
+        }
+      }
+
+      // Fetch files
+      for (const file of filesToTry) {
+        const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file}`);
+        if (res.ok) {
+          contents[file] = await res.text();
+        }
+      }
+      setFetchedCode(contents);
+      if (Object.keys(contents).length > 0) {
+        setSelectedFile(Object.keys(contents)[0]);
+      }
+    } catch (err) {
+      console.error("Error fetching code:", err);
+    } finally {
+      setIsFetchingCode(false);
+    }
+  };
 
   useEffect(() => {
      audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
@@ -1617,197 +1672,500 @@ export default function AdminDashboard() {
 
             <div className="py-4">
               {studentTab === 'submissions' ? (
-                 <div className="space-y-4">
-                    <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter"><Send className="h-5 w-5" /> Recent Submissions</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                       {viewingStudent?.submissions?.sort((a,b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()).map((sub: StudentSubmission) => (
-                         <Card key={sub.id} className="overflow-hidden">
-                            <CardHeader className="p-4 bg-slate-50 dark:bg-slate-900 flex flex-row justify-between items-center border-b">
-                               <div className="flex gap-2 items-center">
-                                  <Badge variant="outline" className="font-bold text-primary">{curriculum.find(c => c.id === sub.curriculum_id)?.title || sub.curriculum_id}</Badge>
-                                  <span className="text-xs font-bold text-muted-foreground">{new Date(sub.submitted_at).toLocaleString()}</span>
-                               </div>
-                               <div className="flex gap-2">
-                                  {sub.github_url && <Button size="sm" variant="outline" asChild><a href={sub.github_url} target="_blank"><GithubIcon className="h-3 w-3 mr-2" /> Repo</a></Button>}
-                                  <Badge className={cn(
-                                    sub.status === 'reviewed' ? 'bg-green-600' :
-                                    sub.status === 'priority_review' ? 'bg-red-600 animate-pulse' :
-                                    'bg-amber-500'
-                                  )}>{sub.status.toUpperCase()}</Badge>
-                               </div>
-                            </CardHeader>
-                            <CardContent className="p-6 space-y-8">
-                               {/* Knowledge Check Section */}
-                               {sub.completion_data?.knowledge_check_answers && (
-                                 <div className="space-y-4">
-                                    <h4 className="font-black text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                       <CheckCheck className="h-4 w-4" /> Knowledge Check Answers
-                                    </h4>
-                                    <div className="space-y-4">
-                                       {Object.entries(sub.completion_data.knowledge_check_answers).map(([qId, answer]) => {
-                                          const lecture = curriculum.find(c => c.id === sub.curriculum_id);
-                                          const question = lecture?.knowledge_checks?.find(k => k.id === qId)?.question;
-                                          return (
-                                             <div key={qId} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border">
-                                                <div className="text-xs font-bold text-slate-500 mb-2">Q: <span className="text-slate-700 dark:text-slate-300 italic">{question || 'Unknown Question'}</span></div>
-                                                <div className="prose prose-slate prose-sm dark:prose-invert max-w-none">
-                                                   <div dangerouslySetInnerHTML={{ __html: answer }} />
+                <div className="space-y-8">
+                  <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter"><Send className="h-5 w-5" /> Completed Curriculum</h3>
+
+                  {courses.map(course => {
+                    const courseLectures = curriculum.filter(l => l.course_id === course.id);
+                    const completedLectures = viewingStudent?.submissions?.filter(s => courseLectures.some(l => l.id === s.curriculum_id)) || [];
+
+                    if (completedLectures.length === 0) return null;
+
+                    return (
+                      <div key={course.id} className="space-y-4">
+                        <div className="flex items-center gap-4">
+                          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-3 py-1 font-black uppercase tracking-widest text-[10px]">{course.name}</Badge>
+                          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                        </div>
+
+                        {modules.filter(m => m.course_id === course.id).map(mod => {
+                          const moduleLectures = courseLectures.filter(l => l.module_id === mod.id);
+                          const moduleCompletions = completedLectures.filter(s => moduleLectures.some(l => l.id === s.curriculum_id));
+
+                          if (moduleCompletions.length === 0) return null;
+
+                          return (
+                            <div key={mod.id} className="pl-4 border-l-2 border-slate-100 dark:border-slate-800 space-y-4">
+                              <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <Layers className="h-4 w-4" /> Module {mod.index}: {mod.name}
+                              </h4>
+
+                              <div className="grid grid-cols-1 gap-3">
+                                {moduleCompletions.sort((a,b) => {
+                                  const la = curriculum.find(l => l.id === a.curriculum_id)?.lecture_index || 0;
+                                  const lb = curriculum.find(l => l.id === b.curriculum_id)?.lecture_index || 0;
+                                  return la - lb;
+                                }).map((sub: StudentSubmission) => {
+                                  const lecture = curriculum.find(l => l.id === sub.curriculum_id);
+                                  const isExpanded = expandedSubId === sub.id;
+
+                                  return (
+                                    <Card key={sub.id} className={cn("overflow-hidden transition-all duration-300", isExpanded ? "ring-2 ring-primary ring-offset-2 dark:ring-offset-slate-950" : "hover:border-primary/50")}>
+                                      <button
+                                        onClick={() => {
+                                          if (isExpanded) {
+                                            setExpandedSubId(null);
+                                          } else {
+                                            setExpandedSubId(sub.id);
+                                            if (sub.github_url) fetchGitHubCode(sub.github_url);
+                                          }
+                                        }}
+                                        className="w-full text-left p-4 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between group"
+                                      >
+                                        <div className="flex items-center gap-4">
+                                          <div className={cn("h-10 w-10 rounded-full flex items-center justify-center font-bold text-xs transition-colors", sub.status === 'reviewed' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
+                                            #{lecture?.lecture_index || '?'}
+                                          </div>
+                                          <div>
+                                            <p className="font-bold text-sm group-hover:text-primary transition-colors">{lecture?.title || 'Unknown Lecture'}</p>
+                                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">{new Date(sub.submitted_at).toLocaleString()}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          <div className="text-right hidden sm:block">
+                                            <div className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Status</div>
+                                            <Badge variant={sub.status === 'reviewed' ? 'default' : 'secondary'} className={cn("text-[9px] h-5", sub.status === 'reviewed' && "bg-emerald-600")}>
+                                              {sub.status.toUpperCase()}
+                                            </Badge>
+                                          </div>
+                                          <div className="text-right hidden sm:block">
+                                            <div className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">Score</div>
+                                            <div className="text-sm font-black">{sub.ai_score ?? '--'}/100</div>
+                                          </div>
+                                          {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-primary" />}
+                                        </div>
+                                      </button>
+
+                                      {isExpanded && (
+                                        <CardContent className="p-6 space-y-10 border-t bg-white dark:bg-slate-950 animate-in slide-in-from-top-2 duration-300">
+                                          {/* Lecture Reading & Sectional Score Calculation */}
+                                          {(() => {
+                                             const hasKC = !!(lecture?.knowledge_checks && lecture.knowledge_checks.length > 0);
+                                             const hasAss = !!lecture?.attached_assignment;
+                                             const hasQuiz = !!lecture?.attached_quiz;
+
+                                             let theoryWeight = 50;
+                                             let kcWeight = hasKC ? 15 : 0;
+                                             let assWeight = hasAss ? 15 : 0;
+                                             let quizWeight = hasQuiz ? 20 : 0;
+
+                                             // Adjust weights if technical parts are missing
+                                             const technicalWeightSum = kcWeight + assWeight + quizWeight;
+                                             if (technicalWeightSum === 0) {
+                                                theoryWeight = 100;
+                                             } else if (technicalWeightSum < 50) {
+                                                // Scale remaining technical parts to fill 50 points
+                                                const scale = 50 / technicalWeightSum;
+                                                kcWeight *= scale;
+                                                assWeight *= scale;
+                                                quizWeight *= scale;
+                                             }
+
+                                             const theoryPoints = sub.completion_data?.theory_read ? theoryWeight : 0;
+                                             const kcPoints = hasKC ? ((manualScores[`${sub.id}-kc`] ?? (sub.ai_sections?.knowledge_check?.score || 0)) / 100 * kcWeight) : 0;
+                                             const assPoints = hasAss ? ((manualScores[`${sub.id}-ass`] ?? (sub.ai_sections?.assignment?.score || 0)) / 100 * assWeight) : 0;
+                                             const quizPoints = hasQuiz ? ((manualScores[`${sub.id}-quiz`] ?? (sub.ai_sections?.quiz?.score || 0)) / 100 * quizWeight) : 0;
+
+                                             return (
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                                                   <div className="text-center md:border-r border-primary/10">
+                                                      <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Theory Read</p>
+                                                      <div className="flex items-center justify-center gap-1">
+                                                         {sub.completion_data?.theory_read ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <X className="h-4 w-4 text-red-500" />}
+                                                         <span className="text-lg font-black">{Math.round(theoryPoints)}/{Math.round(theoryWeight)}</span>
+                                                      </div>
+                                                   </div>
+                                                   {hasKC && (
+                                                      <div className="text-center md:border-r border-primary/10">
+                                                         <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Knowledge Check</p>
+                                                         <div className="text-lg font-black">{Math.round(kcPoints)}/{Math.round(kcWeight)}</div>
+                                                      </div>
+                                                   )}
+                                                   {hasAss && (
+                                                      <div className="text-center md:border-r border-primary/10">
+                                                         <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Assignment</p>
+                                                         <div className="text-lg font-black">{Math.round(assPoints)}/{Math.round(assWeight)}</div>
+                                                      </div>
+                                                   )}
+                                                   {hasQuiz && (
+                                                      <div className="text-center">
+                                                         <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Quiz Score</p>
+                                                         <div className="text-lg font-black">{Math.round(quizPoints)}/{Math.round(quizWeight)}</div>
+                                                      </div>
+                                                   )}
+                                                </div>
+                                             );
+                                          })()}
+
+                                          {/* Knowledge Check Details */}
+                                          {sub.completion_data?.knowledge_check_answers && (
+                                            <div className="space-y-4">
+                                              <h5 className="font-black text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                                <CheckCheck className="h-4 w-4" /> Knowledge Check Answers
+                                              </h5>
+                                              <div className="space-y-4">
+                                                {Object.entries(sub.completion_data.knowledge_check_answers).map(([qId, answer]) => {
+                                                  const question = lecture?.knowledge_checks?.find(k => k.id === qId)?.question;
+                                                  return (
+                                                    <div key={qId} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border">
+                                                      <div className="text-xs font-bold text-slate-500 mb-2">Q: <span className="text-slate-700 dark:text-slate-300 italic" dangerouslySetInnerHTML={{ __html: question || 'Unknown Question' }} /></div>
+                                                      <div className="prose prose-slate prose-sm dark:prose-invert max-w-none bg-white dark:bg-black p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                                                        <div dangerouslySetInnerHTML={{ __html: answer }} />
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* Quiz Results */}
+                                          {lecture?.attached_quiz && sub.completion_data?.quiz_answers && (
+                                            <div className="space-y-4">
+                                              <h5 className="font-black text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                                <HelpCircle className="h-4 w-4" /> Quiz Performance
+                                              </h5>
+                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {lecture.attached_quiz.map((q, idx) => {
+                                                  const studentAnswerIdx = sub.completion_data?.quiz_answers?.[idx];
+                                                  const isCorrect = studentAnswerIdx === q.correctAnswer;
+                                                  return (
+                                                    <div key={idx} className={cn("p-4 rounded-2xl border flex items-start gap-3", isCorrect ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-950/10 dark:border-emerald-900/30" : "bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900/30")}>
+                                                      <div className={cn("h-6 w-6 rounded-full flex items-center justify-center shrink-0 mt-0.5", isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700")}>
+                                                        {isCorrect ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                                                      </div>
+                                                      <div>
+                                                        <p className="text-xs font-bold mb-1">{q.question}</p>
+                                                        <p className="text-[10px] text-muted-foreground">Student: <span className={isCorrect ? "text-emerald-600 font-bold" : "text-red-600 font-bold"}>{q.options[studentAnswerIdx ?? -1] || 'No Answer'}</span></p>
+                                                        {!isCorrect && <p className="text-[10px] text-emerald-600 font-bold">Correct: {q.options[q.correctAnswer]}</p>}
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* Code Review / GitHub Section */}
+                                          {sub.github_url && (
+                                            <div className="space-y-4">
+                                              <div className="flex justify-between items-center">
+                                                <h5 className="font-black text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                                  <GithubIcon className="h-4 w-4" /> Project Code Review
+                                                </h5>
+                                                <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold" asChild>
+                                                  <a href={sub.github_url} target="_blank">View Repository <ExternalLink className="h-3 w-3 ml-1" /></a>
+                                                </Button>
+                                              </div>
+
+                                              {isFetchingCode ? (
+                                                <div className="h-40 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl text-muted-foreground animate-pulse">
+                                                  <Bot className="h-8 w-8 mb-2 animate-bounce" />
+                                                  <span className="text-xs font-bold">Fetching source code from GitHub...</span>
+                                                </div>
+                                              ) : fetchedCode ? (
+                                                <div className="space-y-4">
+                                                   <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                                                      {Object.keys(fetchedCode).map(filename => (
+                                                        <Badge
+                                                          key={filename}
+                                                          variant={selectedFile === filename ? "default" : "outline"}
+                                                          className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
+                                                          onClick={() => setSelectedFile(filename)}
+                                                        >
+                                                          {filename}
+                                                        </Badge>
+                                                      ))}
+                                                   </div>
+                                                   <div className="max-h-[500px] overflow-y-auto rounded-xl border bg-slate-900 p-4">
+                                                      <pre className="text-[11px] font-mono text-slate-300 leading-relaxed">
+                                                        {fetchedCode[selectedFile || ''] || 'No code preview available.'}
+                                                      </pre>
+                                                   </div>
+                                                </div>
+                                              ) : (
+                                                <div className="h-20 flex items-center justify-center border-2 border-dashed rounded-2xl text-muted-foreground text-[10px] font-bold uppercase tracking-widest">
+                                                  Repository content not available for preview.
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* Technical Grading UI */}
+                                          <div className="space-y-6 border-t pt-8">
+                                             <div className="flex items-center justify-between mb-4">
+                                                <h5 className="font-black text-sm uppercase tracking-widest text-primary flex items-center gap-2">
+                                                  <TrendingUp className="h-5 w-5" /> Detailed Grading & Feedback
+                                                </h5>
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className="h-8 text-[10px] font-black uppercase tracking-widest bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
+                                                  onClick={async () => {
+                                                    const lecture = curriculum.find(c => c.id === sub.curriculum_id);
+                                                    if (!lecture) return;
+
+                                                    setIsSaving(true);
+                                                    try {
+                                                      const knowledgeChecks = lecture.knowledge_checks?.map(check => ({
+                                                        question: check.question,
+                                                        answer: sub.completion_data?.knowledge_check_answers?.[check.id] || ''
+                                                      })) || [];
+
+                                                      const response = await fetch('/api/review', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                          githubUrl: sub.github_url,
+                                                          assignmentTitle: lecture.attached_assignment?.title || lecture.title,
+                                                          assignmentDescription: lecture.attached_assignment?.description || lecture.description,
+                                                          knowledgeChecks,
+                                                          lectureTitle: lecture.title
+                                                        })
+                                                      });
+
+                                                      if (response.ok) {
+                                                        const review = await response.json();
+                                                        setAiReviewData(prev => ({ ...prev, [sub.id]: review }));
+                                                        setManualFeedback(prev => ({
+                                                           ...prev,
+                                                           [sub.id]: review.feedback,
+                                                           [`${sub.id}-mistakes`]: review.mistakes?.join('\n') || '',
+                                                           [`${sub.id}-improvements`]: review.improvements?.join('\n') || ''
+                                                        }));
+                                                        setManualScores(prev => ({
+                                                           ...prev,
+                                                           [sub.id]: review.score,
+                                                           [`${sub.id}-kc`]: review.sections?.knowledge_check?.score || 0,
+                                                           [`${sub.id}-ass`]: review.sections?.assignment?.score || 0,
+                                                           [`${sub.id}-quiz`]: review.sections?.quiz?.score || 0
+                                                        }));
+                                                        setManualStatus(prev => ({ ...prev, [sub.id]: review.status === 'passed' ? 'reviewed' : 'extra_task_assigned' }));
+                                                        success('AI Analysis complete! Values pre-filled.');
+                                                      }
+                                                    } catch (err) {
+                                                      toastError("Failed to trigger AI review.");
+                                                    } finally {
+                                                      setIsSaving(false);
+                                                    }
+                                                }}>
+                                                  <Bot className="h-3 w-3 mr-2" /> Quick AI Pre-fill
+                                                </Button>
+                                             </div>
+
+                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                                <div className="space-y-4">
+                                                  <div className="space-y-1">
+                                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Section Scores (0-100)</Label>
+                                                     <div className="space-y-3 pt-2">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                          <span className="text-[10px] font-bold">Know. Check:</span>
+                                                          <Input
+                                                            type="number"
+                                                            className="w-16 h-8 text-xs font-black text-right"
+                                                            value={manualScores[`${sub.id}-kc`] ?? (sub.ai_sections?.knowledge_check?.score || 0)}
+                                                            onChange={(e) => setManualScores(prev => ({ ...prev, [`${sub.id}-kc`]: parseInt(e.target.value) }))}
+                                                          />
+                                                        </div>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                          <span className="text-[10px] font-bold">Assignment:</span>
+                                                          <Input
+                                                            type="number"
+                                                            className="w-16 h-8 text-xs font-black text-right"
+                                                            value={manualScores[`${sub.id}-ass`] ?? (sub.ai_sections?.assignment?.score || 0)}
+                                                            onChange={(e) => setManualScores(prev => ({ ...prev, [`${sub.id}-ass`]: parseInt(e.target.value) }))}
+                                                          />
+                                                        </div>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                          <span className="text-[10px] font-bold">Quiz:</span>
+                                                          <Input
+                                                            type="number"
+                                                            className="w-16 h-8 text-xs font-black text-right"
+                                                            value={manualScores[`${sub.id}-quiz`] ?? (sub.ai_sections?.quiz?.score || 0)}
+                                                            onChange={(e) => setManualScores(prev => ({ ...prev, [`${sub.id}-quiz`]: parseInt(e.target.value) }))}
+                                                          />
+                                                        </div>
+                                                     </div>
+                                                  </div>
+
+                                                  <div className="pt-2">
+                                                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Calculated Total</Label>
+                                                     <div className="flex items-baseline gap-1 mt-1">
+                                                        <span className="text-3xl font-black text-primary">
+                                                          {(() => {
+                                                            const hasKC = !!(lecture?.knowledge_checks && lecture.knowledge_checks.length > 0);
+                                                            const hasAss = !!lecture?.attached_assignment;
+                                                            const hasQuiz = !!lecture?.attached_quiz;
+
+                                                            let theoryWeight = 50;
+                                                            let kcWeight = hasKC ? 15 : 0;
+                                                            let assWeight = hasAss ? 15 : 0;
+                                                            let quizWeight = hasQuiz ? 20 : 0;
+
+                                                            const technicalWeightSum = kcWeight + assWeight + quizWeight;
+                                                            if (technicalWeightSum === 0) {
+                                                               theoryWeight = 100;
+                                                            } else if (technicalWeightSum < 50) {
+                                                               const scale = 50 / technicalWeightSum;
+                                                               kcWeight *= scale;
+                                                               assWeight *= scale;
+                                                               quizWeight *= scale;
+                                                            }
+
+                                                            const kc = (manualScores[`${sub.id}-kc`] ?? (sub.ai_sections?.knowledge_check?.score || 0)) / 100 * kcWeight;
+                                                            const ass = (manualScores[`${sub.id}-ass`] ?? (sub.ai_sections?.assignment?.score || 0)) / 100 * assWeight;
+                                                            const quiz = (manualScores[`${sub.id}-quiz`] ?? (sub.ai_sections?.quiz?.score || 0)) / 100 * quizWeight;
+                                                            const theory = sub.completion_data?.theory_read ? theoryWeight : 0;
+
+                                                            return Math.round(theory + kc + ass + quiz);
+                                                          })()}
+                                                        </span>
+                                                        <span className="text-xs font-bold text-muted-foreground">/ 100</span>
+                                                     </div>
+                                                  </div>
+                                                </div>
+
+                                                <div className="md:col-span-3 space-y-4">
+                                                   <div className="space-y-2">
+                                                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mistakes Identifed</Label>
+                                                      <Textarea
+                                                        className="min-h-[80px] text-xs font-medium"
+                                                        placeholder="One mistake per line..."
+                                                        value={manualFeedback[`${sub.id}-mistakes`] ?? (sub.ai_mistakes?.join('\n') || '')}
+                                                        onChange={(e) => setManualFeedback(prev => ({ ...prev, [`${sub.id}-mistakes`]: e.target.value }))}
+                                                      />
+                                                   </div>
+                                                   <div className="space-y-2">
+                                                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Suggested Improvements</Label>
+                                                      <Textarea
+                                                        className="min-h-[80px] text-xs font-medium"
+                                                        placeholder="One improvement per line..."
+                                                        value={manualFeedback[`${sub.id}-improvements`] ?? (sub.ai_improvements?.join('\n') || '')}
+                                                        onChange={(e) => setManualFeedback(prev => ({ ...prev, [`${sub.id}-improvements`]: e.target.value }))}
+                                                      />
+                                                   </div>
+                                                   <div className="space-y-2">
+                                                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">General Technical Summary</Label>
+                                                      <Textarea
+                                                        className="min-h-[80px] text-xs font-medium"
+                                                        placeholder="Synthesize the student's progress..."
+                                                        value={manualFeedback[sub.id] ?? (sub.ai_feedback || '')}
+                                                        onChange={(e) => setManualFeedback(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                                                      />
+                                                   </div>
                                                 </div>
                                              </div>
-                                          );
-                                       })}
-                                    </div>
-                                 </div>
-                               )}
 
-                               {/* Assignment Section */}
-                               {sub.github_url && (
-                                 <div className="space-y-4 border-t pt-6">
-                                    <h4 className="font-black text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                       <GithubIcon className="h-4 w-4" /> Assignment Description
-                                    </h4>
-                                    <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
-                                       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                          {curriculum.find(c => c.id === sub.curriculum_id)?.attached_assignment?.description || 'No description provided.'}
-                                       </p>
-                                    </div>
-                                 </div>
-                               )}
+                                             <div className="flex justify-between items-center border-t pt-6">
+                                                <div className="flex items-center gap-4">
+                                                   <div className="space-y-1">
+                                                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Verdict</Label>
+                                                      <select
+                                                        className="w-48 p-2 rounded-lg border bg-background text-xs font-black uppercase tracking-widest"
+                                                        value={manualStatus[sub.id] ?? sub.status}
+                                                        onChange={(e) => setManualStatus(prev => ({ ...prev, [sub.id]: e.target.value }))}
+                                                      >
+                                                         <option value="submitted">⏳ Pending Review</option>
+                                                         <option value="reviewed">✅ Pass (Award Sparks)</option>
+                                                         <option value="extra_task_assigned">❌ Re-submit (No Points)</option>
+                                                      </select>
+                                                   </div>
+                                                </div>
+                                                <Button
+                                                  disabled={isSaving}
+                                                  className="h-12 px-8 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+                                                  onClick={async () => {
+                                                     setIsSaving(true);
+                                                      const hasKC = !!(lecture?.knowledge_checks && lecture.knowledge_checks.length > 0);
+                                                      const hasAss = !!lecture?.attached_assignment;
+                                                      const hasQuiz = !!lecture?.attached_quiz;
 
-                               {/* Grading Form */}
-                               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-8">
-                                  <div className="md:col-span-2 space-y-4">
-                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Feedback</Label>
-                                        <Textarea
-                                          className="min-h-[120px] text-sm"
-                                          placeholder="Enter technical feedback..."
-                                          value={manualFeedback[sub.id] !== undefined ? manualFeedback[sub.id] : (sub.ai_feedback || '')}
-                                          onChange={(e) => setManualFeedback(prev => ({ ...prev, [sub.id]: e.target.value }))}
-                                        />
-                                     </div>
-                                  </div>
-                                  <div className="space-y-4">
-                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Score (0-100)</Label>
-                                        <Input
-                                          type="number"
-                                          className="text-2xl font-black h-14"
-                                          value={manualScores[sub.id] !== undefined ? manualScores[sub.id] : (sub.ai_score || 0)}
-                                          onChange={(e) => setManualScores(prev => ({ ...prev, [sub.id]: parseInt(e.target.value) }))}
-                                        />
-                                     </div>
-                                     <div className="space-y-2">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</Label>
-                                        <select
-                                          className="w-full p-3 rounded-lg border bg-background text-sm font-bold"
-                                          value={manualStatus[sub.id] !== undefined ? manualStatus[sub.id] : sub.status}
-                                          onChange={(e) => setManualStatus(prev => ({ ...prev, [sub.id]: e.target.value }))}
-                                        >
-                                           <option value="submitted">Submitted (Pending)</option>
-                                           <option value="reviewed">Reviewed (Pass)</option>
-                                           <option value="extra_task_assigned">Extra Task (Fail)</option>
-                                        </select>
-                                     </div>
-                                  </div>
-                               </div>
+                                                      let theoryWeight = 50;
+                                                      let kcWeight = hasKC ? 15 : 0;
+                                                      let assWeight = hasAss ? 15 : 0;
+                                                      let quizWeight = hasQuiz ? 20 : 0;
 
-                               <div className="flex flex-col sm:flex-row justify-between gap-4 border-t pt-6">
-                                  <div className="flex gap-2">
-                                     {sub.github_url && (
-                                        <Button variant="outline" size="sm" asChild className="rounded-xl h-10 px-4">
-                                           <a href={sub.github_url} target="_blank">
-                                              <GithubIcon className="h-4 w-4 mr-2" /> Open Repository
-                                           </a>
-                                        </Button>
-                                     )}
-                                  </div>
-                                  <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 rounded-xl h-10 px-4"
-                                    onClick={async () => {
-                                      const lecture = curriculum.find(c => c.id === sub.curriculum_id);
-                                      if (!lecture) return;
+                                                      const technicalWeightSum = kcWeight + assWeight + quizWeight;
+                                                      if (technicalWeightSum === 0) {
+                                                         theoryWeight = 100;
+                                                      } else if (technicalWeightSum < 50) {
+                                                         const scale = 50 / technicalWeightSum;
+                                                         kcWeight *= scale;
+                                                         assWeight *= scale;
+                                                         quizWeight *= scale;
+                                                      }
 
-                                      setIsSaving(true);
-                                      try {
-                                        const knowledgeChecks = lecture.knowledge_checks?.map(check => ({
-                                          question: check.question,
-                                          answer: sub.completion_data?.knowledge_check_answers?.[check.id] || ''
-                                        })) || [];
+                                                     const kc = manualScores[`${sub.id}-kc`] ?? (sub.ai_sections?.knowledge_check?.score || 0);
+                                                     const ass = manualScores[`${sub.id}-ass`] ?? (sub.ai_sections?.assignment?.score || 0);
+                                                     const quiz = manualScores[`${sub.id}-quiz`] ?? (sub.ai_sections?.quiz?.score || 0);
+                                                      const theoryPercent = sub.completion_data?.theory_read ? 100 : 0;
 
-                                        const response = await fetch('/api/review', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({
-                                            githubUrl: sub.github_url,
-                                            assignmentTitle: lecture.attached_assignment?.title || lecture.title,
-                                            assignmentDescription: lecture.attached_assignment?.description || lecture.description,
-                                            knowledgeChecks,
-                                            lectureTitle: lecture.title
-                                          })
-                                        });
+                                                      const finalScore = Math.round(
+                                                         (theoryPercent / 100 * theoryWeight) +
+                                                         (kc / 100 * kcWeight) +
+                                                         (ass / 100 * assWeight) +
+                                                         (quiz / 100 * quizWeight)
+                                                      );
 
-                                        if (response.ok) {
-                                          const review = await response.json();
+                                                     const feedback = manualFeedback[sub.id] ?? (sub.ai_feedback || '');
+                                                     const status = manualStatus[sub.id] ?? sub.status;
 
-                                          // Update local state to show AI result in form
-                                          setManualFeedback(prev => ({ ...prev, [sub.id]: review.feedback }));
-                                          setManualScores(prev => ({ ...prev, [sub.id]: review.score }));
-                                          setManualStatus(prev => ({ ...prev, [sub.id]: review.status === 'passed' ? 'reviewed' : 'extra_task_assigned' }));
-                                          setAiReviewData(prev => ({ ...prev, [sub.id]: review }));
+                                                     const mistakes = (manualFeedback[`${sub.id}-mistakes`] ?? (sub.ai_mistakes?.join('\n') || '')).split('\n').filter(Boolean);
+                                                     const improvements = (manualFeedback[`${sub.id}-improvements`] ?? (sub.ai_improvements?.join('\n') || '')).split('\n').filter(Boolean);
 
-                                          success('AI Analysis complete! Review the form and save.');
-                                        }
-                                      } catch (err) {
-                                        toastError("Failed to trigger AI review.");
-                                      } finally {
-                                        setIsSaving(false);
-                                      }
-                                  }}>
-                                    <Bot className="h-4 w-4 mr-2" /> Auto Review (AI)
-                                  </Button>
+                                                     const sections = {
+                                                        theory: { score: theoryPercent, feedback: "Reading requirement met." },
+                                                        knowledge_check: { score: kc, feedback: sub.ai_sections?.knowledge_check?.feedback || "Manual review" },
+                                                        assignment: { score: ass, feedback: sub.ai_sections?.assignment?.feedback || "Manual review" },
+                                                        quiz: { score: quiz, feedback: "Quiz auto-score" }
+                                                     };
 
-                                  <Button
-                                    size="sm"
-                                    className="rounded-xl h-10 px-6 font-bold"
-                                    onClick={async () => {
-                                       setIsSaving(true);
-                                       const score = manualScores[sub.id] !== undefined ? manualScores[sub.id] : (sub.ai_score || 0);
-                                       const feedback = manualFeedback[sub.id] !== undefined ? manualFeedback[sub.id] : (sub.ai_feedback || '');
-                                       const status = manualStatus[sub.id] !== undefined ? manualStatus[sub.id] : sub.status;
-                                       const aiData = aiReviewData[sub.id] || {};
+                                                     const res = await reviewSubmissionAction(
+                                                        sub.id,
+                                                        feedback,
+                                                        finalScore,
+                                                        status === 'extra_task_assigned' ? 'failed' : 'passed',
+                                                        sections,
+                                                        mistakes,
+                                                        improvements
+                                                     );
 
-                                       const res = await reviewSubmissionAction(
-                                          sub.id,
-                                          feedback,
-                                          score,
-                                          status === 'extra_task_assigned' ? 'failed' : 'passed',
-                                          aiData.sections || sub.ai_sections,
-                                          aiData.mistakes || sub.ai_mistakes,
-                                          aiData.improvements || sub.ai_improvements
-                                       );
-
-                                       if (res.success) {
-                                          success('Submission graded successfully!');
-                                          fetchAdminData();
-                                       } else {
-                                          toastError('Failed to save grade.');
-                                       }
-                                       setIsSaving(false);
-                                    }}
-                                  >
-                                    Save Grade & Feedback
-                                  </Button>
-                               </div>
-                               </div>
-                            </CardContent>
-                         </Card>
-                       ))}
-                    </div>
-                 </div>
+                                                     if (res.success) {
+                                                        success('Submission graded and student rewarded!');
+                                                        fetchAdminData();
+                                                     } else {
+                                                        toastError('Failed to save grade.');
+                                                     }
+                                                     setIsSaving(false);
+                                                  }}
+                                                >
+                                                  {isSaving ? 'Processing...' : 'Complete Review & Award Sparks'}
+                                                </Button>
+                                             </div>
+                                          </div>
+                                        </CardContent>
+                                      )}
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                  <div className="space-y-6">
                     <div className="flex items-center justify-between">

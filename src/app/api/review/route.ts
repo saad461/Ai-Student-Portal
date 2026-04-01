@@ -92,17 +92,23 @@ export async function POST(req: Request) {
       1. Review the Knowledge Check answers for accuracy and depth.
       2. Review the Assignment (if provided) for code quality, best practices, and requirements fulfillment.
       3. Provide a score out of 100 for each section.
-      4. Provide an overall score out of 100.
+      4. Calculate the overall score out of 100 using this WEIGHTED SYSTEM:
+         - Lecture Reading: 50 points (Assume 50 if they reached this review stage).
+         - Knowledge Check: 15 points (Scale their 0-100 KC score to 15).
+         - Assignment: 15 points (Scale their 0-100 Assignment score to 15).
+         - Quiz: 20 points (Scale their 0-100 Quiz score to 20).
+         - ADJUSTMENT: If any part (KC, Assignment, or Quiz) is NOT required for this lecture, redistribute its weight into the other remaining technical parts so they always sum to 50 technical points + 50 reading points. If NO technical parts are required, Reading becomes 100 points.
       5. Highlight specific mistakes and provide actionable improvements.
 
       REQUIRED JSON RESPONSE FORMAT:
       {
-        "score": number (total 0-100),
+        "score": number (total 0-100 based on weighted logic),
         "status": "passed" | "failed",
         "feedback": "Overall summary feedback string",
         "sections": {
-          "knowledge_check": { "score": number, "feedback": "string" },
-          "assignment": { "score": number, "feedback": "string" }
+          "knowledge_check": { "score": number (0-100), "feedback": "string" },
+          "assignment": { "score": number (0-100), "feedback": "string" },
+          "quiz": { "score": number (0-100), "feedback": "string" }
         },
         "mistakes": ["string", "string"],
         "improvements": ["string", "string"]
