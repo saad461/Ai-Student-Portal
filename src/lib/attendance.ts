@@ -67,13 +67,13 @@ export async function markAttendance(userId: string) {
        await supabase.from('user_perks').update({ used_count: 1 }).eq('user_id', userId).eq('perk_id', 'streak_freeze');
     }
 
-    // 6. Use Reward Log system for points
-    const { rewardStudentAction } = await import('@/app/admin/actions');
-    await rewardStudentAction(10, `Daily Attendance: ${today}`, 'attendance', today);
+    // 6. Use new server action for secure attendance and rewards
+    const { markAttendanceAction } = await import('@/app/admin/actions');
+    const result = await markAttendanceAction();
 
-    if (profileUpdateError) throw profileUpdateError;
+    if (!result.success) throw new Error(result.error);
 
-    return { success: true, alreadyMarked: false };
+    return { success: true, alreadyMarked: result.alreadyMarked };
   } catch (err) {
     console.error('Error marking attendance:', err);
     return { success: false, error: err };

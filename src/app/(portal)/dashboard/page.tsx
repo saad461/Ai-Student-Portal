@@ -401,7 +401,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Student Sparks</CardTitle>
                 <div className="text-xl font-black text-amber-600 flex items-center gap-1">
                    <Zap className="h-4 w-4 fill-amber-500" />
-                   {getSkillPoints(profile?.total_points || 0)}
+                   <span key={profile?.total_points}>{getSkillPoints(profile?.total_points || 0)}</span>
                 </div>
               </CardHeader>
             </Card>

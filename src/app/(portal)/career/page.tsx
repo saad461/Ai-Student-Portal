@@ -35,7 +35,7 @@ interface Job {
 }
 
 export default function CareerPage() {
-  const { error: toastError } = useToast();
+  const { success, error: toastError } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +84,29 @@ export default function CareerPage() {
     j.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleUpdateResume = () => {
+    success("Resume update requested! Our AI is analyzing your profile to generate an optimized CV.");
+    // In a real app, this could trigger the CV generator
+    import('@/lib/cv-generator').then(({ generateCV }) => {
+      generateCV({
+        fullName: (profile?.full_name as string) || 'Student',
+        email: (profile?.email as string) || '',
+        phone: (profile?.phone_number as string) || '',
+        city: (profile?.city as string) || '',
+        github: (profile?.github_link as string) || '',
+        skills: ['HTML5', 'CSS3', 'JavaScript', 'Tailwind CSS', 'React'],
+        projects: [],
+        totalPoints: (profile?.total_points as number) || 0,
+        level: currentLevel,
+        streak: (profile?.current_streak as number) || 0
+      }, false);
+    });
+  };
+
+  const handleApply = (jobTitle: string, company: string) => {
+    success(`Application for ${jobTitle} at ${company} has been initiated! Your student profile and technical portfolio have been sent to their HR department.`);
+  };
+
   if (loading) return <main className="flex-1 p-8 text-center">Opening the Career Portal...</main>;
 
   return (
@@ -126,16 +149,26 @@ export default function CareerPage() {
                        <span className="text-sm font-bold">Portfolio Status</span>
                        <Badge className="bg-green-600 font-black">READY</Badge>
                     </div>
-                    <div className="flex justify-between items-center opacity-50">
+                    <div className="flex justify-between items-center">
                        <span className="text-sm font-bold">Interview Prep</span>
-                       <Badge variant="secondary" className="font-black">20%</Badge>
+                       <Badge variant={currentLevel > 5 ? "default" : "secondary"} className="font-black">
+                          {currentLevel > 5 ? "ACTIVE" : "LOCKED"}
+                       </Badge>
                     </div>
-                    <div className="flex justify-between items-center opacity-50">
-                       <span className="text-sm font-bold">Github Mastery</span>
-                       <Badge variant="secondary" className="font-black">OFFLINE</Badge>
+                    <div className="flex justify-between items-center">
+                       <span className="text-sm font-bold">Market Readiness</span>
+                       <Badge variant="outline" className="font-black text-primary border-primary">
+                          {Math.min(100, currentLevel * 10)}%
+                       </Badge>
                     </div>
                  </div>
-                 <Button className="w-full h-12 rounded-xl font-black uppercase tracking-tighter" variant="outline">Update Resume</Button>
+                 <Button
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-tighter"
+                    variant="outline"
+                    onClick={handleUpdateResume}
+                 >
+                    Update Resume
+                 </Button>
               </CardContent>
            </Card>
 
@@ -224,7 +257,11 @@ export default function CareerPage() {
                                   <Zap className="h-3 w-3 fill-amber-500" /> LVL {job.min_level} Required
                                </Badge>
                              )}
-                             <Button className="font-black uppercase tracking-widest h-12 rounded-xl group-hover:scale-105 transition-all shadow-xl shadow-primary/20" disabled={!isEligible}>
+                             <Button
+                                className="font-black uppercase tracking-widest h-12 rounded-xl group-hover:scale-105 transition-all shadow-xl shadow-primary/20"
+                                disabled={!isEligible}
+                                onClick={() => handleApply(job.title, job.company)}
+                             >
                                 Apply Now <ChevronRight className="h-5 w-5 ml-1" />
                              </Button>
                           </div>

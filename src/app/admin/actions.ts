@@ -284,6 +284,103 @@ export async function deleteModuleAction(id: string) {
   return { success: !error, error };
 }
 
+export async function markAttendanceAction() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch { /* ignore */ }
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Unauthorized' };
+
+  try {
+    const today = new Date().toLocaleDateString('en-CA');
+
+    // 1. Get profile for streak/points calculation
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('current_streak, total_points, last_punch_in, has_streak_freeze')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    // 2. Check if attendance already recorded
+    const { data: existingAttendance } = await supabaseAdmin
+      .from('attendance')
+      .select('id')
+      .eq('student_id', user.id)
+      .eq('date', today)
+      .single();
+
+    if (!existingAttendance) {
+      // Record in attendance table
+      const { error: attendanceError } = await supabaseAdmin.from('attendance').insert({
+        student_id: user.id,
+        date: today
+      });
+      if (attendanceError) throw attendanceError;
+
+      // Calculate new streak
+      let newStreak = 1;
+      let usedFreeze = false;
+      if (profile.last_punch_in) {
+        const lastPunch = new Date(profile.last_punch_in);
+        const todayDate = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const isConsecutive = lastPunch.toDateString() === yesterday.toDateString();
+        const isToday = lastPunch.toDateString() === todayDate.toDateString();
+
+        if (isConsecutive) {
+          newStreak = (profile.current_streak || 0) + 1;
+        } else if (isToday) {
+          newStreak = profile.current_streak || 1;
+        } else if (profile.has_streak_freeze) {
+          newStreak = (profile.current_streak || 0) + 1;
+          usedFreeze = true;
+        }
+      }
+
+      // Update profile with streak
+      await supabaseAdmin.from('profiles').update({
+        current_streak: newStreak,
+        last_punch_in: new Date().toISOString(),
+        has_streak_freeze: usedFreeze ? false : profile.has_streak_freeze
+      }).eq('id', user.id);
+
+      if (usedFreeze) {
+        await supabaseAdmin.from('user_perks').update({ used_count: 1 }).eq('user_id', user.id).eq('perk_id', 'streak_freeze');
+      }
+    }
+
+    // 3. Award Points (rewardStudentAction handles its own duplicate check via reward_log)
+    const rewardResult = await rewardStudentAction(10, `Daily Attendance: ${today}`, 'attendance', today);
+
+    return {
+      success: true,
+      alreadyMarked: !!existingAttendance && rewardResult.alreadyRewarded,
+      xpAwarded: rewardResult.success && !rewardResult.alreadyRewarded
+    };
+  } catch (err) {
+    console.error('Error in markAttendanceAction:', err);
+    return { success: false, error: String(err) };
+  }
+}
+
 export async function getAdminDataAction() {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
