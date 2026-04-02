@@ -303,8 +303,7 @@ export async function getAdminDataAction() {
       { data: subModules },
       { data: attendance },
       { data: resources },
-      { data: challenges },
-      { data: applications }
+      { data: challenges }
     ] = await Promise.all([
       supabaseAdmin.from('profiles').select('*, submissions (*), student_activity (*)'),
       supabaseAdmin.from('courses').select('*').order('index', { ascending: true }),
@@ -313,8 +312,7 @@ export async function getAdminDataAction() {
       supabaseAdmin.from('sub_modules').select('*').order('index', { ascending: true }),
       supabaseAdmin.from('attendance').select('*, profiles(full_name)').order('date', { ascending: false }),
       supabaseAdmin.from('resources').select('*').order('created_at', { ascending: false }),
-      supabaseAdmin.from('daily_challenges').select('*').order('active_date', { ascending: false }),
-      supabaseAdmin.from('applications').select('*').order('created_at', { ascending: false })
+      supabaseAdmin.from('daily_challenges').select('*').order('active_date', { ascending: false })
     ]);
 
     return {
@@ -327,8 +325,7 @@ export async function getAdminDataAction() {
         subModules: subModules || [],
         attendance: attendance || [],
         resources: resources || [],
-        challenges: challenges || [],
-        applications: applications || []
+        challenges: challenges || []
       }
     };
   } catch (err) {

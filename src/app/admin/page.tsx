@@ -19,6 +19,7 @@ import {
   Clock,
   Plus,
   Search,
+  FileText,
   Database,
   BookOpen,
   Edit,
@@ -34,29 +35,11 @@ import {
   PhoneCall,
   Calendar,
   SendHorizontal,
+  X,
   CheckCheck,
   Paperclip,
   ImageIcon,
-  Download,
-  ExternalLink,
-  Code2,
-  Code,
-  TrendingUp,
-  UserMinus,
-  Hourglass,
-  Library,
-  Trophy,
-  Send,
-  Bot,
-  Github as GithubIcon,
-  MousePointer2,
-  LogIn,
-  MonitorOff,
-  Check,
-  Copy,
-  Eye,
-  FileText,
-  X
+  Download
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -94,7 +77,6 @@ import {
   uploadResourceFileAction,
   uploadImageAction
 } from './actions';
-import { approveApplication, rejectApplication } from './application-actions';
 import { CurriculumItem, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
   Table,
@@ -107,6 +89,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
+import { ExternalLink, Code2, Code, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check } from 'lucide-react';
 
 interface Resource {
   id?: string;
@@ -167,26 +150,6 @@ interface StudentProfile {
   last_seen?: string;
 }
 
-interface Application {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  city: string;
-  status: 'pending' | 'approved' | 'rejected';
-  created_at: string;
-  student_id?: string;
-  gender?: string;
-  age?: number;
-  cnic?: string;
-  phone_number?: string;
-  github_link?: string;
-  education?: string;
-  skills_level?: string;
-  objective?: string;
-  course_pin?: string;
-}
-
 export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
@@ -205,16 +168,8 @@ export default function AdminDashboard() {
   const [attendance, setAttendance] = useState<Record<string, unknown>[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support' | 'applications'>('students');
-
-  const [processingAppId, setProcessingAppId] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
-  const [credentials, setCredentials] = useState<{ email: string; password: string; loginPin: string } | null>(null);
-  const [bulkCredentials, setBulkCredentials] = useState<{ name: string; email: string; password: string; loginPin: string }[]>([]);
-  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
-  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support'>('students');
 
   const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, unknown>[]>([]);
@@ -347,8 +302,7 @@ export default function AdminDashboard() {
         subModules: subModulesData,
         attendance: attendanceData,
         resources: resourcesData,
-        challenges: challengesData,
-        applications: applicationsData
+        challenges: challengesData
       } = res.data as {
         profiles: StudentProfile[];
         courses: Course[];
@@ -358,11 +312,9 @@ export default function AdminDashboard() {
         attendance: Record<string, unknown>[];
         resources: Resource[];
         challenges: DailyChallenge[];
-        applications: Application[];
       };
 
       setStudents(profiles);
-      setApplications(applicationsData || []);
 
       const fetchedCourses = coursesData || [];
       setCourses(fetchedCourses);
@@ -815,7 +767,6 @@ export default function AdminDashboard() {
 
         <div className="flex gap-2 border-b pb-4 overflow-x-auto no-scrollbar scroll-smooth">
           <Button variant={activeTab === 'students' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-1 md:mr-2" /> Students</Button>
-          <Button variant={activeTab === 'applications' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('applications')}><FileText className="h-4 w-4 mr-1 md:mr-2" /> Applications</Button>
           <Button variant={activeTab === 'courses' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('courses')}><Layers className="h-4 w-4 mr-1 md:mr-2" /> Courses</Button>
           <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-1 md:mr-2" /> Structure</Button>
           <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-1 md:mr-2" /> Content</Button>
@@ -1231,15 +1182,7 @@ export default function AdminDashboard() {
                     <CardContent className="p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
                         <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-lg">{student.full_name[0]}</div>
-                        <div>
-                          <p className="font-bold text-sm md:text-base">{student.full_name}</p>
-                          <div className="flex items-center gap-2">
-                             <p className="text-[10px] md:text-xs text-slate-500">Joined {new Date(student.enrollment_date).toLocaleDateString()}</p>
-                             {applications.some(app => app.student_id === student.id) && (
-                                <Badge variant="outline" className="text-[9px] h-4 bg-primary/5 text-primary">ENROLLED VIA APP</Badge>
-                             )}
-                          </div>
-                        </div>
+                        <div><p className="font-bold text-sm md:text-base">{student.full_name}</p><p className="text-[10px] md:text-xs text-slate-500">Joined {new Date(student.enrollment_date).toLocaleDateString()}</p></div>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-8 w-full sm:w-auto border-t sm:border-0 pt-4 sm:pt-0">
                         <div className="text-center"><p className="text-[10px] text-slate-500 uppercase tracking-wider">Submissions</p><p className="font-bold text-sm">{student.submissions?.length || 0}</p></div>
@@ -1251,360 +1194,6 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
-        ) : activeTab === 'applications' ? (
-          <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                 <h2 className="text-xl md:text-2xl font-bold">Student Applications</h2>
-                 <p className="text-xs md:text-sm text-muted-foreground">Manage incoming enrollments and student onboarding.</p>
-              </div>
-              <div className="flex gap-2">
-                  <Badge variant="outline" className="px-4 py-2 text-sm">
-                    {applications.length} Total
-                  </Badge>
-                  {selectedAppIds.length > 0 && (
-                      <div className="flex gap-2 animate-in fade-in slide-in-from-right-2">
-                          <Button variant="outline" size="sm" onClick={() => {
-                             const text = applications.filter(app => selectedAppIds.includes(app.id)).map(app => app.email).join(', ');
-                             navigator.clipboard.writeText(text);
-                             success('Emails copied to clipboard!');
-                          }}>
-                            Copy Emails
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={async () => {
-                             if (!confirm(`Are you sure you want to reject ${selectedAppIds.length} applications?`)) return;
-                             setIsBulkProcessing(true);
-                             let successCount = 0;
-                             for (const id of selectedAppIds) {
-                                 const res = await rejectApplication(id);
-                                 if (res.success) successCount++;
-                             }
-                             success(`Successfully rejected ${successCount} applications.`);
-                             setIsBulkProcessing(false);
-                             fetchAdminData();
-                             setSelectedAppIds([]);
-                          }} disabled={isBulkProcessing}>Reject All</Button>
-                          <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700" onClick={async () => {
-                             if (!confirm(`Are you sure you want to approve ${selectedAppIds.length} applications?`)) return;
-                             setIsBulkProcessing(true);
-                             let successCount = 0;
-                             const allCreds: { name: string; email: string; password: string; loginPin: string }[] = [];
-                             for (const id of selectedAppIds) {
-                                 const app = applications.find(a => a.id === id);
-                                 const res = await approveApplication(id);
-                                 if (res.success && res.credentials) {
-                                    successCount++;
-                                    allCreds.push({
-                                       name: `${app?.first_name} ${app?.last_name}`,
-                                       ...res.credentials
-                                    });
-                                 }
-                             }
-                             if (allCreds.length > 0) {
-                                setBulkCredentials(allCreds);
-                             }
-                             success(`Successfully approved ${successCount} applications.`);
-                             setIsBulkProcessing(false);
-                             fetchAdminData();
-                             setSelectedAppIds([]);
-                          }} disabled={isBulkProcessing}>
-                              {isBulkProcessing ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : `Approve All (${selectedAppIds.length})`}
-                          </Button>
-                      </div>
-                  )}
-              </div>
-            </div>
-
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto no-scrollbar">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                         <input
-                           type="checkbox"
-                           className="h-4 w-4 rounded border-gray-300"
-                           checked={selectedAppIds.length === applications.length && applications.length > 0}
-                           onChange={() => {
-                              if (selectedAppIds.length === applications.length) setSelectedAppIds([]);
-                              else setSelectedAppIds(applications.map(app => app.id));
-                           }}
-                         />
-                      </TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>City</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {applications.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                          No applications found.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      applications.map((app) => (
-                        <TableRow key={app.id} className={cn(selectedAppIds.includes(app.id) && "bg-muted/50")}>
-                          <TableCell>
-                             <input
-                               type="checkbox"
-                               className="h-4 w-4 rounded border-gray-300"
-                               checked={selectedAppIds.includes(app.id)}
-                               onChange={() => {
-                                  setSelectedAppIds(prev =>
-                                      prev.includes(app.id) ? prev.filter(i => i !== app.id) : [...prev, app.id]
-                                  );
-                               }}
-                             />
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {new Date(app.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {app.first_name} {app.last_name}
-                          </TableCell>
-                          <TableCell className="text-xs">{app.email}</TableCell>
-                          <TableCell className="text-xs">{app.city}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                app.status === 'approved' ? 'default' :
-                                app.status === 'rejected' ? 'destructive' :
-                                'secondary'
-                              }
-                              className={cn("capitalize text-[10px]", app.status === 'approved' && "bg-emerald-600")}
-                            >
-                              {app.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                             <div className="flex justify-end gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedApp(app)}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                {app.status === 'pending' && (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                      disabled={processingAppId === app.id}
-                                      onClick={async () => {
-                                         setProcessingAppId(app.id);
-                                         const res = await approveApplication(app.id);
-                                         if (res.success) {
-                                            success('Application approved!');
-                                            setCredentials(res.credentials || null);
-                                            fetchAdminData();
-                                         } else {
-                                            toastError('Error: ' + res.error);
-                                         }
-                                         setProcessingAppId(null);
-                                      }}
-                                    >
-                                      {processingAppId === app.id ? <div className="h-4 w-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> : <Check className="h-4 w-4" />}
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-destructive hover:bg-red-50"
-                                      disabled={processingAppId === app.id}
-                                      onClick={async () => {
-                                         if (!confirm('Are you sure you want to reject this application?')) return;
-                                         setProcessingAppId(app.id);
-                                         const res = await rejectApplication(app.id);
-                                         if (res.success) {
-                                            success('Application rejected.');
-                                            fetchAdminData();
-                                         }
-                                         setProcessingAppId(null);
-                                      }}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                )}
-                                {app.status === 'approved' && app.student_id && (
-                                   <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-primary"
-                                      title="View Student Profile"
-                                      onClick={() => {
-                                         const student = students.find(s => s.id === app.student_id);
-                                         if (student) setViewingStudent(student);
-                                      }}
-                                   >
-                                      <Users className="h-4 w-4" />
-                                   </Button>
-                                )}
-                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-
-            <Dialog open={!!selectedApp} onOpenChange={() => setSelectedApp(null)}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Application Details</DialogTitle>
-                  <p className="text-xs text-muted-foreground">
-                    Submitted on {selectedApp && new Date(selectedApp.created_at).toLocaleString()}
-                  </p>
-                </DialogHeader>
-                {selectedApp && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Personal Info</label>
-                        <p className="font-bold">{selectedApp.first_name} {selectedApp.last_name} ({selectedApp.gender}, {selectedApp.age}y)</p>
-                        <p className="text-xs font-mono">CNIC: {selectedApp.cnic}</p>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Contact</label>
-                        <p className="text-sm font-medium">{selectedApp.email}</p>
-                        <p className="text-sm font-medium">{selectedApp.phone_number}</p>
-                        <p className="text-xs text-muted-foreground">{selectedApp.city}</p>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">GitHub</label>
-                        <p className="text-sm">
-                          {selectedApp.github_link ? (
-                            <a href={selectedApp.github_link} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center font-bold">
-                              {selectedApp.github_link} <ExternalLink className="h-3 w-3 ml-1" />
-                            </a>
-                          ) : 'Not provided'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Education & Skills</label>
-                        <p className="text-sm font-bold">{selectedApp.education}</p>
-                        <p className="text-xs italic text-muted-foreground">Level: {selectedApp.skills_level}</p>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Objective</label>
-                        <p className="text-xs leading-relaxed italic">&quot;{selectedApp.objective}&quot;</p>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Course Pin (Secret)</label>
-                        <p className="text-lg font-mono font-black text-primary">{selectedApp.course_pin}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={bulkCredentials.length > 0} onOpenChange={() => setBulkCredentials([])}>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-emerald-600 flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5" /> Bulk Approval Successful!
-                  </DialogTitle>
-                  <p className="text-xs text-muted-foreground">
-                    The following {bulkCredentials.length} accounts have been created. Copy these credentials now.
-                  </p>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    {bulkCredentials.map((cred, idx) => (
-                      <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border space-y-2">
-                         <div className="flex justify-between items-center">
-                            <h4 className="font-bold text-sm">{cred.name}</h4>
-                            <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => {
-                               const text = `Name: ${cred.name}\nEmail: ${cred.email}\nPassword: ${cred.password}\nLogin PIN: ${cred.loginPin}`;
-                               navigator.clipboard.writeText(text);
-                               success('Copied!');
-                            }}><Copy className="h-3 w-3 mr-1" /> Copy All</Button>
-                         </div>
-                         <div className="grid grid-cols-3 gap-2 text-[10px]">
-                            <div><Label className="text-[8px] uppercase opacity-50">Email</Label><p className="font-mono truncate">{cred.email}</p></div>
-                            <div><Label className="text-[8px] uppercase opacity-50">Password</Label><p className="font-mono">{cred.password}</p></div>
-                            <div><Label className="text-[8px] uppercase opacity-50">PIN</Label><p className="font-mono font-bold text-primary">{cred.loginPin}</p></div>
-                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button className="w-full h-12 rounded-xl font-bold uppercase tracking-widest" onClick={() => setBulkCredentials([])}>Done</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={!!credentials} onOpenChange={() => setCredentials(null)}>
-              <DialogContent className="border-emerald-200">
-                <DialogHeader>
-                  <DialogTitle className="text-emerald-600 flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center"><Check className="h-5 w-5" /></div>
-                    Application Approved!
-                  </DialogTitle>
-                  <p className="text-xs text-muted-foreground">
-                    The student account has been created. Send these credentials to the student.
-                  </p>
-                </DialogHeader>
-                {credentials && (
-                  <div className="space-y-4 py-4">
-                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-4 border">
-                      <div className="flex justify-between items-center group">
-                        <div>
-                          <label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Email</label>
-                          <p className="font-mono text-sm font-bold">{credentials.email}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
-                           navigator.clipboard.writeText(credentials.email);
-                           success('Copied!');
-                        }}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center group">
-                        <div>
-                          <label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Generated Password</label>
-                          <p className="font-mono text-sm font-bold">{credentials.password}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
-                           navigator.clipboard.writeText(credentials.password);
-                           success('Copied!');
-                        }}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center group">
-                        <div>
-                          <label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Login Pin</label>
-                          <p className="font-mono text-2xl font-black tracking-[0.2em] text-primary">{credentials.loginPin}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
-                           navigator.clipboard.writeText(credentials.loginPin);
-                           success('Copied!');
-                        }}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-900/30 flex gap-2">
-                      <div className="shrink-0 mt-0.5">⚠️</div>
-                      <p>These credentials are only shown once. Copy them before closing.</p>
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button className="w-full h-12 rounded-xl font-bold uppercase tracking-widest" onClick={() => setCredentials(null)}>Close & Continue</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
         ) : activeTab === 'structure' ? (
           <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -2094,12 +1683,7 @@ export default function AdminDashboard() {
           <DialogContent className="max-w-5xl w-[95vw] md:w-full max-h-[85vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pr-8">
-                  <DialogTitle className="flex items-center gap-3">
-                     Student Profile: {viewingStudent?.full_name}
-                     {applications.some(app => app.student_id === viewingStudent?.id) && (
-                        <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary">ENROLLED VIA APP</Badge>
-                     )}
-                  </DialogTitle>
+                  <DialogTitle>Student Profile: {viewingStudent?.full_name}</DialogTitle>
                   <div className="flex gap-1 p-1 bg-muted rounded-lg w-full sm:w-auto">
                      <Button
                         variant={studentTab === 'submissions' ? 'secondary' : 'ghost'}
