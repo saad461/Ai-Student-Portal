@@ -14,19 +14,21 @@ import {
   Bot,
   Brain,
   Rocket,
-  ChevronDown,
   Terminal,
   Trophy,
-  Github
+  Github,
+  Menu,
+  X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { PublicLoginForm } from '@/components/public-login-form';
+import { UnifiedLoginForm } from '@/components/unified-login-form';
 import { TechRoadmap } from '@/components/tech-roadmap';
 
 export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     async function checkUser() {
@@ -78,13 +80,42 @@ export default function LandingPage() {
             </div>
           )}
         </nav>
-        {/* Mobile Menu Button - simple for now */}
+        {/* Mobile Menu Button */}
         <div className="md:hidden ml-auto">
-           <Button variant="ghost" size="icon" className="text-white">
-              <ChevronDown className="h-6 w-6" />
+           <Button variant="ghost" size="icon" className="text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
            </Button>
         </div>
       </header>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed inset-0 z-40 md:hidden bg-slate-950 pt-20"
+        >
+          <nav className="flex flex-col items-center gap-8 p-8">
+            <Link className="text-lg font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors" href="#features" onClick={() => setMobileMenuOpen(false)}>Features</Link>
+            <Link className="text-lg font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors" href="#curriculum" onClick={() => setMobileMenuOpen(false)}>Roadmap</Link>
+            {isLoggedIn ? (
+              <Button asChild variant="default" className="w-full bg-blue-600 hover:bg-blue-500 rounded-xl h-14 font-bold uppercase tracking-widest text-sm" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/dashboard">Access Portal</Link>
+              </Button>
+            ) : (
+              <div className="flex flex-col w-full gap-4">
+                <Button asChild variant="ghost" className="w-full text-slate-400 hover:text-white uppercase font-black tracking-widest text-sm h-14" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/enroll">Enroll</Link>
+                </Button>
+                <Button asChild variant="ghost" className="w-full text-white hover:bg-white/10 rounded-xl h-14 font-bold uppercase tracking-widest text-sm border border-white/10" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/login">Login</Link>
+                </Button>
+              </div>
+            )}
+          </nav>
+        </motion.div>
+      )}
 
       <main className="flex-1 relative z-10">
         {/* Immersive Hero Section */}
@@ -115,7 +146,7 @@ export default function LandingPage() {
                       <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </Button>
-                  <Button asChild size="lg" variant="outline" className="h-14 px-10 text-lg font-black uppercase tracking-[0.1em] rounded-2xl border-white/10 hover:bg-white/5 active:scale-95 transition-all">
+                  <Button asChild size="lg" variant="outline" className="h-14 px-10 text-lg font-black uppercase tracking-[0.1em] rounded-2xl border-white/20 bg-white/5 hover:bg-white/10 text-white active:scale-95 transition-all">
                     <Link href="#features">Explore Features</Link>
                   </Button>
                 </div>
@@ -133,7 +164,7 @@ export default function LandingPage() {
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 animate-pulse">Initializing System...</p>
                    </div>
                 ) : !isLoggedIn ? (
-                   <PublicLoginForm />
+                   <UnifiedLoginForm />
                 ) : (
                    <div className="w-full p-8 bg-slate-900/50 backdrop-blur-3xl border border-white/10 rounded-3xl text-center space-y-6">
                       <div className="h-24 w-24 bg-blue-600/20 rounded-3xl mx-auto flex items-center justify-center">
@@ -216,7 +247,7 @@ export default function LandingPage() {
             <TechRoadmap />
 
             <div className="mt-20 text-center">
-               <Button asChild size="lg" variant="outline" className="border-white/10 h-14 px-12 rounded-2xl font-black uppercase tracking-widest hover:bg-white/5">
+               <Button asChild size="lg" variant="outline" className="border-white/20 bg-white/5 h-14 px-12 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 text-white transition-all">
                   <Link href="/enroll">Join the Next Cohort</Link>
                </Button>
             </div>
@@ -284,7 +315,7 @@ export default function LandingPage() {
                <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-500 h-16 px-16 text-xl font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all border-none shadow-2xl shadow-blue-600/20">
                   <Link href="/enroll">Join Now</Link>
                </Button>
-               <Button asChild size="lg" variant="outline" className="border-white/10 h-16 px-16 text-xl font-black uppercase tracking-widest rounded-2xl hover:bg-white/5 active:scale-95 transition-all text-white">
+               <Button asChild size="lg" variant="outline" className="border-white/20 bg-white/5 h-16 px-16 text-xl font-black uppercase tracking-widest rounded-2xl hover:bg-white/10 active:scale-95 transition-all text-white">
                   <Link href="#curriculum">View Roadmap</Link>
                </Button>
             </div>
