@@ -39,12 +39,19 @@
 
 ### 2.4 Daily Bounty
 - **Logic**: Works correctly using an AI verification endpoint.
-- **Persistence**: Completion is stored in `localStorage` (`bounty_completed_YYYY-MM-DD`). If a user clears their cache, they might be able to submit again, though the `reward_log` in the backend should prevent duplicate XP.
+- **Uniqueness**: Successfully enforces daily limits via `localStorage` and backend `reward_log` (keyed by date).
+- **Reward**: Correctly awards XP based on the bounty difficulty.
 
-### 2.5 Feature Gaps (Placeholders)
+### 2.5 Attendance System
+- **Functionality**: Uses a 15-minute active threshold (`ATTENDANCE_THRESHOLD = 900s`).
+- **Persistence**: Cleverly uses `localStorage` to track progress across tabs and syncs with `attendance_progress` table.
+- **Reward**: Correctly awards 10 XP per day.
+
+### 2.6 Feature Gaps (Placeholders)
 - **Career Path**: "Github Mastery" status is hardcoded as "OFFLINE".
 - **Interview Prep**: Functional AI chat, but "Voice" relies on browser `speechSynthesis` which is often unreliable/robotic.
 - **Github Mastery**: Mostly static content; lacks deep integration with actual GitHub APIs beyond the submission link.
+- **Roadmap**: Contains hardcoded branding ("Zohan Ali & Professional Roadmap") which might need to be dynamic or updated to "Daurix Project".
 
 ## 3. Admin Dashboard Audit
 
@@ -82,6 +89,7 @@ The reported 6-second load time is primarily caused by a "Network Waterfall" in 
 
 ### 4.3 Codebase Health (Placeholders & TODOs)
 - **Library Leaks**: The Library page allows "purchasing" resources without deducting XP/Sparks, unlike the Skill Shop.
+- **Hardcoded Branding**: Found hardcoded names in `Roadmap` and `Footer` areas.
 - **Missing Backends**:
     - "Github Mastery" steps are mostly static UI.
     - "Career Center" readiness badges are calculated purely on client-side XP.
@@ -101,6 +109,7 @@ The reported 6-second load time is primarily caused by a "Network Waterfall" in 
 ### 5.3 UX Enhancements
 1. **Live XP Feedback**: Show a small animation or toast whenever XP is earned or spent.
 2. **Real Support**: Replace browser `alert()` and `confirm()` with themed Shadcn UI dialogs for a professional feel.
+3. **Refine Captcha**: Move Captcha to the first step of enrollment or replace with a more user-friendly "Turnstile" style interaction to reduce friction.
 
 ---
 *Audit Completed by Jules.*
