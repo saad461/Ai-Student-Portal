@@ -16,7 +16,7 @@ interface ProfileResult {
   role?: string;
 }
 
-export function PublicLoginForm() {
+export function UnifiedLoginForm({ className }: { className?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +52,7 @@ export function PublicLoginForm() {
     setError(null);
 
     try {
+      // 1. Sign in with password
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
@@ -59,26 +60,28 @@ export function PublicLoginForm() {
 
       if (authError) throw authError;
 
-      const { data: profileData } = await supabase
+      // 2. Fetch profile for PIN/Role verification
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('login_pin, role')
         .eq('id', authData.user.id)
         .single();
 
-      const profile = profileData as ProfileResult | null;
+      if (profileError) throw new Error('Security verification failed. Profile not found.');
+
+      const profile = profileData as ProfileResult;
       const userRole = profile?.role;
       const userPin = profile?.login_pin;
 
-      if (!profile && userRole !== 'admin') {
-        await supabase.auth.signOut();
-        throw new Error('Security verification failed. Profile not found.');
+      // 3. PIN Verification (Skip for Admins)
+      if (userRole !== 'admin') {
+        if (userPin && userPin !== formData.pin) {
+          await supabase.auth.signOut();
+          throw new Error('Invalid Security PIN.');
+        }
       }
 
-      if (userRole !== 'admin' && userPin && userPin !== formData.pin) {
-        await supabase.auth.signOut();
-        throw new Error('Invalid Security PIN.');
-      }
-
+      // 4. Persistence
       if (rememberMe) {
         localStorage.setItem('login_remember', JSON.stringify({
           e: safeEncode(formData.email),
@@ -89,24 +92,32 @@ export function PublicLoginForm() {
         localStorage.removeItem('login_remember');
       }
 
-      await logActivityAction('login', { method: 'landing_page_form' }, '/');
+      // 5. Activity Logging (Optional, but good for tracking)
+      try {
+        await logActivityAction('login', { method: 'unified_form' }, '/');
+      } catch (logErr) {
+        console.warn('Failed to log activity:', logErr);
+      }
+
+      // 6. Redirect
       router.push('/dashboard');
+      router.refresh(); // Ensure session is picked up
     } catch (err: unknown) {
+      console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl relative overflow-hidden group">
+    <div className={`w-full max-w-md mx-auto p-6 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl relative overflow-hidden group ${className}`}>
       {/* Decorative Glow */}
-      <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-600/20 rounded-full blur-[80px] group-hover:bg-blue-600/30 transition-colors" />
+      <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-600/20 rounded-full blur-[80px] group-hover:bg-blue-600/30 transition-colors pointer-events-none" />
 
       <div className="relative z-10 space-y-6">
         <div className="text-center space-y-2">
-          <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Student Portal</h3>
-          <p className="text-slate-400 text-sm font-medium">Authentication Required</p>
+          <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Access Portal</h3>
+          <p className="text-slate-400 text-sm font-medium">Identity Verification Required</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -118,13 +129,13 @@ export function PublicLoginForm() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email-landing" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Identity</Label>
+            <Label htmlFor="email-unified" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Identity (Email)</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
-                id="email-landing"
+                id="email-unified"
                 type="email"
-                placeholder="email@example.com"
+                placeholder="cadet@daurix.com"
                 required
                 className="bg-slate-950/50 border-white/5 pl-10 h-12 focus:border-blue-500/50 transition-all text-white rounded-xl"
                 value={formData.email}
@@ -134,11 +145,11 @@ export function PublicLoginForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password-landing" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Access Key</Label>
+            <Label htmlFor="password-unified" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Access Key (Password)</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
-                id="password-landing"
+                id="password-unified"
                 type="password"
                 required
                 placeholder="••••••••"
@@ -150,11 +161,11 @@ export function PublicLoginForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="pin-landing" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Security PIN</Label>
+            <Label htmlFor="pin-unified" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Security PIN</Label>
             <div className="relative">
               <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
-                id="pin-landing"
+                id="pin-unified"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -176,9 +187,9 @@ export function PublicLoginForm() {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500/50"
               />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover/check:text-slate-300 transition-colors">Remember</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover/check:text-slate-300 transition-colors">Remember Me</span>
             </label>
-            <button type="button" className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white transition-colors">Forgot Pin?</button>
+            <button type="button" className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white transition-colors">Emergency Reset</button>
           </div>
 
           <div className="pt-2">
@@ -190,7 +201,12 @@ export function PublicLoginForm() {
             className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-blue-900/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
             disabled={loading || !isCaptchaVerified}
           >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Execute Login'}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Verifying...</span>
+              </div>
+            ) : 'Initiate Session'}
           </Button>
         </form>
       </div>

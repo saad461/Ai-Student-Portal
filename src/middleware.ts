@@ -89,7 +89,7 @@ export async function middleware(req: NextRequest) {
   const isPortalPath = portalPaths.some(path => url.pathname.startsWith(path));
 
   if (isPortalPath && !session) {
-    url.pathname = '/login';
+    url.pathname = '/';
     return NextResponse.redirect(url);
   }
 
