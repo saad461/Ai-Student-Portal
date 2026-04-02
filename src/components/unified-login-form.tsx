@@ -99,7 +99,10 @@ export function UnifiedLoginForm({ className }: { className?: string }) {
         console.warn('Failed to log activity:', logErr);
       }
 
-      // 6. Redirect
+      // 6. Wait a bit for cookies to settle before navigating
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 7. Redirect
       router.push('/dashboard');
       router.refresh(); // Ensure session is picked up
     } catch (err: unknown) {

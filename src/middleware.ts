@@ -62,8 +62,10 @@ export async function middleware(req: NextRequest) {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const hasSession = !!user;
 
   const url = req.nextUrl.clone();
 
@@ -88,12 +90,12 @@ export async function middleware(req: NextRequest) {
 
   const isPortalPath = portalPaths.some(path => url.pathname.startsWith(path));
 
-  if (isPortalPath && !session) {
+  if (isPortalPath && !hasSession) {
     url.pathname = '/';
     return NextResponse.redirect(url);
   }
 
-  if (url.pathname === '/login' && session) {
+  if (url.pathname === '/login' && hasSession) {
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
