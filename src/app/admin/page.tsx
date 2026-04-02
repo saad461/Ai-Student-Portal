@@ -58,17 +58,6 @@ import {
   FileText,
   X
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   seedCurriculumAction,
   saveCurriculumItemAction,
@@ -96,6 +85,17 @@ import {
 } from './actions';
 import { approveApplication, rejectApplication } from './application-actions';
 import { CurriculumItem, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
