@@ -1315,6 +1315,9 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-8 w-full sm:w-auto border-t sm:border-0 pt-4 sm:pt-0">
                         <div className="text-center"><p className="text-[10px] text-slate-500 uppercase tracking-wider">Submissions</p><p className="font-bold text-sm">{student.submissions?.length || 0}</p></div>
+                        {applications.some(app => (app as any).student_id === student.id) && (
+                           <Badge variant="outline" className="text-[9px] bg-blue-50 text-blue-600 border-blue-200 font-black uppercase tracking-tighter">Enrolled via App</Badge>
+                        )}
                         <Badge variant={student.is_pro ? "default" : "secondary"} className="text-[10px]">{student.is_pro ? 'PRO' : 'BASIC'}</Badge>
                         <Button variant="ghost" size="icon" onClick={() => setViewingStudent(student)}><FileText className="h-4 w-4" /></Button>
                       </div>

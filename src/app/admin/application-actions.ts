@@ -27,7 +27,10 @@ export async function approveApplication(applicationId: string) {
     const password = Math.random().toString(36).substring(2, 10);
     const loginPin = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 3. Create Auth User
+    // 3. Create or Update Auth User
+    let userId: string;
+    let isExistingUser = false;
+
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: app.email,
       password: password,
@@ -35,14 +38,37 @@ export async function approveApplication(applicationId: string) {
       user_metadata: { full_name: `${app.first_name} ${app.last_name}` }
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      if (authError.message.includes('already been registered')) {
+        // Find existing user
+        const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) throw listError;
 
-    // 4. Create Profile
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-      id: authUser.user.id,
+        const existingUser = existingUsers.users.find(u => u.email === app.email);
+        if (!existingUser) throw new Error('User already registered but not found in list');
+
+        userId = existingUser.id;
+        isExistingUser = true;
+
+        // Reset password for existing user so they can login with the new credentials
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            password: password
+        });
+        if (updateError) throw updateError;
+      } else {
+        throw authError;
+      }
+    } else {
+      userId = authUser.user.id;
+    }
+
+    // 4. Create/Upsert Profile
+    const { error: profileError } = await supabaseAdmin.from('profiles').upsert({
+      id: userId,
       full_name: `${app.first_name} ${app.last_name}`,
       first_name: app.first_name,
       last_name: app.last_name,
+      email: app.email,
       gender: app.gender,
       cnic: app.cnic,
       age: app.age,
@@ -59,15 +85,20 @@ export async function approveApplication(applicationId: string) {
     });
 
     if (profileError) {
-      // Cleanup auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      // Only cleanup if we just created the user
+      if (!isExistingUser) {
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+      }
       throw profileError;
     }
 
-    // 5. Update Application Status
+    // 5. Update Application Status & link student ID
     await supabaseAdmin
       .from('applications')
-      .update({ status: 'approved' })
+      .update({
+        status: 'approved',
+        student_id: userId
+      })
       .eq('id', applicationId);
 
     return {
