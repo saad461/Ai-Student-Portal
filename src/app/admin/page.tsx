@@ -1781,20 +1781,26 @@ export default function AdminDashboard() {
                                              const hasQuiz = !!lecture?.attached_quiz;
 
                                              let theoryWeight = 50;
-                                             let kcWeight = hasKC ? 15 : 0;
-                                             let assWeight = hasAss ? 15 : 0;
-                                             let quizWeight = hasQuiz ? 20 : 0;
+                                             let kcWeight = 0;
+                                             let assWeight = 0;
+                                             let quizWeight = 0;
 
-                                             // Adjust weights if technical parts are missing
-                                             const technicalWeightSum = kcWeight + assWeight + quizWeight;
-                                             if (technicalWeightSum === 0) {
+                                             const count = (hasKC ? 1 : 0) + (hasAss ? 1 : 0) + (hasQuiz ? 1 : 0);
+
+                                             if (count === 3) {
+                                                assWeight = 20;
+                                                kcWeight = 15;
+                                                quizWeight = 15;
+                                             } else if (count === 2) {
+                                                if (hasKC) kcWeight = 25;
+                                                if (hasAss) assWeight = 25;
+                                                if (hasQuiz) quizWeight = 25;
+                                             } else if (count === 1) {
+                                                if (hasKC) kcWeight = 50;
+                                                if (hasAss) assWeight = 50;
+                                                if (hasQuiz) quizWeight = 50;
+                                             } else {
                                                 theoryWeight = 100;
-                                             } else if (technicalWeightSum < 50) {
-                                                // Scale remaining technical parts to fill 50 points
-                                                const scale = 50 / technicalWeightSum;
-                                                kcWeight *= scale;
-                                                assWeight *= scale;
-                                                quizWeight *= scale;
                                              }
 
                                              const theoryPoints = sub.completion_data?.theory_read ? theoryWeight : 0;
@@ -2034,18 +2040,26 @@ export default function AdminDashboard() {
                                                             const hasQuiz = !!lecture?.attached_quiz;
 
                                                             let theoryWeight = 50;
-                                                            let kcWeight = hasKC ? 15 : 0;
-                                                            let assWeight = hasAss ? 15 : 0;
-                                                            let quizWeight = hasQuiz ? 20 : 0;
+                                                            let kcWeight = 0;
+                                                            let assWeight = 0;
+                                                            let quizWeight = 0;
 
-                                                            const technicalWeightSum = kcWeight + assWeight + quizWeight;
-                                                            if (technicalWeightSum === 0) {
+                                                            const count = (hasKC ? 1 : 0) + (hasAss ? 1 : 0) + (hasQuiz ? 1 : 0);
+
+                                                            if (count === 3) {
+                                                               assWeight = 20;
+                                                               kcWeight = 15;
+                                                               quizWeight = 15;
+                                                            } else if (count === 2) {
+                                                               if (hasKC) kcWeight = 25;
+                                                               if (hasAss) assWeight = 25;
+                                                               if (hasQuiz) quizWeight = 25;
+                                                            } else if (count === 1) {
+                                                               if (hasKC) kcWeight = 50;
+                                                               if (hasAss) assWeight = 50;
+                                                               if (hasQuiz) quizWeight = 50;
+                                                            } else {
                                                                theoryWeight = 100;
-                                                            } else if (technicalWeightSum < 50) {
-                                                               const scale = 50 / technicalWeightSum;
-                                                               kcWeight *= scale;
-                                                               assWeight *= scale;
-                                                               quizWeight *= scale;
                                                             }
 
                                                             const kc = (manualScores[`${sub.id}-kc`] ?? (sub.ai_sections?.knowledge_check?.score || 0)) / 100 * kcWeight;
@@ -2117,18 +2131,26 @@ export default function AdminDashboard() {
                                                       const hasQuiz = !!lecture?.attached_quiz;
 
                                                       let theoryWeight = 50;
-                                                      let kcWeight = hasKC ? 15 : 0;
-                                                      let assWeight = hasAss ? 15 : 0;
-                                                      let quizWeight = hasQuiz ? 20 : 0;
+                                                      let kcWeight = 0;
+                                                      let assWeight = 0;
+                                                      let quizWeight = 0;
 
-                                                      const technicalWeightSum = kcWeight + assWeight + quizWeight;
-                                                      if (technicalWeightSum === 0) {
+                                                      const count = (hasKC ? 1 : 0) + (hasAss ? 1 : 0) + (hasQuiz ? 1 : 0);
+
+                                                      if (count === 3) {
+                                                         assWeight = 20;
+                                                         kcWeight = 15;
+                                                         quizWeight = 15;
+                                                      } else if (count === 2) {
+                                                         if (hasKC) kcWeight = 25;
+                                                         if (hasAss) assWeight = 25;
+                                                         if (hasQuiz) quizWeight = 25;
+                                                      } else if (count === 1) {
+                                                         if (hasKC) kcWeight = 50;
+                                                         if (hasAss) assWeight = 50;
+                                                         if (hasQuiz) quizWeight = 50;
+                                                      } else {
                                                          theoryWeight = 100;
-                                                      } else if (technicalWeightSum < 50) {
-                                                         const scale = 50 / technicalWeightSum;
-                                                         kcWeight *= scale;
-                                                         assWeight *= scale;
-                                                         quizWeight *= scale;
                                                       }
 
                                                      const kc = manualScores[`${sub.id}-kc`] ?? (sub.ai_sections?.knowledge_check?.score || 0);
