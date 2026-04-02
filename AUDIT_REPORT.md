@@ -52,6 +52,7 @@
 - **Interview Prep**: Functional AI chat, but "Voice" relies on browser `speechSynthesis` which is often unreliable/robotic.
 - **Github Mastery**: Mostly static content; lacks deep integration with actual GitHub APIs beyond the submission link.
 - **Roadmap**: Contains hardcoded branding ("Zohan Ali & Professional Roadmap") which might need to be dynamic or updated to "Daurix Project".
+- **Weekend Lock**: The platform implements a strict "Weekend Lock" (`PortalLayout.tsx`) that redirects students to a `RestScreen` on Saturdays and Sundays. While intended for wellness, it prevents dedicated students from progressing during their off-days.
 
 ## 3. Admin Dashboard Audit
 
