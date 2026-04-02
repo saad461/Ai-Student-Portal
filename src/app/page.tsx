@@ -25,6 +25,7 @@ import { TechRoadmap } from '@/components/tech-roadmap';
 
 export default function LandingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -33,6 +34,7 @@ export default function LandingPage() {
       if (user) {
         setIsLoggedIn(true);
       }
+      setCheckingAuth(false);
     }
     checkUser();
 
@@ -70,7 +72,7 @@ export default function LandingPage() {
               <Button asChild variant="ghost" className="text-slate-400 hover:text-white uppercase font-black tracking-widest text-[10px]">
                 <Link href="/enroll">Enroll</Link>
               </Button>
-              <Button asChild variant="outline" className="border-white/10 hover:bg-white/5 rounded-xl px-6 h-10 font-bold uppercase tracking-widest text-[10px]">
+              <Button asChild variant="ghost" className="text-white hover:bg-white/10 rounded-xl px-6 h-10 font-bold uppercase tracking-widest text-[10px] border border-white/10">
                 <Link href="/login">Login</Link>
               </Button>
             </div>
@@ -123,11 +125,17 @@ export default function LandingPage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1, delay: 0.2 }}
-                className="relative"
+                className="relative min-h-[400px] flex items-center justify-center"
               >
-                {!isLoggedIn && <PublicLoginForm />}
-                {isLoggedIn && (
-                   <div className="p-8 bg-slate-900/50 backdrop-blur-3xl border border-white/10 rounded-3xl text-center space-y-6">
+                {checkingAuth ? (
+                   <div className="flex flex-col items-center gap-4">
+                      <div className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 animate-pulse">Initializing System...</p>
+                   </div>
+                ) : !isLoggedIn ? (
+                   <PublicLoginForm />
+                ) : (
+                   <div className="w-full p-8 bg-slate-900/50 backdrop-blur-3xl border border-white/10 rounded-3xl text-center space-y-6">
                       <div className="h-24 w-24 bg-blue-600/20 rounded-3xl mx-auto flex items-center justify-center">
                          <Rocket className="h-12 w-12 text-blue-500 animate-bounce" />
                       </div>
@@ -273,10 +281,10 @@ export default function LandingPage() {
           <div className="container px-6 md:px-12 mx-auto text-center relative z-10">
             <h2 className="text-5xl md:text-8xl font-black tracking-tighter uppercase mb-12 leading-none">Execute Your <br /> Potential</h2>
             <div className="flex flex-col sm:flex-row justify-center gap-6">
-               <Button asChild size="lg" className="bg-white text-black hover:bg-slate-200 h-16 px-16 text-xl font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all">
+               <Button asChild size="lg" className="bg-blue-600 text-white hover:bg-blue-500 h-16 px-16 text-xl font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all border-none shadow-2xl shadow-blue-600/20">
                   <Link href="/enroll">Join Now</Link>
                </Button>
-               <Button asChild size="lg" variant="outline" className="border-white/20 h-16 px-16 text-xl font-black uppercase tracking-widest rounded-2xl hover:bg-white/5 active:scale-95 transition-all text-white">
+               <Button asChild size="lg" variant="outline" className="border-white/10 h-16 px-16 text-xl font-black uppercase tracking-widest rounded-2xl hover:bg-white/5 active:scale-95 transition-all text-white">
                   <Link href="#curriculum">View Roadmap</Link>
                </Button>
             </div>

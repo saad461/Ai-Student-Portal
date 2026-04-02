@@ -219,7 +219,7 @@ function PhaseCard({ phase, isLeft, isCurrent, isCompleted }: { phase: RoadmapPh
           {/* Status Badge */}
           <div className="absolute top-4 left-4 flex gap-2">
             {isCurrent && (
-               <Badge className="bg-primary text-primary-foreground border-none animate-pulse text-[10px] font-black tracking-tighter">
+               <Badge className="bg-blue-600 text-white border-none animate-pulse text-[10px] font-black tracking-tighter">
                   ACTIVE PHASE
                </Badge>
             )}
