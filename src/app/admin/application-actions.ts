@@ -64,10 +64,13 @@ export async function approveApplication(applicationId: string) {
       throw profileError;
     }
 
-    // 5. Update Application Status
+    // 5. Update Application Status and link to student profile
     await supabaseAdmin
       .from('applications')
-      .update({ status: 'approved' })
+      .update({
+        status: 'approved',
+        student_id: authUser.user.id
+      })
       .eq('id', applicationId);
 
     return {
