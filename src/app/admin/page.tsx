@@ -309,7 +309,8 @@ export default function AdminDashboard() {
         subModules: subModulesData,
         attendance: attendanceData,
         resources: resourcesData,
-        challenges: challengesData
+        challenges: challengesData,
+        applications: applicationsData
       } = res.data as {
         profiles: StudentProfile[];
         courses: Course[];
@@ -1161,6 +1162,51 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
+
+            {/* Standalone Courses */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-slate-400 uppercase tracking-widest">
+                <BookOpen className="h-5 w-5" /> Standalone Courses
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {courses.filter(c => !c.parent_id && !courses.some(sub => sub.parent_id === c.id)).map(course => (
+                  <Card key={course.id} className="overflow-hidden group flex flex-col">
+                    <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
+                       {course.thumbnail_url ? (
+                         <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
+                       ) : (
+                         <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <BookOpen className="h-12 w-12" />
+                         </div>
+                       )}
+                       <div className="absolute top-2 right-2 flex gap-1">
+                          <Button variant="secondary" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
+                       </div>
+                    </div>
+                    <CardContent className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-bold text-lg">{course.name}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1 flex-1">{course.description || 'No description provided.'}</p>
+                      <div className="flex justify-between items-center mt-4">
+                         <Badge variant="outline" className="text-[10px]">{course.slug}</Badge>
+                         <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
+                            setSelectedCourseId(course.id);
+                            setActiveTab('structure');
+                          }}>Manage <ChevronRight className="h-3 w-3 ml-1" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                <button
+                  onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}
+                  className="border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-slate-400 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all space-y-2"
+                >
+                  <Plus className="h-8 w-8" />
+                  <span className="font-bold uppercase tracking-tighter text-sm">Create New Program</span>
+                </button>
+              </div>
+            </div>
+          </div>
         ) : activeTab === 'applications' ? (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1250,51 +1296,6 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Standalone Courses */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-slate-400 uppercase tracking-widest">
-                <BookOpen className="h-5 w-5" /> Standalone Courses
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {courses.filter(c => !c.parent_id && !courses.some(sub => sub.parent_id === c.id)).map(course => (
-                  <Card key={course.id} className="overflow-hidden group flex flex-col">
-                    <div className="h-32 bg-slate-200 dark:bg-slate-800 relative">
-                       {course.thumbnail_url ? (
-                         <img src={course.thumbnail_url} alt={course.name} className="w-full h-full object-cover" />
-                       ) : (
-                         <div className="w-full h-full flex items-center justify-center text-slate-400">
-                            <BookOpen className="h-12 w-12" />
-                         </div>
-                       )}
-                       <div className="absolute top-2 right-2 flex gap-1">
-                          <Button variant="secondary" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="destructive" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
-                       </div>
-                    </div>
-                    <CardContent className="p-4 flex-1 flex flex-col">
-                      <h3 className="font-bold text-lg">{course.name}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1 flex-1">{course.description || 'No description provided.'}</p>
-                      <div className="flex justify-between items-center mt-4">
-                         <Badge variant="outline" className="text-[10px]">{course.slug}</Badge>
-                         <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-widest" onClick={() => {
-                            setSelectedCourseId(course.id);
-                            setActiveTab('structure');
-                          }}>Manage <ChevronRight className="h-3 w-3 ml-1" /></Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                <button
-                  onClick={() => setEditingCourse({ index: courses.length + 1, name: '', slug: '' })}
-                  className="border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-slate-400 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all space-y-2"
-                >
-                  <Plus className="h-8 w-8" />
-                  <span className="font-bold uppercase tracking-tighter text-sm">Create New Program</span>
-                </button>
-              </div>
-            </div>
-          </div>
         ) : activeTab === 'students' ? (
             <div className="lg:col-span-2 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -2231,7 +2232,7 @@ export default function AdminDashboard() {
                                                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">General Technical Summary</Label>
                                                       <Textarea
                                                         className="min-h-[80px] text-xs font-medium"
-                                                        placeholder="Synthesize the student's progress..."
+                                                        placeholder="Synthesize the student&apos;s progress..."
                                                         value={manualFeedback[sub.id] ?? (sub.ai_feedback || '')}
                                                         onChange={(e) => setManualFeedback(prev => ({ ...prev, [sub.id]: e.target.value }))}
                                                       />

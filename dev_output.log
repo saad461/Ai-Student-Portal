@@ -53,3 +53,8 @@ https://nextjs.org/telemetry
   digest: '1098616480'
 }
  POST /admin 500 in 716ms
+ ✓ Compiled in 14.9s (2323 modules)
+ ✓ Compiled in 2.1s (2323 modules)
+ ✓ Compiled in 2.1s (2323 modules)
+ ✓ Compiled in 6.7s (2323 modules)
+ ✓ Compiled in 2.5s (2323 modules)
