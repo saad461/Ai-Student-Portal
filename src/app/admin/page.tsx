@@ -77,6 +77,7 @@ import {
   uploadResourceFileAction,
   uploadImageAction
 } from './actions';
+import { approveApplication, rejectApplication } from './application-actions';
 import { CurriculumItem, Module, SubModule, Course, extractHeadings } from '@/lib/curriculum';
 import {
   Table,
@@ -89,7 +90,7 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { ExternalLink, Code2, Code, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check } from 'lucide-react';
+import { ExternalLink, Code2, Code, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check, Eye, Copy, Loader2 } from 'lucide-react';
 
 interface Resource {
   id?: string;
@@ -168,8 +169,9 @@ export default function AdminDashboard() {
   const [attendance, setAttendance] = useState<Record<string, unknown>[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [challenges, setChallenges] = useState<DailyChallenge[]>([]);
+  const [applications, setApplications] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'students' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support'>('students');
+  const [activeTab, setActiveTab] = useState<'students' | 'applications' | 'courses' | 'curriculum' | 'attendance' | 'structure' | 'insights' | 'library' | 'challenges' | 'support'>('students');
 
   const [selectedChatStudent, setSelectedChatStudent] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, unknown>[]>([]);
@@ -195,6 +197,11 @@ export default function AdminDashboard() {
   const [editingCourse, setEditingCourse] = useState<Partial<Course> | null>(null);
   const [editingResource, setEditingResource] = useState<Partial<Resource> | null>(null);
   const [editingChallenge, setEditingChallenge] = useState<Partial<DailyChallenge> | null>(null);
+
+  const [processingAppId, setProcessingAppId] = useState<string | null>(null);
+  const [selectedApp, setSelectedApp] = useState<Record<string, unknown> | null>(null);
+  const [appCredentials, setAppCredentials] = useState<{ email: string; password: string; loginPin: string } | null>(null);
+
   const videoInputRef = useRef<HTMLInputElement>(null);
   const resourceFileRef = useRef<HTMLInputElement>(null);
   const thumbnailFileRef = useRef<HTMLInputElement>(null);
@@ -312,6 +319,7 @@ export default function AdminDashboard() {
         attendance: Record<string, unknown>[];
         resources: Resource[];
         challenges: DailyChallenge[];
+        applications: Record<string, unknown>[];
       };
 
       setStudents(profiles);
@@ -330,6 +338,7 @@ export default function AdminDashboard() {
       setAttendance(attendanceData);
       setResources(resourcesData);
       setChallenges(challengesData);
+      setApplications(applicationsData || []);
     } else {
       toastError('Error fetching admin data: ' + (typeof res.error === 'string' ? res.error : 'Unknown error'));
     }
@@ -725,6 +734,35 @@ export default function AdminDashboard() {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    success('Copied to clipboard!');
+  };
+
+  const handleApproveApp = async (id: string) => {
+    setProcessingAppId(id);
+    const result = await approveApplication(id);
+    if (result.success) {
+      success('Application approved!');
+      setAppCredentials(result.credentials || null);
+      fetchAdminData();
+    } else {
+      toastError('Error: ' + result.error);
+    }
+    setProcessingAppId(null);
+  };
+
+  const handleRejectApp = async (id: string) => {
+    if (!confirm('Are you sure you want to reject this application?')) return;
+    setProcessingAppId(id);
+    const result = await rejectApplication(id);
+    if (result.success) {
+      success('Application rejected.');
+      fetchAdminData();
+    }
+    setProcessingAppId(null);
+  };
+
   if (loading) return <div className="p-8 text-center">Loading Admin Controls...</div>;
 
   return (
@@ -767,6 +805,7 @@ export default function AdminDashboard() {
 
         <div className="flex gap-2 border-b pb-4 overflow-x-auto no-scrollbar scroll-smooth">
           <Button variant={activeTab === 'students' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('students')}><Users className="h-4 w-4 mr-1 md:mr-2" /> Students</Button>
+          <Button variant={activeTab === 'applications' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('applications')}><FileText className="h-4 w-4 mr-1 md:mr-2" /> Applications</Button>
           <Button variant={activeTab === 'courses' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('courses')}><Layers className="h-4 w-4 mr-1 md:mr-2" /> Courses</Button>
           <Button variant={activeTab === 'structure' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('structure')}><Layout className="h-4 w-4 mr-1 md:mr-2" /> Structure</Button>
           <Button variant={activeTab === 'curriculum' ? 'default' : 'ghost'} size="sm" className="whitespace-nowrap shrink-0" onClick={() => setActiveTab('curriculum')}><BookOpen className="h-4 w-4 mr-1 md:mr-2" /> Content</Button>
@@ -1121,6 +1160,95 @@ export default function AdminDashboard() {
                   </Card>
                 ))}
               </div>
+            </div>
+        ) : activeTab === 'applications' ? (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold">Student Applications</h2>
+                  <p className="text-xs md:text-sm text-muted-foreground">Manage incoming enrollments and student onboarding.</p>
+                </div>
+                <Badge variant="outline" className="px-4 py-2 text-sm">
+                  {applications.length} Total
+                </Badge>
+              </div>
+
+              <Card>
+                <CardContent className="p-0 overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Student Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>City</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {applications.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                            No applications found.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        applications.map((app) => (
+                          <TableRow key={app.id as string}>
+                            <TableCell className="text-xs">
+                              {new Date(app.created_at as string).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="font-medium text-sm">
+                              {app.first_name as string} {app.last_name as string}
+                            </TableCell>
+                            <TableCell className="text-sm">{app.email as string}</TableCell>
+                            <TableCell className="text-sm">{app.city as string}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  app.status === 'approved' ? 'default' :
+                                  app.status === 'rejected' ? 'destructive' :
+                                  'secondary'
+                                }
+                                className="capitalize text-[10px]"
+                              >
+                                {app.status as string}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedApp(app)}>
+                                <Eye className="h-4 w-4 mr-1" /> View
+                              </Button>
+                              {app.status === 'pending' && (
+                                <>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    disabled={processingAppId === app.id}
+                                    onClick={() => handleApproveApp(app.id as string)}
+                                  >
+                                    {processingAppId === app.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    disabled={processingAppId === app.id}
+                                    onClick={() => handleRejectApp(app.id as string)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Standalone Courses */}
@@ -2261,6 +2389,131 @@ export default function AdminDashboard() {
                  </div>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Application Details Dialog */}
+        <Dialog open={!!selectedApp} onOpenChange={() => setSelectedApp(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Application Details</DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Submitted on {selectedApp && new Date(selectedApp.created_at as string).toLocaleString()}
+              </p>
+            </DialogHeader>
+            {selectedApp && (
+              <div className="grid grid-cols-2 gap-6 py-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Personal Info</label>
+                    <p className="font-medium text-sm">{selectedApp.first_name as string} {selectedApp.last_name as string} ({selectedApp.gender as string}, {selectedApp.age as string}y)</p>
+                    <p className="text-xs">CNIC: {selectedApp.cnic as string}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Contact</label>
+                    <p className="text-xs">{selectedApp.email as string}</p>
+                    <p className="text-xs">{selectedApp.phone_number as string}</p>
+                    <p className="text-xs">{selectedApp.city as string}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">GitHub</label>
+                    <p className="text-xs">
+                      {selectedApp.github_link ? (
+                        <a href={selectedApp.github_link as string} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
+                          {selectedApp.github_link as string} <ExternalLink className="h-3 w-3 ml-1" />
+                        </a>
+                      ) : 'Not provided'}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Education &amp; Skills</label>
+                    <p className="text-xs font-medium">{selectedApp.education as string}</p>
+                    <p className="text-xs italic">Level: {selectedApp.skills_level as string}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Objective</label>
+                    <p className="text-xs">{selectedApp.objective as string}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Course Pin (Secret)</label>
+                    <p className="text-lg font-mono font-bold text-primary">{selectedApp.course_pin as string}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+               {selectedApp?.status === 'pending' && (
+                  <div className="flex gap-2 w-full">
+                     <Button
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={processingAppId === selectedApp.id}
+                        onClick={() => { handleRejectApp(selectedApp.id as string); setSelectedApp(null); }}
+                     >Reject</Button>
+                     <Button
+                        variant="default"
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        disabled={processingAppId === selectedApp.id}
+                        onClick={() => { handleApproveApp(selectedApp.id as string); setSelectedApp(null); }}
+                     >Approve</Button>
+                  </div>
+               )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Application Credentials Dialog */}
+        <Dialog open={!!appCredentials} onOpenChange={() => setAppCredentials(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-green-600 flex items-center">
+                <Check className="mr-2" /> Application Approved!
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                The account has been created. Please send these credentials to the student manually.
+              </p>
+            </DialogHeader>
+            {appCredentials && (
+              <div className="space-y-4 py-4">
+                <div className="p-4 bg-muted rounded-lg space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Email</label>
+                      <p className="font-mono text-sm">{appCredentials.email}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(appCredentials.email)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Generated Password</label>
+                      <p className="font-mono text-sm">{appCredentials.password}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(appCredentials.password)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Login Pin</label>
+                      <p className="font-mono text-xl font-bold tracking-widest">{appCredentials.loginPin}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(appCredentials.loginPin)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-[10px] text-amber-600 bg-amber-50 p-3 rounded border border-amber-200">
+                  <strong>Important:</strong> These credentials are only shown once. Make sure to copy them before closing this window.
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setAppCredentials(null)}>Done</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
