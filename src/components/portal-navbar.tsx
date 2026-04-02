@@ -19,7 +19,8 @@ import {
   Briefcase,
   Mic,
   Heart,
-  ShoppingCart
+  ShoppingCart,
+  Code
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
@@ -66,9 +67,11 @@ export function PortalNavbar() {
       )}>
         <div className="flex h-16 items-center justify-between px-4">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <Zap className="h-6 w-6 fill-primary" />
-            <span className={cn("font-bold", theme === 'pro' && "hacker-text")}>
-              {theme === 'pro' ? 'PRO' : 'STUDENT'}
+            <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+               <Code className="h-5 w-5 text-white" />
+            </div>
+            <span className={cn("font-black tracking-tighter uppercase", theme === 'pro' && "hacker-text")}>
+              {theme === 'pro' ? 'DAURIX PRO' : 'DAURIX'}
             </span>
           </Link>
 

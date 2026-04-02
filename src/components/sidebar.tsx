@@ -20,7 +20,8 @@ import {
   Mic,
   Heart,
   ShoppingCart,
-  Star
+  Star,
+  Code
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
@@ -85,11 +86,13 @@ export function Sidebar() {
       )}>
         {!isCollapsed && (
           <h1 className={cn(
-            "text-xl font-bold flex items-center gap-2 overflow-hidden whitespace-nowrap",
+            "text-xl font-black flex items-center gap-2 overflow-hidden whitespace-nowrap uppercase tracking-tighter",
             theme === 'pro' && "hacker-text"
           )}>
-            <Zap className="h-6 w-6 fill-primary shrink-0" />
-            <span>{theme === 'pro' ? 'PRO PORTAL' : 'Student Portal'}</span>
+            <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+               <Code className="h-5 w-5 text-white" />
+            </div>
+            <span>{theme === 'pro' ? 'DAURIX PRO' : 'DAURIX'}</span>
           </h1>
         )}
         {isCollapsed && <Zap className="h-8 w-8 fill-primary" />}
