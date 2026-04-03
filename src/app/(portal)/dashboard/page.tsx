@@ -330,6 +330,7 @@ export default function DashboardPage() {
         title: 'Daily Bounty',
         description: 'Complete today\'s technical challenge and earn bonus XP.',
         icon: Target,
+        href: '',
         actionLabel: 'Claim Now',
         color: 'text-orange-600',
         bg: 'bg-orange-500/5',
@@ -380,6 +381,7 @@ export default function DashboardPage() {
         title: 'Instructor Task',
         description: t.description,
         icon: AlertTriangle,
+        href: '',
         actionLabel: 'Done',
         color: 'text-red-600',
         bg: 'bg-red-500/5',
@@ -776,7 +778,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-8">
-              <DailyBounty onComplete={async (reward) => {
+              <DailyBounty currentLectureIndex={nextAvailableItem?.lecture_index || 1} onComplete={async (reward) => {
                 const { rewardStudentAction } = await import('@/app/admin/actions');
                 const today = new Date().toLocaleDateString('en-CA');
                 await rewardStudentAction(reward, 'Daily Bounty Completed', 'daily_bounty', today);
