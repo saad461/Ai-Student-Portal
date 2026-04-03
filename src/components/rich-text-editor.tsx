@@ -148,8 +148,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { uploadImageAction } from '@/app/admin/actions';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
+import { CalloutExtension } from './tiptap-callout';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { AlertTriangle, Info, CheckCircle2, HelpCircle, XCircle, LayoutPanelTop, Trash2 } from 'lucide-react';
 
 interface RichTextEditorProps {
   content: string;
@@ -162,9 +172,10 @@ interface MenuBarProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   isUploading: boolean;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAddCallout: () => void;
 }
 
-const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBarProps) => {
+const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCallout }: MenuBarProps) => {
   if (!editor) {
     return null;
   }
@@ -510,6 +521,15 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload }: MenuBa
         >
           <TableIcon className="h-4 w-4" />
         </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onAddCallout}
+          title="Add Callout Card"
+          className={cn(editor.isActive('callout') && 'bg-slate-200 dark:bg-slate-800')}
+        >
+          <LayoutPanelTop className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
@@ -543,6 +563,9 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { success, error: toastError } = useToast();
+
+  const [isCalloutModalOpen, setIsCalloutModalOpen] = useState(false);
+  const [editingCallout, setEditingCallout] = useState<{ title: string; color: string; icon: string } | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -615,6 +638,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
       FloatingMenuExtension.configure({
         pluginKey: 'floatingMenu',
       }),
+      CalloutExtension,
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -629,6 +653,58 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
     },
   });
 
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleNodeClick = () => {
+      const { selection } = editor.state;
+      const node = (selection as unknown as { node?: { type: { name: string }, attrs: Record<string, string> } }).node;
+
+      if (node && node.type.name === 'callout') {
+        setEditingCallout({
+          title: node.attrs.title,
+          color: node.attrs.color,
+          icon: node.attrs.icon,
+        });
+        setIsCalloutModalOpen(true);
+      }
+    };
+
+    editor.on('selectionUpdate', handleNodeClick);
+    return () => {
+      editor.off('selectionUpdate', handleNodeClick);
+    };
+  }, [editor]);
+
+  const handleSaveCallout = () => {
+    if (!editor || !editingCallout) return;
+
+    const { selection } = editor.state;
+    const node = (selection as unknown as { node?: { type: { name: string } } }).node;
+
+    if (node && node.type.name === 'callout') {
+      // Update existing
+      editor.chain().focus().updateAttributes('callout', editingCallout).run();
+    } else {
+      // Insert new
+      editor.chain().focus().insertContent({
+        type: 'callout',
+        attrs: editingCallout,
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Enter important content here...' }] }],
+      }).run();
+    }
+
+    setIsCalloutModalOpen(false);
+    setEditingCallout(null);
+  };
+
+  const handleDeleteCallout = () => {
+    if (!editor) return;
+    editor.chain().focus().deleteSelection().run();
+    setIsCalloutModalOpen(false);
+    setEditingCallout(null);
+  };
+
   return (
     <div className="border rounded-md bg-white dark:bg-slate-950 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all relative">
       <MenuBar
@@ -636,7 +712,88 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
         fileInputRef={fileInputRef}
         isUploading={isUploading}
         handleFileUpload={handleFileUpload}
+        onAddCallout={() => {
+          setEditingCallout({ title: 'Important Information', color: 'blue', icon: 'info' });
+          setIsCalloutModalOpen(true);
+        }}
       />
+
+      <Dialog open={isCalloutModalOpen} onOpenChange={(open) => !open && setIsCalloutModalOpen(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editor?.isActive('callout') ? 'Edit Callout Card' : 'Add Callout Card'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Card Title</Label>
+              <Input
+                value={editingCallout?.title || ''}
+                onChange={(e) => setEditingCallout(prev => prev ? { ...prev, title: e.target.value } : null)}
+                placeholder="e.g. Pro Tip, Warning, etc."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Border Color</Label>
+                <select
+                  className="w-full p-2 rounded border bg-background text-sm"
+                  value={editingCallout?.color || 'blue'}
+                  onChange={(e) => setEditingCallout(prev => prev ? { ...prev, color: e.target.value } : null)}
+                >
+                  <option value="blue">Blue (Info)</option>
+                  <option value="orange">Orange (Warning)</option>
+                  <option value="green">Green (Success)</option>
+                  <option value="red">Red (Error)</option>
+                  <option value="gray">Gray (Note)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <select
+                  className="w-full p-2 rounded border bg-background text-sm"
+                  value={editingCallout?.icon || 'info'}
+                  onChange={(e) => setEditingCallout(prev => prev ? { ...prev, icon: e.target.value } : null)}
+                >
+                  <option value="info">Info Circle</option>
+                  <option value="warning">Triangle Warning</option>
+                  <option value="success">Check Circle</option>
+                  <option value="help">Question Circle</option>
+                  <option value="error">X Circle</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-4 flex items-center gap-4">
+              <div className="text-[10px] font-bold uppercase text-muted-foreground">Preview:</div>
+              <div className={cn(
+                "flex-1 flex items-center gap-2 p-2 border-l-4 rounded-r-md text-xs font-bold",
+                editingCallout?.color === 'blue' && "border-blue-500 bg-blue-50 text-blue-700",
+                editingCallout?.color === 'orange' && "border-orange-500 bg-orange-50 text-orange-700",
+                editingCallout?.color === 'green' && "border-green-500 bg-green-50 text-green-700",
+                editingCallout?.color === 'red' && "border-red-500 bg-red-50 text-red-700",
+                editingCallout?.color === 'gray' && "border-slate-500 bg-slate-50 text-slate-700",
+              )}>
+                {editingCallout?.icon === 'info' && <Info className="h-3 w-3" />}
+                {editingCallout?.icon === 'warning' && <AlertTriangle className="h-3 w-3" />}
+                {editingCallout?.icon === 'success' && <CheckCircle2 className="h-3 w-3" />}
+                {editingCallout?.icon === 'help' && <HelpCircle className="h-3 w-3" />}
+                {editingCallout?.icon === 'error' && <XCircle className="h-3 w-3" />}
+                {editingCallout?.title}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            {editor?.isActive('callout') ? (
+              <Button variant="ghost" className="text-destructive font-bold" onClick={handleDeleteCallout}>
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Card
+              </Button>
+            ) : <div />}
+            <Button onClick={handleSaveCallout} className="font-bold">
+              {editor?.isActive('callout') ? 'Update Card' : 'Insert Callout Card'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {editor && (
         <>

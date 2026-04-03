@@ -13,7 +13,6 @@ import {
   Github,
   Send,
   FileText,
-  HelpCircle,
   Lock,
   ArrowRight,
   ChevronLeft,
@@ -27,7 +26,11 @@ import {
   ExternalLink,
   Bot,
   X,
-  TrendingUp
+  TrendingUp,
+  AlertTriangle,
+  Info,
+  HelpCircle,
+  XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
@@ -349,6 +352,44 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     </main>
   );
 
+  const CalloutRenderer = ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+    const dataProps = props as Record<string, unknown>;
+    if (dataProps['data-type'] === 'callout') {
+      const title = dataProps['data-title'] as string;
+      const color = dataProps['data-color'] as string;
+      const icon = dataProps['data-icon'] as string;
+
+      const IconComponent = {
+        info: Info,
+        warning: AlertTriangle,
+        success: CheckCircle2,
+        help: HelpCircle,
+        error: XCircle,
+      }[icon as string] || Info;
+
+      const colorClasses = {
+        blue: 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300',
+        orange: 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300',
+        green: 'border-green-500 bg-green-50/50 dark:bg-green-900/10 text-green-700 dark:text-green-300',
+        red: 'border-red-500 bg-red-50/50 dark:bg-red-900/10 text-red-700 dark:text-red-300',
+        gray: 'border-slate-500 bg-slate-50/50 dark:bg-slate-900/10 text-slate-700 dark:text-slate-300',
+      }[color as string] || 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300';
+
+      return (
+        <div className={cn("my-8 border-l-4 rounded-r-2xl p-6 shadow-sm transition-all", colorClasses)}>
+          <div className="flex items-center gap-3 mb-4 font-black uppercase tracking-tight text-sm md:text-base">
+            <IconComponent className="h-5 w-5 md:h-6 md:w-6 shrink-0" />
+            <span>{title}</span>
+          </div>
+          <div className="prose prose-slate dark:prose-invert max-w-none prose-p:mb-4 last:prose-p:mb-0">
+            {children}
+          </div>
+        </div>
+      );
+    }
+    return <div {...props}>{children}</div>;
+  };
+
   const MarkdownComponents = {
     h1: ({ children }: { children?: React.ReactNode }) => {
       const id = children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') || '';
@@ -422,6 +463,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
     th: ({ children }: { children?: React.ReactNode }) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
     td: ({ children }: { children?: React.ReactNode }) => <td className="p-4 border-b text-slate-500 dark:text-slate-400 text-sm md:text-base font-normal">{children}</td>,
+    div: CalloutRenderer
   };
 
   const isDirectVideo = (url: string) => {
@@ -987,6 +1029,7 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
                              ),
                              ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-2 text-blue-50">{children}</ul>,
                              li: ({ children }) => <li className="text-blue-50">{children}</li>,
+                             div: CalloutRenderer
                            }}
                          >
                             {lecture.attached_assignment?.description || ''}
