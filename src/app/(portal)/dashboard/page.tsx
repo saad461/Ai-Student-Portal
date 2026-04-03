@@ -303,8 +303,22 @@ export default function DashboardPage() {
   const currentModule = nextAvailableItem?.week || 1;
   const focusContent = nextAvailableItem ? [nextAvailableItem] : [];
 
+  interface AutomatedTask {
+    id: string;
+    title: string;
+    description: string;
+    icon: typeof Github;
+    href: string;
+    actionLabel: string;
+    color: string;
+    bg: string;
+    border: string;
+    isBounty: boolean;
+    isExtra: boolean;
+  }
+
   const automatedTasks = useMemo(() => {
-    const tasks = [];
+    const tasks: AutomatedTask[] = [];
 
     // 1. Profile Task
     if (!profile?.github_link) {
