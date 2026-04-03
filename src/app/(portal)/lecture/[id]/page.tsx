@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, use, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, use, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CurriculumItem, getEstimatedReadTime, extractHeadings } from '@/lib/curriculum';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -46,6 +46,108 @@ import { RichTextEditor } from '@/components/rich-text-editor';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+
+const CollapsibleSection = ({ children }: { children: React.ReactNode }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(true);
+
+  const titleNode = React.Children.toArray(children).find(
+    (child) => React.isValidElement(child) && (child.props as Record<string, unknown>)?.[ 'data-type'] === 'collapsible-title'
+  );
+  const contentNode = React.Children.toArray(children).find(
+    (child) => React.isValidElement(child) && (child.props as Record<string, unknown>)?.[ 'data-type'] === 'collapsible-content'
+  );
+
+  return (
+    <div className="my-6 border rounded-2xl overflow-hidden bg-slate-50/30 dark:bg-slate-900/10 border-slate-200/60 dark:border-slate-800/60">
+      <button
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setShowTooltip(false);
+        }}
+        className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors group relative"
+      >
+        <div className="h-10 w-10 rounded-xl bg-black flex items-center justify-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+           <Zap className="h-5 w-5 text-white fill-white" />
+        </div>
+        <div className="flex-1">
+           <div className="font-bold text-lg text-slate-900 dark:text-white leading-tight">
+              {titleNode}
+           </div>
+           {showTooltip && (
+             <motion.div
+               initial={{ opacity: 0, x: -10 }}
+               animate={{ opacity: 1, x: 0 }}
+               className="text-[10px] font-black uppercase tracking-widest text-primary mt-1 flex items-center gap-1"
+             >
+                <Sparkles className="h-3 w-3" /> Click to expand
+             </motion.div>
+           )}
+        </div>
+        <ChevronRight className={cn(
+          "h-5 w-5 text-slate-400 transition-transform duration-300",
+          isOpen && "rotate-90 text-primary"
+        )} />
+      </button>
+      <motion.div
+        initial={false}
+        animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+        transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+        className="overflow-hidden bg-white dark:bg-slate-950/40"
+      >
+        <div className="p-6 border-t border-slate-100 dark:border-slate-800/50">
+           {contentNode}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+const CalloutCard = ({ children, dataProps }: { children: React.ReactNode, dataProps: Record<string, unknown> }) => {
+  const title = dataProps['data-title'] as string;
+  const color = dataProps['data-color'] as string;
+  const icon = dataProps['data-icon'] as string;
+
+  const IconComponent = {
+    info: Info,
+    warning: AlertTriangle,
+    success: CheckCircle2,
+    help: HelpCircle,
+    error: XCircle,
+  }[icon as string] || Info;
+
+  const colorClasses = {
+    blue: 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300',
+    orange: 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300',
+    green: 'border-green-500 bg-green-50/50 dark:bg-green-900/10 text-green-700 dark:text-green-300',
+    red: 'border-red-500 bg-red-50/50 dark:bg-red-900/10 text-red-700 dark:text-red-300',
+    gray: 'border-slate-500 bg-slate-50/50 dark:bg-slate-900/10 text-slate-700 dark:text-slate-300',
+  }[color as string] || 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300';
+
+  return (
+    <div className={cn("my-8 border-l-4 rounded-r-2xl p-6 shadow-sm transition-all", colorClasses)}>
+      <div className="flex items-center gap-3 mb-4 font-black uppercase tracking-tight text-sm md:text-base">
+        <IconComponent className="h-5 w-5 md:h-6 md:w-6 shrink-0" />
+        <span>{title}</span>
+      </div>
+      <div className="prose prose-slate dark:prose-invert max-w-none prose-p:mb-4 last:prose-p:mb-0">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const CalloutRenderer = ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+  const dataProps = props as Record<string, unknown>;
+  if (dataProps['data-type'] === 'collapsible') {
+    return <CollapsibleSection>{children}</CollapsibleSection>;
+  }
+
+  if (dataProps['data-type'] === 'callout') {
+    return <CalloutCard dataProps={dataProps}>{children}</CalloutCard>;
+  }
+  return <div {...props}>{children}</div>;
+};
 
 interface Submission {
   id: string;
@@ -351,44 +453,6 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
       Lecture not found.
     </main>
   );
-
-  const CalloutRenderer = ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
-    const dataProps = props as Record<string, unknown>;
-    if (dataProps['data-type'] === 'callout') {
-      const title = dataProps['data-title'] as string;
-      const color = dataProps['data-color'] as string;
-      const icon = dataProps['data-icon'] as string;
-
-      const IconComponent = {
-        info: Info,
-        warning: AlertTriangle,
-        success: CheckCircle2,
-        help: HelpCircle,
-        error: XCircle,
-      }[icon as string] || Info;
-
-      const colorClasses = {
-        blue: 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300',
-        orange: 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300',
-        green: 'border-green-500 bg-green-50/50 dark:bg-green-900/10 text-green-700 dark:text-green-300',
-        red: 'border-red-500 bg-red-50/50 dark:bg-red-900/10 text-red-700 dark:text-red-300',
-        gray: 'border-slate-500 bg-slate-50/50 dark:bg-slate-900/10 text-slate-700 dark:text-slate-300',
-      }[color as string] || 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300';
-
-      return (
-        <div className={cn("my-8 border-l-4 rounded-r-2xl p-6 shadow-sm transition-all", colorClasses)}>
-          <div className="flex items-center gap-3 mb-4 font-black uppercase tracking-tight text-sm md:text-base">
-            <IconComponent className="h-5 w-5 md:h-6 md:w-6 shrink-0" />
-            <span>{title}</span>
-          </div>
-          <div className="prose prose-slate dark:prose-invert max-w-none prose-p:mb-4 last:prose-p:mb-0">
-            {children}
-          </div>
-        </div>
-      );
-    }
-    return <div {...props}>{children}</div>;
-  };
 
   const MarkdownComponents = {
     h1: ({ children }: { children?: React.ReactNode }) => {
