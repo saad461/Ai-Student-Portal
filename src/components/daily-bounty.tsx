@@ -73,8 +73,8 @@ export function DailyBounty({ onComplete }: { onComplete: (reward: number) => vo
   if (!bounty) return null;
 
   return (
-    <Card className={cn(
-      "relative overflow-hidden transition-all duration-500",
+    <Card id="daily-bounty-card" className={cn(
+      "relative overflow-hidden transition-all duration-500 scroll-mt-20",
       isCompleted ? "bg-green-500/10 border-green-500/20" : "bg-primary/5 border-primary/20"
     )}>
       {isCompleted && (
