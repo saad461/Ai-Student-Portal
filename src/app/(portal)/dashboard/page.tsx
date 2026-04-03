@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CurriculumItem, QuizQuestion, isItemUnlocked } from '@/lib/curriculum';
 import { useTheme } from '@/components/theme-provider';
@@ -34,10 +34,12 @@ import {
   BookOpen,
   Zap,
   Video,
+  Sparkles,
   Trophy,
   Star,
   Target,
   Flame,
+  AlertTriangle,
   FileUser
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -100,6 +102,8 @@ export default function DashboardPage() {
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasPunchedInToday, setHasPunchedInToday] = useState(false);
+  const [hasBountyToday, setHasBountyToday] = useState(false);
+  const [hasWellnessToday, setHasWellnessToday] = useState(false);
   const [recentAttendance, setRecentAttendance] = useState<Record<string, unknown>[]>([]);
   const [rewardHistory, setRewardHistory] = useState<Record<string, unknown>[]>([]);
   const [userPerks, setUserPerks] = useState<Record<string, unknown>[]>([]);
@@ -138,7 +142,9 @@ export default function DashboardPage() {
         subsRes,
         tasksRes,
         modulesRes,
-        focusRes
+        focusRes,
+        bountyRes,
+        wellnessRes
       ] = await Promise.all([
         supabase.from('attendance').select('*').eq('student_id', user.id).eq('date', today),
         supabase.from('attendance').select('*').eq('student_id', user.id).order('date', { ascending: false }).limit(7),
@@ -147,10 +153,14 @@ export default function DashboardPage() {
         supabase.from('submissions').select('*').eq('student_id', user.id),
         supabase.from('extra_tasks').select('*').eq('student_id', user.id),
         supabase.from('modules').select('index').eq('course_id', profileData.current_course_id).order('index', { ascending: true }),
-        supabase.from('focus_sessions').select('duration_seconds').eq('student_id', user.id)
+        supabase.from('focus_sessions').select('duration_seconds').eq('student_id', user.id),
+        supabase.from('reward_log').select('id').eq('student_id', user.id).eq('source_type', 'daily_bounty').gte('created_at', today),
+        supabase.from('student_activity').select('id').eq('student_id', user.id).eq('activity_type', 'wellness_story_read').gte('created_at', today)
       ]);
 
       setHasPunchedInToday(!!(attendanceRes.data && attendanceRes.data.length > 0));
+      setHasBountyToday(!!(bountyRes.data && bountyRes.data.length > 0));
+      setHasWellnessToday(!!(wellnessRes.data && wellnessRes.data.length > 0));
       setRecentAttendance(allAttendanceRes.data || []);
       setRewardHistory(rewardsRes.data || []);
       setUserPerks(perksRes.data || []);
@@ -292,6 +302,95 @@ export default function DashboardPage() {
 
   const currentModule = nextAvailableItem?.week || 1;
   const focusContent = nextAvailableItem ? [nextAvailableItem] : [];
+
+  const automatedTasks = useMemo(() => {
+    const tasks = [];
+
+    // 1. Profile Task
+    if (!profile?.github_link) {
+      tasks.push({
+        id: 'task-profile',
+        title: 'Complete your profile',
+        description: 'Add your GitHub link to your profile to enable assignment submissions.',
+        icon: Github,
+        href: '/career',
+        actionLabel: 'Go to Profile',
+        color: 'text-blue-600',
+        bg: 'bg-blue-500/5',
+        border: 'border-blue-500/10',
+        isBounty: false,
+        isExtra: false
+      });
+    }
+
+    // 2. Daily Bounty Task
+    if (!hasBountyToday) {
+      tasks.push({
+        id: 'task-bounty',
+        title: 'Daily Bounty',
+        description: 'Complete today\'s technical challenge and earn bonus XP.',
+        icon: Target,
+        actionLabel: 'Claim Now',
+        color: 'text-orange-600',
+        bg: 'bg-orange-500/5',
+        border: 'border-orange-500/10',
+        isBounty: true,
+        isExtra: false
+      });
+    }
+
+    // 3. Next Lecture Task
+    if (nextAvailableItem) {
+      tasks.push({
+        id: 'task-next-lecture',
+        title: 'Next Lesson',
+        description: `Continue your journey with: ${nextAvailableItem.title}`,
+        icon: Video,
+        href: `/lecture/${nextAvailableItem.id}`,
+        actionLabel: 'Start Now',
+        color: 'text-purple-600',
+        bg: 'bg-purple-500/5',
+        border: 'border-purple-500/10',
+        isBounty: false,
+        isExtra: false
+      });
+    }
+
+    // 4. Wellness Task
+    if (!hasWellnessToday) {
+      tasks.push({
+        id: 'task-wellness',
+        title: 'Mindful Moment',
+        description: 'Take a break and read a wellness story to recharge your mind.',
+        icon: Sparkles,
+        href: '/wellness',
+        actionLabel: 'Read Story',
+        color: 'text-emerald-600',
+        bg: 'bg-emerald-500/5',
+        border: 'border-emerald-500/10',
+        isBounty: false,
+        isExtra: false
+      });
+    }
+
+    // 5. Admin Extra Tasks
+    extraTasks.filter(t => !t.is_completed).forEach(t => {
+      tasks.push({
+        id: t.id,
+        title: 'Instructor Task',
+        description: t.description,
+        icon: AlertTriangle,
+        actionLabel: 'Done',
+        color: 'text-red-600',
+        bg: 'bg-red-500/5',
+        border: 'border-red-500/10',
+        isBounty: false,
+        isExtra: true
+      });
+    });
+
+    return tasks;
+  }, [profile, hasBountyToday, nextAvailableItem, hasWellnessToday, extraTasks]);
 
   const handleCompleteExtraTask = async (taskId: string) => {
     setCompletingTaskId(taskId);
@@ -606,41 +705,77 @@ export default function DashboardPage() {
                 )}
               </section>
 
-              <section className="space-y-4">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" /> Active Tasks
-                </h2>
-                <Card className="bg-muted/10 border-dashed">
-                  <CardContent className="p-8 text-center">
-                    <p className="text-muted-foreground text-sm italic">
-                      &quot;The secret of getting ahead is getting started.&quot;
-                    </p>
-                  </CardContent>
-                </Card>
-              </section>
-            </div>
+              <section id="active-tasks" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-primary" /> Active Tasks
+                  </h2>
+                  <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest opacity-50">
+                    {automatedTasks.length} Pending
+                  </Badge>
+                </div>
 
-            <div className="space-y-8">
-              {extraTasks.length > 0 && (
-                <section className="space-y-4">
-                  <h2 className="text-lg font-bold text-orange-600">Active Tasks</h2>
-                  <div className="space-y-3">
-                    {extraTasks.map(task => (
-                      <Card key={task.id} className={cn("border-orange-200 bg-orange-50/50", task.is_completed && "opacity-50 grayscale")}>
-                        <CardContent className="p-4 flex items-center justify-between gap-4">
-                          <p className="text-xs font-medium leading-relaxed">{task.description}</p>
-                          {!task.is_completed && (
-                            <Button size="sm" variant="outline" className="h-8 border-orange-300" onClick={() => handleCompleteExtraTask(task.id)} disabled={!!completingTaskId}>
-                              {completingTaskId === task.id ? '...' : 'Done'}
-                            </Button>
-                          )}
+                {automatedTasks.length === 0 ? (
+                  <Card className="bg-muted/10 border-dashed">
+                    <CardContent className="p-8 text-center">
+                      <p className="text-muted-foreground text-sm italic font-medium">
+                        &quot;The secret of getting ahead is getting started.&quot;
+                      </p>
+                      <p className="text-[10px] uppercase font-black tracking-tighter mt-2 opacity-40">You&apos;re all caught up for now!</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {automatedTasks.map((task) => (
+                      <Card key={task.id} className={cn("group transition-all duration-300 hover:shadow-lg", task.bg, task.border)}>
+                        <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
+                           <div className="flex items-start gap-4">
+                              <div className={cn("p-2.5 rounded-xl bg-white shadow-sm shrink-0", task.color)}>
+                                 <task.icon className="h-5 w-5" />
+                              </div>
+                              <div className="space-y-1">
+                                 <h4 className="font-bold text-sm leading-none">{task.title}</h4>
+                                 <p className="text-xs text-muted-foreground leading-relaxed">{task.description}</p>
+                              </div>
+                           </div>
+                           <div className="flex items-center justify-end">
+                              {task.href ? (
+                                <Button asChild size="sm" variant="outline" className={cn("h-8 font-bold border-current", task.color)}>
+                                   <Link href={task.href}>{task.actionLabel} <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                                </Button>
+                              ) : task.isBounty ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className={cn("h-8 font-bold border-current", task.color)}
+                                  onClick={() => {
+                                     const bountyEl = document.getElementById('daily-bounty-card');
+                                     bountyEl?.scrollIntoView({ behavior: 'smooth' });
+                                  }}
+                                >
+                                   {task.actionLabel}
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className={cn("h-8 font-bold border-current", task.color)}
+                                  onClick={() => task.isExtra && handleCompleteExtraTask(task.id)}
+                                  disabled={!!completingTaskId}
+                                >
+                                   {completingTaskId === task.id ? '...' : task.actionLabel}
+                                </Button>
+                              )}
+                           </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
-                </section>
-              )}
+                )}
+              </section>
+            </div>
 
+            <div className="space-y-8">
               <DailyBounty onComplete={async (reward) => {
                 const { rewardStudentAction } = await import('@/app/admin/actions');
                 const today = new Date().toLocaleDateString('en-CA');
