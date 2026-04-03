@@ -121,7 +121,7 @@ export const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify }, re
           const isV = val.toLowerCase() === captchaText.toLowerCase();
           onVerify(isV);
         }}
-        className="text-center font-mono tracking-widest uppercase"
+        className="text-center font-mono tracking-widest uppercase text-slate-900 dark:text-white"
       />
     </div>
   );

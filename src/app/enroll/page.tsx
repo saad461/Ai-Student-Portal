@@ -206,7 +206,7 @@ export default function EnrollPage() {
             <Button variant="outline" className="w-full h-12 rounded-xl border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest text-[10px]" onClick={() => downloadPDF(formData, generatedPin)}>
               <Download className="mr-2 h-4 w-4" /> Redownload Credentials
             </Button>
-            <Button className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-[10px] border-none" onClick={() => router.push('/')}>
+              <Button className="w-full h-12 rounded-xl bg-blue-600 text-white hover:bg-blue-500 font-black uppercase tracking-widest text-[10px] border-none" onClick={() => router.push('/')}>
               Back to Command Center
             </Button>
           </CardFooter>
