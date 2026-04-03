@@ -166,7 +166,10 @@ function CurriculumContent() {
   };
 
   const handleSkip = async (itemId: string) => {
-    if (skipPin !== '7323') {
+    const { verifySkipPinAction } = await import('@/app/admin/actions');
+    const isValid = await verifySkipPinAction(skipPin);
+
+    if (!isValid) {
       toastError('Invalid PIN');
       return;
     }

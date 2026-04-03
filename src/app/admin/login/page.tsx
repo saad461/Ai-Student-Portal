@@ -35,7 +35,6 @@ export default function AdminLoginPage() {
     const isValid = await verifyAdminPassword(password);
 
     if (isValid) {
-      localStorage.setItem('admin_auth', 'true');
       if (rememberMe) {
         localStorage.setItem('admin_remember', safeEncode(password));
       } else {

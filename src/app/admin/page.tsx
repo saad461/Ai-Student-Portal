@@ -348,9 +348,6 @@ export default function AdminDashboard() {
   }, [selectedCourseId, toastError]);
 
   useEffect(() => {
-    const auth = localStorage.getItem('admin_auth');
-    if (auth !== 'true') router.push('/admin/login');
-    else {
       fetchAdminData();
 
       // Request browser notification permission
@@ -484,7 +481,6 @@ export default function AdminDashboard() {
         supabase.removeChannel(profileChannel);
         clearInterval(pollInterval);
       };
-    }
   }, [router, fetchAdminData, selectedChatStudent, fetchChat, fetchVideoSessions, activeTab, adminId]);
 
   useEffect(() => {
@@ -796,7 +792,6 @@ export default function AdminDashboard() {
             </Button>
             <Button variant="outline" size="sm" onClick={async () => {
               await adminLogoutAction();
-              localStorage.removeItem('admin_auth');
               router.push('/admin/login');
             }}>
               Logout
@@ -2243,8 +2238,8 @@ export default function AdminDashboard() {
                                                 </div>
                                              </div>
 
-                                             <div className="flex justify-between items-center border-t pt-6">
-                                                <div className="flex items-center gap-4">
+                                             <div className="flex justify-between items-end border-t pt-6 gap-6">
+                                                <div className="flex flex-1 items-end gap-4">
                                                    <div className="space-y-1">
                                                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Verdict</Label>
                                                       <select
@@ -2254,9 +2249,20 @@ export default function AdminDashboard() {
                                                       >
                                                          <option value="submitted">⏳ Pending Review</option>
                                                          <option value="reviewed">✅ Pass (Award Sparks)</option>
-                                                         <option value="extra_task_assigned">❌ Re-submit (No Points)</option>
+                                                         <option value="extra_task_assigned">❌ Re-submit (Assign Extra Task)</option>
                                                       </select>
                                                    </div>
+                                                   {(manualStatus[sub.id] === 'extra_task_assigned' || (!manualStatus[sub.id] && sub.status === 'extra_task_assigned')) && (
+                                                     <div className="flex-1 space-y-1 animate-in slide-in-from-left-2">
+                                                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Extra Task Description</Label>
+                                                       <Input
+                                                         placeholder="Describe the extra task..."
+                                                         className="h-10 text-xs"
+                                                         value={manualFeedback[`${sub.id}-extra-task`] || ''}
+                                                         onChange={(e) => setManualFeedback(prev => ({ ...prev, [`${sub.id}-extra-task`]: e.target.value }))}
+                                                       />
+                                                     </div>
+                                                   )}
                                                 </div>
                                                 <Button
                                                   disabled={isSaving}
@@ -2322,7 +2328,8 @@ export default function AdminDashboard() {
                                                         status === 'extra_task_assigned' ? 'failed' : 'passed',
                                                         sections,
                                                         mistakes,
-                                                        improvements
+                                                        improvements,
+                                                        manualFeedback[`${sub.id}-extra-task`]
                                                      );
 
                                                      if (res.success) {
@@ -2470,53 +2477,65 @@ export default function AdminDashboard() {
 
         {/* Application Credentials Dialog */}
         <Dialog open={!!appCredentials} onOpenChange={() => setAppCredentials(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-green-600 flex items-center">
                 <Check className="mr-2" /> Application Approved!
               </DialogTitle>
               <p className="text-xs text-muted-foreground">
-                The account has been created. Please send these credentials to the student manually.
+                Account created. Send these credentials to the student.
               </p>
             </DialogHeader>
             {appCredentials && (
               <div className="space-y-4 py-4">
-                <div className="p-4 bg-muted rounded-lg space-y-3">
-                  <div className="flex justify-between items-center">
+                <div className="p-4 bg-slate-900 text-slate-100 rounded-2xl space-y-4 shadow-inner border border-white/5">
+                  <div className="flex justify-between items-center group">
                     <div>
-                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Email</label>
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Email</label>
                       <p className="font-mono text-sm">{appCredentials.email}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(appCredentials.email)}>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 text-slate-400 hover:text-white" onClick={() => copyToClipboard(appCredentials.email)}>
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center group">
                     <div>
-                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Generated Password</label>
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Initial Password</label>
                       <p className="font-mono text-sm">{appCredentials.password}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(appCredentials.password)}>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 text-slate-400 hover:text-white" onClick={() => copyToClipboard(appCredentials.password)}>
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center group">
                     <div>
-                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Login Pin</label>
-                      <p className="font-mono text-xl font-bold tracking-widest">{appCredentials.loginPin}</p>
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Login Pin</label>
+                      <p className="font-mono text-xl font-bold tracking-widest text-primary">{appCredentials.loginPin}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(appCredentials.loginPin)}>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 text-slate-400 hover:text-white" onClick={() => copyToClipboard(appCredentials.loginPin)}>
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <div className="text-[10px] text-amber-600 bg-amber-50 p-3 rounded border border-amber-200">
-                  <strong>Important:</strong> These credentials are only shown once. Make sure to copy them before closing this window.
+
+                <div className="space-y-3">
+                   <Button
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest gap-2 shadow-lg shadow-primary/20"
+                    onClick={() => {
+                       const template = `Welcome to The Daurix Project!\n\nYour account has been approved. Here are your credentials:\n\nEmail: ${appCredentials.email}\nPassword: ${appCredentials.password}\nLogin PIN: ${appCredentials.loginPin}\n\nLogin at: ${window.location.origin}/login\n\nSee you in the portal!`;
+                       copyToClipboard(template);
+                    }}
+                   >
+                      <Copy className="h-4 w-4" /> Copy Full Template
+                   </Button>
+                   <div className="text-[10px] text-amber-500 bg-amber-500/5 p-3 rounded-xl border border-amber-500/20 font-bold text-center italic">
+                     Warning: This is the only time these credentials will be shown.
+                   </div>
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button onClick={() => setAppCredentials(null)}>Done</Button>
+              <Button variant="ghost" onClick={() => setAppCredentials(null)} className="w-full font-bold uppercase tracking-widest">Close Window</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

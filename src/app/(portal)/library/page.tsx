@@ -98,23 +98,15 @@ export default function LibraryPage() {
 
   const handlePurchase = async (resource: Resource) => {
     if (!profile) return;
-    const totalPoints = (profile?.total_points as number) || 0;
-    const skillPoints = Math.floor(totalPoints / 10);
-    if (skillPoints < resource.price_points) {
-      toastError(`Insufficient points! You need ${resource.price_points - skillPoints} more Skill Points.`);
-      return;
-    }
+    const { purchaseResourceAction } = await import('@/app/admin/actions');
+    const res = await purchaseResourceAction(resource.id, resource.price_points);
 
-    const { error } = await supabase
-      .from('user_resources')
-      .insert({ user_id: profile.id, resource_id: resource.id });
-
-    if (error) {
-      toastError('Purchase failed. Please try again.');
-    } else {
+    if (res.success) {
       success(`Successfully purchased ${resource.title}!`);
       setMyResources([...myResources, resource.id]);
-      // Ideally we should also deduct points, but for now we follow the "points gain" model
+      fetchData(); // Refresh profile points
+    } else {
+      toastError(res.error || 'Purchase failed.');
     }
   };
 
