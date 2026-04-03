@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { useChat } from '@/components/chat-context';
+import { useConfirmation } from '@/components/ui/confirmation-provider';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -17,6 +18,7 @@ interface Message {
 
 export function AIAssistant() {
   const { isAIOpen: isOpen, toggleAI: setIsOpen, lectureData } = useChat();
+  const { confirm: customConfirm } = useConfirmation();
 
   const lectureId = lectureData?.id || 'global';
   const lectureTitle = lectureData?.title || 'Course Content';
@@ -160,8 +162,8 @@ export function AIAssistant() {
     }
   };
 
-  const clearChat = () => {
-    if (confirm("Clear conversation history?")) {
+  const clearChat = async () => {
+    if (await customConfirm("Clear conversation history?")) {
       const initial = { role: 'assistant', content: `Hi! I'm your AI Tutor. Need help understanding "${lectureTitle}"? Ask me anything!` };
       setMessages([initial as Message]);
       sessionStorage.removeItem(`ai_chat_${lectureId}`);

@@ -150,6 +150,7 @@ import { cn } from '@/lib/utils';
 import { uploadImageAction } from '@/app/admin/actions';
 import { useRef, useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
+import { useConfirmation } from '@/components/ui/confirmation-provider';
 import { CalloutExtension } from './tiptap-callout';
 import {
   Dialog,
@@ -176,19 +177,31 @@ interface MenuBarProps {
 }
 
 const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCallout }: MenuBarProps) => {
+  const { prompt: customPrompt } = useConfirmation();
+
   if (!editor) {
     return null;
   }
 
-  const addLink = () => {
-    const url = window.prompt('URL');
+  const addLink = async () => {
+    const url = await customPrompt({
+      title: 'Insert Link',
+      description: 'Enter the destination URL',
+      placeholder: 'https://example.com',
+      confirmText: 'Insert'
+    });
     if (url) {
       editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     }
   };
 
-  const addImage = () => {
-    const url = window.prompt('Image URL');
+  const addImage = async () => {
+    const url = await customPrompt({
+      title: 'Insert Image URL',
+      description: 'Enter the image URL',
+      placeholder: 'https://example.com/image.png',
+      confirmText: 'Insert'
+    });
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
@@ -563,6 +576,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { success, error: toastError } = useToast();
+  const { prompt: customPrompt } = useConfirmation();
 
   const [isCalloutModalOpen, setIsCalloutModalOpen] = useState(false);
   const [editingCallout, setEditingCallout] = useState<{ title: string; color: string; icon: string } | null>(null);
@@ -875,9 +889,15 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
                 variant="ghost"
                 size="sm"
                 className={cn("h-8 w-8 p-0", editor.isActive('link') && 'text-primary bg-slate-100 dark:bg-slate-800')}
-                onClick={() => {
-                  const previousUrl = editor.getAttributes('link').href;
-                  const url = window.prompt('URL', previousUrl);
+                onClick={async () => {
+                  const previousUrl = editor.getAttributes('link').href || '';
+                  const url = await customPrompt({
+                    title: 'Edit Link',
+                    description: 'Update the destination URL',
+                    defaultValue: String(previousUrl),
+                    placeholder: 'https://example.com',
+                    confirmText: 'Update'
+                  });
                   if (url === '') {
                     editor.chain().focus().extendMarkRange('link').unsetLink().run();
                   } else if (url) {
