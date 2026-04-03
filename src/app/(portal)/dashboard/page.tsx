@@ -317,7 +317,9 @@ export default function DashboardPage() {
         actionLabel: 'Go to Profile',
         color: 'text-blue-600',
         bg: 'bg-blue-500/5',
-        border: 'border-blue-500/10'
+        border: 'border-blue-500/10',
+        isBounty: false,
+        isExtra: false
       });
     }
 
@@ -332,7 +334,8 @@ export default function DashboardPage() {
         color: 'text-orange-600',
         bg: 'bg-orange-500/5',
         border: 'border-orange-500/10',
-        isBounty: true
+        isBounty: true,
+        isExtra: false
       });
     }
 
@@ -347,7 +350,9 @@ export default function DashboardPage() {
         actionLabel: 'Start Now',
         color: 'text-purple-600',
         bg: 'bg-purple-500/5',
-        border: 'border-purple-500/10'
+        border: 'border-purple-500/10',
+        isBounty: false,
+        isExtra: false
       });
     }
 
@@ -362,7 +367,9 @@ export default function DashboardPage() {
         actionLabel: 'Read Story',
         color: 'text-emerald-600',
         bg: 'bg-emerald-500/5',
-        border: 'border-emerald-500/10'
+        border: 'border-emerald-500/10',
+        isBounty: false,
+        isExtra: false
       });
     }
 
@@ -377,6 +384,7 @@ export default function DashboardPage() {
         color: 'text-red-600',
         bg: 'bg-red-500/5',
         border: 'border-red-500/10',
+        isBounty: false,
         isExtra: true
       });
     });
