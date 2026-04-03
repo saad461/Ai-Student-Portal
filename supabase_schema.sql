@@ -48,6 +48,7 @@ create table applications (
   city text not null,
   github_link text,
   course_pin text not null,
+  student_id uuid references profiles(id) on delete set null,
   status text default 'pending' check (status in ('pending', 'approved', 'rejected')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
