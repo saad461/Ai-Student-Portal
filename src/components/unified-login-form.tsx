@@ -175,7 +175,7 @@ export function UnifiedLoginForm({ className }: { className?: string }) {
                 maxLength={6}
                 placeholder="6-Digit PIN"
                 required
-                className="bg-slate-950/50 border-white/5 pl-10 h-12 focus:border-blue-500/50 transition-all text-white text-center font-mono tracking-[0.3em] rounded-xl"
+                className="bg-slate-950/50 border-white/5 pl-10 h-12 focus:border-blue-500/50 transition-all text-white !text-white text-center font-mono tracking-[0.3em] rounded-xl placeholder:text-slate-600"
                 value={formData.pin}
                 onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
               />

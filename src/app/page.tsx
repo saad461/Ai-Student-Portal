@@ -66,15 +66,15 @@ export default function LandingPage() {
           <Link className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors" href="#features">Features</Link>
           <Link className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors" href="#curriculum">Roadmap</Link>
           {isLoggedIn ? (
-            <Button asChild variant="default" className="bg-blue-600 hover:bg-blue-500 rounded-xl px-6 h-10 font-bold uppercase tracking-widest text-[10px]">
+            <Button asChild variant="default" className="bg-blue-600 text-white hover:bg-blue-500 rounded-xl px-6 h-10 font-bold uppercase tracking-widest text-[10px]">
               <Link href="/dashboard">Access Portal</Link>
             </Button>
           ) : (
             <div className="flex gap-4">
-              <Button asChild variant="ghost" className="text-slate-400 hover:text-white uppercase font-black tracking-widest text-[10px]">
+              <Button asChild variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/5 uppercase font-black tracking-widest text-[10px]">
                 <Link href="/enroll">Enroll</Link>
               </Button>
-              <Button asChild variant="ghost" className="text-white hover:bg-white/10 rounded-xl px-6 h-10 font-bold uppercase tracking-widest text-[10px] border border-white/10">
+              <Button asChild variant="ghost" className="text-white hover:bg-white/10 rounded-xl px-6 h-10 font-bold uppercase tracking-widest text-[10px] border border-white/20 bg-white/5">
                 <Link href="/login">Login</Link>
               </Button>
             </div>
