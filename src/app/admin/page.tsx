@@ -1167,7 +1167,7 @@ export default function AdminDashboard() {
                           <div key={sub.id} className="group relative p-4 rounded-xl border bg-card hover:shadow-md transition-all">
                             <div className="flex justify-between items-start mb-2">
                               <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tighter">Sub-Course</Badge>
-                              <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                              <div className="flex gap-1 transition-opacity">
                                 <Button variant="ghost" size="icon" className="h-7 w-7 bg-slate-100 dark:bg-slate-800" onClick={() => setEditingCourse(sub)}><Edit className="h-3.5 w-3.5" /></Button>
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive bg-red-50 dark:bg-red-900/20" onClick={() => handleDeleteCourse(sub.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                               </div>
@@ -1207,8 +1207,8 @@ export default function AdminDashboard() {
                          </div>
                        )}
                        <div className="absolute top-2 right-2 flex gap-1 z-20">
-                          <Button variant="secondary" size="icon" className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="destructive" size="icon" className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="secondary" size="icon" className="h-8 w-8 transition-opacity shadow-lg" onClick={() => setEditingCourse(course)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 transition-opacity shadow-lg" onClick={() => handleDeleteCourse(course.id)}><Trash2 className="h-4 w-4" /></Button>
                        </div>
                     </div>
                     <CardContent className="p-4 flex-1 flex flex-col">
@@ -1573,7 +1573,7 @@ export default function AdminDashboard() {
                                 <CardHeader className="pb-2">
                                   <div className="flex justify-between items-start">
                                     <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
-                                    <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-1 transition-opacity">
                                       <Button variant="ghost" size="icon" className="h-8 w-8 bg-slate-100 dark:bg-slate-800" onClick={() => moveItem(item, 'up')}><Clock className="h-4 w-4 rotate-180" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 bg-slate-100 dark:bg-slate-800" onClick={() => moveItem(item, 'down')}><Clock className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 bg-slate-100 dark:bg-slate-800" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
@@ -1622,7 +1622,7 @@ export default function AdminDashboard() {
                                 <CardHeader className="pb-2">
                                   <div className="flex justify-between items-start">
                                     <div className="flex gap-2"><Badge variant="outline">#{item.lecture_index} {item.day}</Badge><Badge variant="secondary">{item.type}</Badge></div>
-                                    <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-1 transition-opacity">
                                       <Button variant="ghost" size="icon" className="h-8 w-8 bg-slate-100 dark:bg-slate-800" onClick={() => moveItem(item, 'up')}><Clock className="h-4 w-4 rotate-180" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 bg-slate-100 dark:bg-slate-800" onClick={() => moveItem(item, 'down')}><Clock className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 bg-slate-100 dark:bg-slate-800" onClick={() => setEditingItem(item)}><Edit className="h-4 w-4" /></Button>
@@ -2903,7 +2903,7 @@ export default function AdminDashboard() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-destructive opacity-100 sm:opacity-0 sm:group-hover:opacity-100 bg-red-50 dark:bg-red-900/20"
+                              className="h-8 w-8 text-destructive bg-red-50 dark:bg-red-900/20 transition-opacity"
                               onClick={() => {
                                 const currentToc = (Array.isArray(editingItem.content) ? editingItem.content : extractHeadings(editingItem.theory_content));
                                 const newToc = currentToc.filter((_, i: number) => i !== idx);
