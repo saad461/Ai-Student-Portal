@@ -180,7 +180,6 @@ interface MenuBarProps {
 }
 
 const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCallout, onAddCollapsible }: MenuBarProps) => {
-const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCallout }: MenuBarProps) => {
   const { prompt: customPrompt } = useConfirmation();
   if (!editor) {
     return null;

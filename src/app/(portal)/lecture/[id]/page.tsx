@@ -80,7 +80,7 @@ const CollapsibleSection = ({ children }: { children: React.ReactNode }) => {
                animate={{ opacity: 1, x: 0 }}
                className="text-[10px] font-black uppercase tracking-widest text-primary mt-1 flex items-center gap-1"
              >
-                <Sparkles className="h-3 w-3" /> Click to expand
+                <Zap className="h-3 w-3 fill-primary" /> Click to expand
              </motion.div>
            )}
         </div>
