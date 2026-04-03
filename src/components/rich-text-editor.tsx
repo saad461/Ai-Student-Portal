@@ -142,7 +142,8 @@ import {
   AlignRight,
   AlignJustify,
   Table as TableIcon,
-  Upload
+  Upload,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -152,6 +153,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/toast-provider';
 import { useConfirmation } from '@/components/ui/confirmation-provider';
 import { CalloutExtension } from './tiptap-callout';
+import { CollapsibleExtension, CollapsibleTitle, CollapsibleContent } from './tiptap-collapsible';
 import {
   Dialog,
   DialogContent,
@@ -174,11 +176,12 @@ interface MenuBarProps {
   isUploading: boolean;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAddCallout: () => void;
+  onAddCollapsible: () => void;
 }
 
+const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCallout, onAddCollapsible }: MenuBarProps) => {
 const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCallout }: MenuBarProps) => {
   const { prompt: customPrompt } = useConfirmation();
-
   if (!editor) {
     return null;
   }
@@ -543,6 +546,15 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
         >
           <LayoutPanelTop className="h-4 w-4" />
         </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onAddCollapsible}
+          title="Add Collapsible Bullet (⚡)"
+          className={cn(editor.isActive('collapsible') && 'bg-slate-200 dark:bg-slate-800')}
+        >
+          <Zap className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
@@ -653,6 +665,9 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
         pluginKey: 'floatingMenu',
       }),
       CalloutExtension,
+      CollapsibleExtension,
+      CollapsibleTitle,
+      CollapsibleContent,
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -729,6 +744,9 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
         onAddCallout={() => {
           setEditingCallout({ title: 'Important Information', color: 'blue', icon: 'info' });
           setIsCalloutModalOpen(true);
+        }}
+        onAddCollapsible={() => {
+          (editor as unknown as { commands: { setCollapsible: () => void } }).commands.setCollapsible();
         }}
       />
 
