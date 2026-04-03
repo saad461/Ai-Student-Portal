@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ReflexMaster } from '@/components/mini-games/reflex-master';
 import { MemorySequence } from '@/components/mini-games/memory-sequence';
+import { logActivityAction } from '@/app/admin/actions';
 import { SpeedTyper } from '@/components/mini-games/speed-typer';
 import { GridLogic } from '@/components/mini-games/grid-logic';
 import { AimTrainer } from '@/components/mini-games/aim-trainer';
@@ -213,7 +214,13 @@ export default function WellnessPage() {
         {activeMode === 'stories' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-10">
              {stories.map((story, i) => (
-               <Card key={i} className="rounded-3xl border-2 hover:border-primary transition-all group overflow-hidden">
+               <Card
+                 key={i}
+                 className="rounded-3xl border-2 hover:border-primary transition-all group overflow-hidden cursor-pointer"
+                 onClick={() => {
+                    logActivityAction('wellness_story_read', { title: story.title }, '/wellness');
+                 }}
+               >
                   <div className="h-2 bg-primary/20 w-full" />
                   <CardHeader>
                      <Quote className="h-8 w-8 text-primary/20 group-hover:text-primary transition-colors mb-2" />
@@ -221,6 +228,9 @@ export default function WellnessPage() {
                   </CardHeader>
                   <CardContent>
                      <p className="text-muted-foreground font-medium leading-relaxed italic">&quot;{story.body}&quot;</p>
+                     <div className="mt-4 text-[10px] font-black uppercase tracking-widest text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Story Read
+                     </div>
                   </CardContent>
                </Card>
              ))}
