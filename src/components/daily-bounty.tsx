@@ -14,17 +14,24 @@ interface Bounty {
   title: string;
   task: string;
   reward: number;
+  minLectureIndex: number;
+  category: string;
 }
 
 const BOUNTIES: Bounty[] = [
-  { id: 'b1', title: 'The Semantic Guard', task: 'Use 5 different semantic HTML tags in your next submission.', reward: 20 },
-  { id: 'b2', title: 'Accessibility Hero', task: 'Ensure all images have meaningful alt text today.', reward: 15 },
-  { id: 'b3', title: 'Form Master', task: 'Implement a form with at least 3 types of native validation.', reward: 25 },
-  { id: 'b4', title: 'Media Maven', task: 'Embed both audio and video elements in a single project.', reward: 30 },
-  { id: 'b5', title: 'SEO Ninja', task: 'Add Open Graph meta tags to your portfolio layout.', reward: 20 },
+  { id: 'b1', title: 'The Semantic Guard', task: 'Use at least 3 semantic HTML tags (like <header>, <main>, <footer>) in your code.', reward: 20, minLectureIndex: 1, category: 'HTML' },
+  { id: 'b2', title: 'Meta Master', task: 'Add a <meta name="description"> tag to your HTML boilerplate.', reward: 15, minLectureIndex: 4, category: 'HTML' },
+  { id: 'b3', title: 'Heading Hierarchy', task: 'Create a clear heading structure using <h1>, <h2>, and <h3> tags correctly.', reward: 15, minLectureIndex: 7, category: 'HTML' },
+  { id: 'b4', title: 'Link Architect', task: 'Create an <a> link that opens in a new tab using the target attribute.', reward: 10, minLectureIndex: 10, category: 'HTML' },
+  { id: 'b5', title: 'List Specialist', task: 'Build a nested list using <ul> and <li> tags.', reward: 20, minLectureIndex: 11, category: 'HTML' },
+  { id: 'b6', title: 'Data Visualizer', task: 'Create a simple <table> with at least 2 rows and 2 columns.', reward: 25, minLectureIndex: 13, category: 'HTML' },
+  { id: 'b7', title: 'Form Architect', task: 'Build a <form> with at least two <input> fields and a <button>.', reward: 20, minLectureIndex: 16, category: 'HTML' },
+  { id: 'b8', title: 'Validation Pro', task: 'Add "required" and "minlength" validation to an input field.', reward: 25, minLectureIndex: 17, category: 'HTML' },
+  { id: 'b9', title: 'Media Maven', task: 'Embed an <audio> or <video> element with controls enabled.', reward: 30, minLectureIndex: 27, category: 'HTML' },
+  { id: 'b10', title: 'SVG Artist', task: 'Embed a simple <svg> shape (like a circle or rect) directly in your HTML.', reward: 20, minLectureIndex: 28, category: 'HTML' },
 ];
 
-export function DailyBounty({ onComplete }: { onComplete: (reward: number) => void }) {
+export function DailyBounty({ onComplete, currentLectureIndex = 1 }: { onComplete: (reward: number) => void, currentLectureIndex?: number }) {
   const [bounty, setBounty] = useState<Bounty | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
@@ -33,13 +40,28 @@ export function DailyBounty({ onComplete }: { onComplete: (reward: number) => vo
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Select bounty based on day of the month
-    const day = new Date().getDate();
-    setBounty(BOUNTIES[day % BOUNTIES.length]);
+    // Filter bounties based on student's current progress
+    // We want to show a bounty that they are qualified for (minLectureIndex <= current)
+    // but not too far behind (e.g. the most advanced one they qualify for)
+    const availableBounties = BOUNTIES.filter(b => b.minLectureIndex <= currentLectureIndex);
+
+    if (availableBounties.length > 0) {
+      // Pick the highest lecture index bounty they qualify for
+      const sorted = [...availableBounties].sort((a, b) => b.minLectureIndex - a.minLectureIndex);
+
+      // Use the day of the month to pick one if there are multiple at the same level,
+      // but usually we just want the most relevant one.
+      // To keep it fresh, we can pick from the top 3 they qualify for.
+      const pool = sorted.slice(0, 3);
+      const day = new Date().getDate();
+      setBounty(pool[day % pool.length]);
+    } else {
+      setBounty(BOUNTIES[0]);
+    }
 
     const completedDate = localStorage.getItem(`bounty_completed_${new Date().toLocaleDateString('en-CA')}`);
     if (completedDate) setIsCompleted(true);
-  }, []);
+  }, [currentLectureIndex]);
 
   const handleComplete = async () => {
     if (!userCode.trim()) return;
