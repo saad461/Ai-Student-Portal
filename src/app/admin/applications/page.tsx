@@ -23,12 +23,10 @@ import {
 } from '@/components/ui/dialog';
 import { Loader2, Check, X, Eye, Copy, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/toast-provider';
-import { useConfirmation } from '@/components/ui/confirmation-provider';
 import { cn } from '@/lib/utils';
 
 export default function AdminApplicationsPage() {
   const { success, error: toastError } = useToast();
-  const { confirm: customConfirm } = useConfirmation();
   const [applications, setApplications] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -67,12 +65,7 @@ export default function AdminApplicationsPage() {
   };
 
   const handleReject = async (id: string) => {
-    if (!await customConfirm({
-      title: 'Reject Application',
-      description: 'Are you sure you want to reject this application?',
-      variant: 'destructive',
-      confirmText: 'Reject'
-    })) return;
+    if (!confirm('Are you sure you want to reject this application?')) return;
     setProcessingId(id);
     const result = await rejectApplication(id);
     if (result.success) {
@@ -82,7 +75,7 @@ export default function AdminApplicationsPage() {
   };
 
   const handleBulkApprove = async () => {
-    if (!await customConfirm(`Are you sure you want to approve ${selectedIds.length} applications?`)) return;
+    if (!confirm(`Are you sure you want to approve ${selectedIds.length} applications?`)) return;
     setIsBulkProcessing(true);
     let successCount = 0;
     for (const id of selectedIds) {
@@ -95,12 +88,7 @@ export default function AdminApplicationsPage() {
   };
 
   const handleBulkReject = async () => {
-    if (!await customConfirm({
-      title: 'Bulk Reject',
-      description: `Are you sure you want to reject ${selectedIds.length} applications?`,
-      variant: 'destructive',
-      confirmText: 'Reject All'
-    })) return;
+    if (!confirm(`Are you sure you want to reject ${selectedIds.length} applications?`)) return;
     setIsBulkProcessing(true);
     let successCount = 0;
     for (const id of selectedIds) {

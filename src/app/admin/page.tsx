@@ -90,7 +90,6 @@ import {
 import { RichTextEditor } from '@/components/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
-import { useConfirmation } from '@/components/ui/confirmation-provider';
 import { ExternalLink, Code2, Code, TrendingUp, UserMinus, Hourglass, Library, Trophy, Send, Bot, Github as GithubIcon, MousePointer2, LogIn, MonitorOff, Check, Eye, Copy, Loader2 } from 'lucide-react';
 
 interface Resource {
@@ -155,7 +154,6 @@ interface StudentProfile {
 export default function AdminDashboard() {
   const router = useRouter();
   const { success, error: toastError } = useToast();
-  const { confirm: customConfirm } = useConfirmation();
 
   const [manualScores, setManualScores] = useState<Record<string, number>>({});
   const [manualFeedback, setManualFeedback] = useState<Record<string, string>>({});
@@ -633,12 +631,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteModule = async (id: string) => {
-    if (!await customConfirm({
-      title: 'Delete Module',
-      description: 'Are you sure? This will delete all sub-modules and lectures in this module.',
-      variant: 'destructive',
-      confirmText: 'Delete'
-    })) return;
+    if (!confirm('Are you sure? This will delete all sub-modules and lectures in this module.')) return;
     const res = await deleteModuleAction(id);
     if (res.success) fetchAdminData();
   };
@@ -655,12 +648,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteSubModule = async (id: string) => {
-    if (!await customConfirm({
-      title: 'Delete Sub-Module',
-      description: 'Are you sure? This will affect all lectures in this sub-module.',
-      variant: 'destructive',
-      confirmText: 'Delete'
-    })) return;
+    if (!confirm('Are you sure? This will affect all lectures in this sub-module.')) return;
     const res = await deleteSubModuleAction(id);
     if (res.success) fetchAdminData();
   };
@@ -684,12 +672,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteCourse = async (id: string) => {
-    if (!await customConfirm({
-      title: 'Delete Course',
-      description: 'Are you sure? This will delete the entire course and all its content.',
-      variant: 'destructive',
-      confirmText: 'Delete Course'
-    })) return;
+    if (!confirm('Are you sure? This will delete the entire course and all its content.')) return;
     const res = await deleteCourseAction(id);
     if (res.success) fetchAdminData();
   };
@@ -706,12 +689,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteResource = async (id: string) => {
-    if (!await customConfirm({
-      title: 'Delete Resource',
-      description: 'Are you sure you want to delete this resource?',
-      variant: 'destructive',
-      confirmText: 'Delete'
-    })) return;
+    if (!confirm('Are you sure?')) return;
     const res = await deleteResourceAction(id);
     if (res.success) fetchAdminData();
   };
@@ -729,12 +707,7 @@ export default function AdminDashboard() {
 
 
   const handleDeleteCurriculum = async (id: string) => {
-    if (!await customConfirm({
-      title: 'Delete Item',
-      description: 'Are you sure you want to delete this item?',
-      variant: 'destructive',
-      confirmText: 'Delete'
-    })) return;
+    if (!confirm('Are you sure you want to delete this item?')) return;
     const res = await deleteCurriculumItemAction(id);
     if (res.success) fetchAdminData();
   };
@@ -777,12 +750,7 @@ export default function AdminDashboard() {
   };
 
   const handleRejectApp = async (id: string) => {
-    if (!await customConfirm({
-      title: 'Reject Application',
-      description: 'Are you sure you want to reject this application?',
-      variant: 'destructive',
-      confirmText: 'Reject'
-    })) return;
+    if (!confirm('Are you sure you want to reject this application?')) return;
     setProcessingAppId(id);
     const result = await rejectApplication(id);
     if (result.success) {

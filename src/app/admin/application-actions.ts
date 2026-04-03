@@ -81,8 +81,6 @@ export async function approveApplication(applicationId: string) {
       github_link: app.github_link,
       course_pin: app.course_pin,
       login_pin: loginPin,
-      current_course_id: '686f743f-0978-44c4-9588-a01256d8ee27',
-      agreed_tc: true,
       role: 'student'
     });
 
@@ -95,15 +93,13 @@ export async function approveApplication(applicationId: string) {
     }
 
     // 5. Update Application Status & link student ID
-    const { error: updateError } = await supabaseAdmin
+    await supabaseAdmin
       .from('applications')
       .update({
         status: 'approved',
         student_id: userId
       })
       .eq('id', applicationId);
-
-    if (updateError) throw updateError;
 
     return {
       success: true,

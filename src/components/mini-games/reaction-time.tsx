@@ -4,10 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Box } from 'lucide-react';
-import { useToast } from '@/components/ui/toast-provider';
 
 export function ReactionTime() {
-  const { error } = useToast();
   const [status, setStatus] = useState<'idle' | 'waiting' | 'ready' | 'result'>('idle');
   const [startTime, setStartTime] = useState(0);
   const [result, setResult] = useState(0);
@@ -24,7 +22,7 @@ export function ReactionTime() {
   const handleTrigger = () => {
     if (status === 'waiting') {
       setStatus('idle');
-      error("Too early!");
+      alert("Too early!");
     } else if (status === 'ready') {
       const diff = Date.now() - startTime;
       setResult(diff);
