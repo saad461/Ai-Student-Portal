@@ -32,7 +32,7 @@ export const CollapsibleExtension = Node.create({
         return commands.insertContent({
           type: this.name,
           content: [
-            { type: 'collapsibleTitle', content: [{ type: 'text', text: 'New Collapsible Section' }] },
+            { type: 'collapsibleTitle', content: [{ type: 'text', text: 'New Collapsible Section', marks: [{ type: 'bold' }] }] },
             { type: 'collapsibleContent', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Add your collapsible content here...' }] }] },
           ],
         })
