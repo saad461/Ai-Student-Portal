@@ -689,15 +689,12 @@ export async function unlockCourseForStudentAction(email: string, courseId: stri
   if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  // Find user by email
-  const { data: userData, error: userError } = await supabaseAdmin
-    .from('profiles')
-    .select('id')
-    .eq('email', email)
-    .single();
+  // Find user by email (from auth)
+  const { data: users, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+  const userData = users?.users.find(u => u.email === email);
 
   if (userError || !userData) {
-    return { success: false, error: 'Student not found. Please use the student ID.' };
+    return { success: false, error: 'Student not found in authentication list.' };
   }
 
   const { error } = await supabaseAdmin

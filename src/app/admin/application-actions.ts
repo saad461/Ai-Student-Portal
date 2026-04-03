@@ -68,7 +68,6 @@ export async function approveApplication(applicationId: string) {
       full_name: `${app.first_name} ${app.last_name}`,
       first_name: app.first_name,
       last_name: app.last_name,
-      email: app.email,
       gender: app.gender,
       cnic: app.cnic,
       age: app.age,
