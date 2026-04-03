@@ -1,11 +1,13 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Terminal, GitBranch, GitPullRequest, GitMerge, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Terminal, GitBranch, GitPullRequest, GitMerge, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/components/ui/toast-provider';
 
 const CONTENT = {
   'git-basics': {
@@ -101,6 +103,53 @@ const CONTENT = {
 export default function GitHubTopicPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const topic = CONTENT[resolvedParams.id as keyof typeof CONTENT];
+  const { success, error: toastError } = useToast();
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('submissions')
+        .select('status')
+        .eq('student_id', user.id)
+        .eq('curriculum_id', `github-${resolvedParams.id}`)
+        .single();
+
+      if (data) setIsCompleted(true);
+      setLoading(false);
+    };
+    checkStatus();
+  }, [resolvedParams.id]);
+
+  const handleComplete = async () => {
+    setSubmitting(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase.from('submissions').upsert({
+      student_id: user.id,
+      curriculum_id: `github-${resolvedParams.id}`,
+      status: 'reviewed',
+      feedback: 'Completed GitHub Mastery lesson'
+    });
+
+    if (!error) {
+      setIsCompleted(true);
+      success("Lesson marked as complete! +5 XP earned.");
+
+      // Award XP via server action
+      const { rewardStudentAction } = await import('@/app/admin/actions');
+      await rewardStudentAction(5, `GitHub Mastery: ${topic.title}`, 'game', `github-${resolvedParams.id}`);
+    } else {
+      toastError("Failed to save progress.");
+    }
+    setSubmitting(false);
+  };
 
   if (!topic) notFound();
 
@@ -148,11 +197,25 @@ export default function GitHubTopicPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <Card className="bg-primary/5 border-primary/20 p-8 text-center">
-            <h2 className="text-xl font-bold mb-2">Ready to master this?</h2>
-            <p className="text-muted-foreground mb-6">Apply these techniques in your next assignment to build professional habits.</p>
-            <Link href="/dashboard">
-              <Button size="lg">Return to Dashboard</Button>
-            </Link>
+            <h2 className="text-xl font-bold mb-2">{isCompleted ? 'Well Done!' : 'Ready to master this?'}</h2>
+            <p className="text-muted-foreground mb-6">
+              {isCompleted
+                ? 'You have successfully completed this lesson. Keep going!'
+                : 'Apply these techniques in your next assignment to build professional habits.'}
+            </p>
+            <div className="flex justify-center gap-4">
+              {!isCompleted && !loading && (
+                <Button size="lg" onClick={handleComplete} disabled={submitting}>
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                  Mark as Complete
+                </Button>
+              )}
+              <Link href="/github-mastery">
+                <Button size="lg" variant={isCompleted ? "default" : "outline"}>
+                   {isCompleted ? 'Next Lesson' : 'Back to Overview'}
+                </Button>
+              </Link>
+            </div>
           </Card>
         </div>
     </main>

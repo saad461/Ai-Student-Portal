@@ -6,7 +6,11 @@ import { cookies } from 'next/headers';
 import { CURRICULUM } from '@/lib/curriculum';
 
 export async function verifyAdminPassword(password: string) {
-  const correctPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const correctPassword = process.env.ADMIN_PASSWORD;
+  if (!correctPassword) {
+    console.error('ADMIN_PASSWORD environment variable is not set');
+    return false;
+  }
   const isValid = password === correctPassword;
 
   if (isValid) {
@@ -153,7 +157,8 @@ export async function reviewSubmissionAction(
     quiz?: { score: number; feedback: string };
   },
   mistakes?: string[],
-  improvements?: string[]
+  improvements?: string[],
+  extraTaskDescription?: string
 ) {
   const isAdmin = await authorizeAdmin();
   if (!isAdmin) return { success: false, error: 'Unauthorized' };
@@ -180,10 +185,21 @@ export async function reviewSubmissionAction(
 
   if (!error && data?.[0]) {
     const sub = data[0];
+
+    if (status !== 'passed' && extraTaskDescription) {
+      await supabaseAdmin.from('extra_tasks').insert({
+        student_id: sub.student_id,
+        description: extraTaskDescription,
+        is_completed: false
+      });
+    }
+
     await createNotificationAction(
       sub.student_id,
       'Submission Reviewed',
-      `Your work for this lecture has been reviewed with a score of ${score}/100.`,
+      status === 'passed'
+        ? `Your work for this lecture has been reviewed with a score of ${score}/100.`
+        : `Your work needs improvement. An extra task has been assigned.`,
       status === 'passed' ? 'success' : 'warning'
     );
 
@@ -282,6 +298,15 @@ export async function deleteModuleAction(id: string) {
     .from('modules').delete().eq('id', id);
 
   return { success: !error, error };
+}
+
+export async function verifySkipPinAction(pin: string) {
+  const correctPin = process.env.LECTURE_SKIP_PIN;
+  if (!correctPin) {
+    console.error('LECTURE_SKIP_PIN environment variable is not set');
+    return false;
+  }
+  return pin === correctPin;
 }
 
 export async function getAdminDataAction() {
@@ -505,6 +530,54 @@ export async function rewardStudentAction(amount: number, reason: string, source
   }
 
   return { success: true, alreadyRewarded: false };
+}
+
+export async function purchaseResourceAction(resourceId: string, priceInSkillPoints: number) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch { /* ignore */ }
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Unauthorized' };
+
+  // 1. Get profile and validate points
+  const { data: profile } = await supabaseAdmin.from('profiles').select('total_points').eq('id', user.id).single();
+  const costInXp = priceInSkillPoints * 10;
+
+  if (!profile || (profile.total_points || 0) < costInXp) {
+    return { success: false, error: 'Insufficient points' };
+  }
+
+  // 2. Deduct points
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .update({ total_points: (profile.total_points || 0) - costInXp })
+    .eq('id', user.id);
+
+  if (profileError) return { success: false, error: profileError.message };
+
+  // 3. Add to user_resources
+  const { error: resError } = await supabaseAdmin
+    .from('user_resources')
+    .insert({ user_id: user.id, resource_id: resourceId });
+
+  if (resError) return { success: false, error: resError.message };
+
+  return { success: true };
 }
 
 export async function purchaseShopItemAction(itemId: string, priceInSkillPoints: number) {
@@ -990,6 +1063,32 @@ export async function getUnreadCountsAction(adminId: string) {
   });
 
   return { success: true, data: counts };
+}
+
+export async function getWellnessStoriesAction() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceRoleKey) return { success: false, error: 'Missing environment variables' };
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+  const { data, error } = await supabaseAdmin
+    .from('wellness_stories')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+     // Fallback to defaults if table doesn't exist yet or other error
+     return {
+        success: true,
+        data: [
+           { title: "The Persistent Programmer", body: "Ada spent 48 hours debugging a single semicolon. When she finally found it, she didn't just fix the bug; she optimized the entire algorithm. Persistence is the key to mastery." },
+           { title: "The Flow State", body: "Focus is not about doing more; it's about doing one thing with your whole heart. When you lose track of time, you've found your flow." },
+           { title: "Rest to Recharge", body: "A rested mind is 10x more productive than a tired one. Taking 15 minutes to breathe is an investment, not a distraction." }
+        ]
+     };
+  }
+
+  return { success: true, data };
 }
 
 export async function deleteCurriculumItemAction(id: string) {

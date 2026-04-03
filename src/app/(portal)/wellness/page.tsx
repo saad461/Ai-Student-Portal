@@ -41,6 +41,18 @@ export default function WellnessPage() {
   const [timer, setTimer] = useState(0);
   const [activeMode, setActiveMode] = useState<'relax' | 'game' | 'stories'>('relax');
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
+  const [stories, setStories] = useState<{ title: string; body: string }[]>([]);
+
+  useEffect(() => {
+    const fetchStories = async () => {
+       const { getWellnessStoriesAction } = await import('@/app/admin/actions');
+       const res = await getWellnessStoriesAction();
+       if (res.success && res.data) {
+          setStories(res.data as { title: string; body: string }[]);
+       }
+    };
+    fetchStories();
+  }, []);
 
   useEffect(() => {
     if (breathingStatus === 'idle') return;
@@ -64,12 +76,6 @@ export default function WellnessPage() {
     setBreathingStatus('inhale');
     setTimer(0);
   };
-
-  const stories = [
-    { title: "The Persistent Programmer", body: "Ada spent 48 hours debugging a single semicolon. When she finally found it, she didn't just fix the bug; she optimized the entire algorithm. Persistence is the key to mastery." },
-    { title: "The Flow State", body: "Focus is not about doing more; it's about doing one thing with your whole heart. When you lose track of time, you've found your flow." },
-    { title: "Rest to Recharge", body: "A rested mind is 10x more productive than a tired one. Taking 15 minutes to breathe is an investment, not a distraction." }
-  ];
 
   return (
     <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-1000 w-full overflow-x-hidden">

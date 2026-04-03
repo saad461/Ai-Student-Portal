@@ -38,6 +38,7 @@ export default function CareerPage() {
   const { error: toastError } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+  const [bossProjectsCount, setBossProjectsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -47,27 +48,26 @@ export default function CareerPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      try {
-        const res = await fetch('/api/jobs');
-        if (!res.ok) {
-          throw new Error(`API Error: ${res.status}`);
-        }
-        const jobsData = await res.json();
-        setJobs(jobsData);
-      } catch (error) {
-        console.error("Failed to fetch jobs", error);
-        toastError("AI Job Market is currently offline. Showing cached results.");
+      const [jobsRes, profileRes, submissionsRes, bossItemsRes] = await Promise.all([
+        fetch('/api/jobs').then(r => r.ok ? r.json() : []),
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('submissions').select('curriculum_id').eq('student_id', user.id).eq('status', 'reviewed'),
+        supabase.from('curriculum').select('id').eq('type', 'final_project')
+      ]);
+
+      setJobs(jobsRes);
+      setProfile(profileRes.data as Record<string, unknown>);
+
+      // Filter boss projects from submissions
+      if (submissionsRes.data && bossItemsRes.data) {
+        const bossIds = bossItemsRes.data.map(b => b.id);
+        const count = submissionsRes.data.filter(s => bossIds.includes(s.curriculum_id)).length;
+        setBossProjectsCount(count);
       }
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      setProfile(profileData as Record<string, unknown>);
-    } catch {
-      // ignore
+    } catch (error) {
+      console.error("Fetch data error:", error);
+      toastError("Failed to fetch career data.");
     } finally {
       setLoading(false);
     }
@@ -124,18 +124,31 @@ export default function CareerPage() {
                  <div className="space-y-4">
                     <div className="flex justify-between items-center">
                        <span className="text-sm font-bold">Portfolio Status</span>
-                       <Badge className="bg-green-600 font-black">READY</Badge>
+                       <Badge className={cn("font-black", bossProjectsCount > 0 ? "bg-green-600" : "bg-amber-600")}>
+                          {bossProjectsCount > 0 ? 'READY' : 'INCOMPLETE'}
+                       </Badge>
                     </div>
-                    <div className="flex justify-between items-center opacity-50">
+                    <div className="flex justify-between items-center">
                        <span className="text-sm font-bold">Interview Prep</span>
-                       <Badge variant="secondary" className="font-black">20%</Badge>
+                       <Badge variant="secondary" className="font-black">
+                          {Math.min(100, Math.round((currentLevel / 10) * 100))}%
+                       </Badge>
                     </div>
-                    <div className="flex justify-between items-center opacity-50">
+                    <div className="flex justify-between items-center">
                        <span className="text-sm font-bold">Github Mastery</span>
-                       <Badge variant="secondary" className="font-black">OFFLINE</Badge>
+                       <Badge variant="secondary" className="font-black uppercase">
+                          {profile?.is_pro ? 'UNLOCKED' : 'LOCKED'}
+                       </Badge>
                     </div>
                  </div>
-                 <Button className="w-full h-12 rounded-xl font-black uppercase tracking-tighter" variant="outline">Update Resume</Button>
+                 <Button
+                   className="w-full h-12 rounded-xl font-black uppercase tracking-tighter"
+                   variant="outline"
+                   disabled={!profile?.github_link}
+                   onClick={() => window.open(profile?.github_link as string || '#', '_blank')}
+                 >
+                   {profile?.github_link ? 'Update Resume' : 'GitHub Link Required'}
+                 </Button>
               </CardContent>
            </Card>
 

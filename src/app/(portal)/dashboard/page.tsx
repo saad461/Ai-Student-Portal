@@ -117,6 +117,7 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // First, get the profile to know the current_course_id
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -127,77 +128,48 @@ export default function DashboardPage() {
       setProfile(profileData as unknown as Profile);
 
       const today = new Date().toLocaleDateString('en-CA');
-      const { data: attendance } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('student_id', user.id)
-        .eq('date', today);
 
-      setHasPunchedInToday(!!(attendance && attendance.length > 0));
+      // Run all other queries concurrently
+      const [
+        attendanceRes,
+        allAttendanceRes,
+        rewardsRes,
+        perksRes,
+        subsRes,
+        tasksRes,
+        modulesRes,
+        focusRes
+      ] = await Promise.all([
+        supabase.from('attendance').select('*').eq('student_id', user.id).eq('date', today),
+        supabase.from('attendance').select('*').eq('student_id', user.id).order('date', { ascending: false }).limit(7),
+        supabase.from('reward_log').select('*').eq('student_id', user.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('user_perks').select('*').eq('user_id', user.id),
+        supabase.from('submissions').select('*').eq('student_id', user.id),
+        supabase.from('extra_tasks').select('*').eq('student_id', user.id),
+        supabase.from('modules').select('index').eq('course_id', profileData.current_course_id).order('index', { ascending: true }),
+        supabase.from('focus_sessions').select('duration_seconds').eq('student_id', user.id)
+      ]);
 
-      const { data: allAttendance } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('student_id', user.id)
-        .order('date', { ascending: false })
-        .limit(7);
+      setHasPunchedInToday(!!(attendanceRes.data && attendanceRes.data.length > 0));
+      setRecentAttendance(allAttendanceRes.data || []);
+      setRewardHistory(rewardsRes.data || []);
+      setUserPerks(perksRes.data || []);
+      setSubmissions((subsRes.data as unknown as Submission[]) || []);
+      setExtraTasks((tasksRes.data as unknown as ExtraTask[]) || []);
 
-      setRecentAttendance(allAttendance || []);
-
-      const { data: rewards } = await supabase
-        .from('reward_log')
-        .select('*')
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      setRewardHistory(rewards || []);
-
-      const { data: perks } = await supabase
-        .from('user_perks')
-        .select('*')
-        .eq('user_id', user.id);
-      setUserPerks(perks || []);
-
-      const { data: subs } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('student_id', user.id);
-
-      setSubmissions((subs as unknown as Submission[]) || []);
-
-      const { data: tasks } = await supabase
-        .from('extra_tasks')
-        .select('*')
-        .eq('student_id', user.id);
-
-      setExtraTasks((tasks as unknown as ExtraTask[]) || []);
-
-      const { data: modulesData } = await supabase
-        .from('modules')
-        .select('index')
-        .eq('course_id', profileData.current_course_id)
-        .order('index', { ascending: true });
-
-      const moduleIndices = (modulesData || []).map(m => m.index);
-
+      const moduleIndices = (modulesRes.data || []).map(m => m.index);
       const { data: curriculumData } = await supabase
         .from('curriculum')
         .select('*')
         .in('week', moduleIndices);
-
       setCurriculum((curriculumData as unknown as CurriculumItem[]) || []);
 
-      const { data: focusData } = await supabase
-        .from('focus_sessions')
-        .select('duration_seconds')
-        .eq('student_id', user.id);
-
-      if (focusData) {
-        const totalSeconds = focusData.reduce((acc, curr) => acc + curr.duration_seconds, 0);
+      if (focusRes.data) {
+        const totalSeconds = focusRes.data.reduce((acc, curr) => acc + curr.duration_seconds, 0);
         setTotalFocusMinutes(Math.round(totalSeconds / 60));
       }
 
-      if (profileData && !profileData.is_pro && subs && subs.length >= 5) {
+      if (profileData && !profileData.is_pro && subsRes.data && subsRes.data.length >= 5) {
         await supabase.from('profiles').update({ is_pro: true }).eq('id', user.id);
         setTheme('pro');
         setProfile(prev => prev ? { ...prev, is_pro: true } : null);
@@ -278,7 +250,10 @@ export default function DashboardPage() {
   };
 
   const handleSkip = async (itemId: string) => {
-    if (skipPin !== '7323') {
+    const { verifySkipPinAction } = await import('@/app/admin/actions');
+    const isValid = await verifySkipPinAction(skipPin);
+
+    if (!isValid) {
       toastError('Invalid PIN');
       return;
     }
