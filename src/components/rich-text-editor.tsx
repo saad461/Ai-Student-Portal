@@ -776,7 +776,8 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
           setIsCalloutModalOpen(true);
         }}
         onAddCollapsible={() => {
-          (editor as unknown as { commands: { setCollapsible: () => void } }).commands.setCollapsible();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (editor as any)?.chain().focus().setCollapsible().run();
         }}
       />
 
