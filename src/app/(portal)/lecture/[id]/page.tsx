@@ -527,6 +527,11 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
     thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-slate-50 dark:bg-slate-800/50">{children}</thead>,
     th: ({ children }: { children?: React.ReactNode }) => <th className="p-4 border-b font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">{children}</th>,
     td: ({ children }: { children?: React.ReactNode }) => <td className="p-4 border-b text-slate-500 dark:text-slate-400 text-sm md:text-base font-normal">{children}</td>,
+    kbd: ({ children }: { children?: React.ReactNode }) => (
+      <kbd className="px-1.5 py-0.5 rounded-md border border-b-2 border-slate-200 bg-slate-100 font-mono text-[0.8em] font-bold text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 mx-0.5">
+        {children}
+      </kbd>
+    ),
     div: CalloutRenderer
   };
 

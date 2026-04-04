@@ -115,6 +115,16 @@ import { Typography } from '@tiptap/extension-typography';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
+
+// Define explicit types for Markdown configuration to enable HTML tag preservation
+interface MarkdownOptions {
+  html?: boolean;
+  tightLists?: boolean;
+  tightListNodes?: string[];
+  bulletListMarker?: string;
+  linkify?: boolean;
+  breaks?: boolean;
+}
 import {
   Bold,
   Italic,
@@ -143,7 +153,8 @@ import {
   AlignJustify,
   Table as TableIcon,
   Upload,
-  Zap
+  Zap,
+  Keyboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,6 +165,7 @@ import { useToast } from '@/components/ui/toast-provider';
 import { useConfirmation } from '@/components/ui/confirmation-provider';
 import { CalloutExtension } from './tiptap-callout';
 import { CollapsibleExtension, CollapsibleTitle, CollapsibleContent } from './tiptap-collapsible';
+import { Kbd } from './tiptap-kbd';
 import {
   Dialog,
   DialogContent,
@@ -259,7 +271,10 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
           <Input
             type="color"
             className="w-8 h-8 p-0 border-none bg-transparent cursor-pointer z-10 opacity-0"
-            onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
+            onChange={(e) => {
+              const color = (e.target as HTMLInputElement).value;
+              editor.chain().focus().setColor(color).run();
+            }}
             title="Text Color"
           />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -275,7 +290,10 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
           <Input
             type="color"
             className="w-8 h-8 p-0 border-none bg-transparent cursor-pointer z-10 opacity-0"
-            onInput={(e) => editor.chain().focus().setHighlight({ color: (e.target as HTMLInputElement).value }).run()}
+            onChange={(e) => {
+              const color = (e.target as HTMLInputElement).value;
+              editor.chain().focus().setHighlight({ color }).run();
+            }}
             title="Highlight Color"
           />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -484,6 +502,16 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
       {/* Media & Links */}
       <div className="flex gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onClick={() => (editor as any).chain().focus().toggleKbd().run()}
+          className={cn(editor.isActive('kbd') && 'bg-slate-200 dark:bg-slate-800')}
+          title="Keyboard Key (kbd)"
+        >
+          <Keyboard className="h-4 w-4" />
+        </Button>
         <div className="flex gap-1">
           <Button
             variant="ghost"
@@ -653,7 +681,9 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
       TaskItem.configure({
         nested: true,
       }),
-      Markdown,
+      Markdown.configure({
+        html: true,
+      } as MarkdownOptions),
       BubbleMenuExtension.configure({
         pluginKey: 'bubbleMenu',
       }),
@@ -667,6 +697,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
       CollapsibleExtension,
       CollapsibleTitle,
       CollapsibleContent,
+      Kbd,
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -894,7 +925,10 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
               <Input
                 type="color"
                 className="absolute inset-0 w-full h-full p-0 border-none bg-transparent cursor-pointer z-10 opacity-0"
-                onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
+                onChange={(e) => {
+                  const color = (e.target as HTMLInputElement).value;
+                  editor.chain().focus().setColor(color).run();
+                }}
               />
               <div className="flex items-center justify-center w-full h-full pointer-events-none">
                 <Baseline className="h-4 w-4" />
