@@ -60,7 +60,9 @@ export function AttendanceTracker() {
   }, []);
 
   useEffect(() => {
-    if (!userId || isMarked) return;
+    const day = new Date().getDay();
+    const isWeekend = day === 0 || day === 6;
+    if (!userId || isMarked || isWeekend) return;
 
     const today = new Date().toLocaleDateString('en-CA');
     const storageKey = `attendance_time_${userId}_${today}`;
