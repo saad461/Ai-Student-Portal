@@ -32,8 +32,24 @@ export const CollapsibleExtension = Node.create({
         return commands.insertContent({
           type: this.name,
           content: [
-            { type: 'collapsibleTitle', content: [{ type: 'text', text: 'New Collapsible Section', marks: [{ type: 'bold' }] }] },
-            { type: 'collapsibleContent', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Add your collapsible content here...' }] }] },
+            {
+              type: 'collapsibleTitle',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'New Collapsible Section', marks: [{ type: 'bold' }] }]
+                }
+              ]
+            },
+            {
+              type: 'collapsibleContent',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'Add your collapsible content here...' }]
+                }
+              ]
+            },
           ],
         })
       },
@@ -56,9 +72,9 @@ export const CollapsibleExtension = Node.create({
 // --- Collapsible Title Node ---
 export const CollapsibleTitle = Node.create({
   name: 'collapsibleTitle',
-  content: 'inline*',
+  content: 'block+',
   selectable: false,
-  marks: 'bold', // Encourage/default to bold
+  marks: '_', // Allow all marks
 
   parseHTML() {
     return [{ tag: 'div[data-type="collapsible-title"]' }];
@@ -72,9 +88,9 @@ export const CollapsibleTitle = Node.create({
     return ReactNodeViewRenderer(() => {
       return (
         <div className="flex items-center gap-3 p-4 bg-slate-100/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-          <Zap className="h-4 w-4 text-black fill-black shrink-0" />
+          <Zap className="h-4 w-4 text-primary fill-primary shrink-0" />
           <div className="flex-1 font-bold">
-            <NodeViewContent className="inline" />
+            <NodeViewContent />
           </div>
           <ChevronRight className="h-4 w-4 text-slate-400 rotate-90" />
         </div>
