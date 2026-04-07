@@ -94,6 +94,9 @@ function CurriculumContent() {
 
           if (userCourses && userCourses.length > 0) {
             targetCourseId = userCourses[0].course_id;
+          } else {
+            // Absolute fallback for existing students
+            targetCourseId = '686f743f-0978-44c4-9588-a01256d8ee27';
           }
         }
       }
