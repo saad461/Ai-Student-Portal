@@ -34,9 +34,16 @@ export default function CoursesPage() {
 
         const merged = (coursesData as Course[] || []).map(course => {
           const access = userCourses?.find(uc => uc.course_id === course.id);
+          let status = (access ? access.status : 'locked') as 'locked' | 'unlocked' | 'completed';
+
+          // Auto-unlock first course (index 1) for all students
+          if (course.index === 1 && status === 'locked') {
+            status = 'unlocked';
+          }
+
           return {
             ...course,
-            status: (access ? access.status : 'locked') as 'locked' | 'unlocked' | 'completed'
+            status: status
           };
         });
 

@@ -215,6 +215,9 @@ export async function reviewSubmissionAction(
         sub.student_id
       );
     }
+
+    // 4. Check for course completion
+    await checkAndUnlockNextCourse(sub.student_id);
   }
 
   return { success: !error, data: data?.[0], error };
@@ -281,7 +284,102 @@ export async function saveAIReviewAction(
     );
   }
 
+  // 3. Auto-unlock logic
+  await checkAndUnlockNextCourse(user.id);
+
   return { success: true, data: subData?.[0] };
+}
+
+async function checkAndUnlockNextCourse(userId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole);
+
+  try {
+    // 1. Get current course and user_courses data
+    const { data: profile } = await supabaseAdmin.from('profiles').select('current_course_id').eq('id', userId).single();
+    if (!profile?.current_course_id) return;
+
+    const { data: userCourseStatus } = await supabaseAdmin
+      .from('user_courses')
+      .select('status')
+      .eq('user_id', userId)
+      .eq('course_id', profile.current_course_id)
+      .single();
+
+    // If already marked as completed, don't re-run to avoid notification spam
+    if (userCourseStatus?.status === 'completed') return;
+
+    // 2. Get all curriculum for this course
+    const { data: courseCurriculum } = await supabaseAdmin.from('curriculum').select('id').eq('course_id', profile.current_course_id);
+    if (!courseCurriculum || courseCurriculum.length === 0) return;
+
+    // 3. Get student submissions for these items
+    const curriculumIds = courseCurriculum.map(c => c.id);
+    const { data: submissions } = await supabaseAdmin
+      .from('submissions')
+      .select('curriculum_id, status')
+      .eq('student_id', userId)
+      .in('curriculum_id', curriculumIds);
+
+    // Requirement: A course is only complete when all items are either 'reviewed' or 'skipped' (academic rigor)
+    const completedIds = (submissions || [])
+      .filter(s => s.status === 'reviewed' || s.status === 'skipped')
+      .map(s => s.curriculum_id);
+
+    // 4. Check if all items are completed
+    const isCourseComplete = curriculumIds.every(id => completedIds.includes(id));
+
+    if (isCourseComplete) {
+      // Mark current course as completed
+      await supabaseAdmin.from('user_courses').upsert({
+        user_id: userId,
+        course_id: profile.current_course_id,
+        status: 'completed'
+      });
+
+      // Find next course by index
+      const { data: currentCourse } = await supabaseAdmin.from('courses').select('index').eq('id', profile.current_course_id).single();
+      if (currentCourse) {
+        const { data: nextCourse } = await supabaseAdmin
+          .from('courses')
+          .select('id, name')
+          .eq('index', currentCourse.index + 1)
+          .single();
+
+        if (nextCourse) {
+          // Check if next course is already unlocked
+          const { data: nextCourseStatus } = await supabaseAdmin
+            .from('user_courses')
+            .select('status')
+            .eq('user_id', userId)
+            .eq('course_id', nextCourse.id)
+            .single();
+
+          if (nextCourseStatus?.status !== 'unlocked' && nextCourseStatus?.status !== 'completed') {
+            // Unlock next course
+            await supabaseAdmin.from('user_courses').upsert({
+              user_id: userId,
+              course_id: nextCourse.id,
+              status: 'unlocked'
+            });
+
+            // Also update profile's current_course_id to the new one
+            await supabaseAdmin.from('profiles').update({ current_course_id: nextCourse.id }).eq('id', userId);
+
+            await createNotificationAction(
+              userId,
+              'New Course Unlocked!',
+              `Congratulations! You have completed your current course and unlocked ${nextCourse.name}.`,
+              'success'
+            );
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error in checkAndUnlockNextCourse:', err);
+  }
 }
 
 export async function deleteModuleAction(id: string) {
