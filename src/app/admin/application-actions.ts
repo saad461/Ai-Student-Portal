@@ -94,7 +94,20 @@ export async function approveApplication(applicationId: string) {
       throw profileError;
     }
 
-    // 5. Update Application Status & link student ID
+    // 5. Automatically unlock the first course
+    const { error: courseError } = await supabaseAdmin.from('user_courses').upsert({
+      user_id: userId,
+      course_id: '686f743f-0978-44c4-9588-a01256d8ee27',
+      status: 'unlocked'
+    });
+
+    if (courseError) {
+      console.warn('Failed to auto-unlock course for student:', courseError);
+      // We don't throw here to avoid failing the whole approval process
+      // The student can still be fixed manually or via the UI fallback
+    }
+
+    // 6. Update Application Status & link student ID
     const { error: updateError } = await supabaseAdmin
       .from('applications')
       .update({
