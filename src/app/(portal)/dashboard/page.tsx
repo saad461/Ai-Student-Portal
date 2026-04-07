@@ -134,6 +134,13 @@ export default function DashboardPage() {
       const today = new Date().toLocaleDateString('en-CA');
 
       // Run all other queries concurrently
+      const activeCourseId = profileData.current_course_id || '686f743f-0978-44c4-9588-a01256d8ee27';
+
+      // Update current course in profile if missing
+      if (!profileData.current_course_id) {
+        await supabase.from('profiles').update({ current_course_id: activeCourseId }).eq('id', user.id);
+      }
+
       const [
         attendanceRes,
         allAttendanceRes,
@@ -152,7 +159,7 @@ export default function DashboardPage() {
         supabase.from('user_perks').select('*').eq('user_id', user.id),
         supabase.from('submissions').select('*').eq('student_id', user.id),
         supabase.from('extra_tasks').select('*').eq('student_id', user.id),
-        supabase.from('modules').select('index').eq('course_id', profileData.current_course_id).order('index', { ascending: true }),
+        supabase.from('modules').select('index').eq('course_id', activeCourseId).order('index', { ascending: true }),
         supabase.from('focus_sessions').select('duration_seconds').eq('student_id', user.id),
         supabase.from('reward_log').select('id').eq('student_id', user.id).eq('source_type', 'daily_bounty').gte('created_at', today),
         supabase.from('student_activity').select('id').eq('student_id', user.id).eq('activity_type', 'wellness_story_read').gte('created_at', today)
