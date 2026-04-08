@@ -221,7 +221,7 @@
     @apply list-decimal list-outside pl-6;
   }
   .prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-    @apply border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 my-6 p-4 rounded-lg overflow-x-auto font-mono text-sm;
+    @apply border border-slate-800 bg-slate-950 my-6 p-6 rounded-2xl overflow-x-auto font-mono text-sm shadow-2xl text-slate-300;
   }
 
   /* Tiptap Task List Styles */
