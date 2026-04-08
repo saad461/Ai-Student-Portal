@@ -30,7 +30,8 @@ import {
   AlertTriangle,
   Info,
   HelpCircle,
-  XCircle
+  XCircle,
+  Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
@@ -46,6 +47,66 @@ import { RichTextEditor } from '@/components/rich-text-editor';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+const CodeBlock = ({ language, value }: { language?: string; value: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative my-8 group shadow-2xl rounded-2xl overflow-hidden border border-slate-800 bg-[#1e293b]">
+      <div className="absolute top-3 right-3 z-10">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopy}
+          className="h-7 px-2 text-[10px] font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-md transition-all"
+        >
+          {copied ? (
+            <><CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> Copied</>
+          ) : (
+            <><Copy className="h-3 w-3 mr-1" /> Copy</>
+          )}
+        </Button>
+      </div>
+
+      <SyntaxHighlighter
+        language={language || 'bash'}
+        style={oneDark}
+        showLineNumbers={true}
+        lineNumberStyle={{
+          minWidth: '2.5em',
+          paddingRight: '1em',
+          color: '#64748b',
+          textAlign: 'right',
+          borderRight: '1px solid #334155',
+          marginRight: '1em',
+          userSelect: 'none'
+        }}
+        customStyle={{
+          margin: 0,
+          padding: '1.5rem',
+          fontSize: '0.875rem',
+          lineHeight: '1.5',
+          background: 'transparent',
+        }}
+        codeTagProps={{
+          style: {
+            fontFamily: 'var(--font-geist-mono), monospace',
+          }
+        }}
+      >
+        {value.trim()}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
 
 const CollapsibleSection = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -498,16 +559,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         {children}
       </a>
     ),
-    code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) => (
-      inline
-        ? <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">{children}</code>
-        : <div className="relative my-8 group">
-            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-            <pre className="relative bg-slate-900 text-slate-50 p-6 rounded-xl overflow-x-auto font-mono text-sm border border-slate-800 shadow-2xl">
-              <code>{children}</code>
-            </pre>
-          </div>
-    ),
+    code: ({ inline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      const language = match ? match[1] : 'bash';
+      const content = String(children).replace(/\n$/, '');
+
+      if (inline) {
+        return <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">{children}</code>;
+      }
+
+      return <CodeBlock language={language} value={content} />;
+    },
     blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className="border-l-8 border-primary bg-primary/5 p-6 rounded-r-2xl italic my-8 text-xl text-slate-700 dark:text-slate-300 font-medium shadow-inner">
         {children}
