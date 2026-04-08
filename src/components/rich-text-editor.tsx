@@ -987,6 +987,22 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
 
           <BubbleMenu
             editor={editor}
+            pluginKey="collapsibleBubbleMenu"
+            shouldShow={({ editor }) => editor.isActive('collapsible')}
+            className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-1 gap-0.5 z-[9999]"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-[10px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+              onClick={() => editor.chain().focus().deleteNode('collapsible').run()}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Collapsible Section
+            </Button>
+          </BubbleMenu>
+
+          <BubbleMenu
+            editor={editor}
             pluginKey="tableBubbleMenu"
             shouldShow={({ editor }) => editor.isActive('table')}
             className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-1 gap-0.5 z-[9999]"
