@@ -73,6 +73,31 @@ export const CalloutExtension = Node.create({
           icon: (element as HTMLElement).getAttribute('data-icon'),
         }),
       },
+      {
+        tag: 'div.lesson-note',
+        getAttrs: (element) => {
+          const el = element as HTMLElement;
+          let color = 'blue';
+          let icon = 'info';
+
+          if (el.classList.contains('lesson-note--tip')) {
+            color = 'green';
+            icon = 'success';
+          } else if (el.classList.contains('lesson-note--warning')) {
+            color = 'orange';
+            icon = 'warning';
+          } else if (el.classList.contains('lesson-note--error')) {
+            color = 'red';
+            icon = 'error';
+          }
+
+          return {
+            title: el.querySelector('h3, h4')?.textContent?.trim() || 'Note',
+            color,
+            icon,
+          };
+        },
+      },
     ];
   },
 

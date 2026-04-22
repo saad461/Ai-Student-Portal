@@ -20,7 +20,10 @@ export const CollapsibleExtension = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-type="collapsible"]' }];
+    return [
+      { tag: 'div[data-type="collapsible"]' },
+      { tag: 'details' }
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -93,7 +96,10 @@ export const CollapsibleTitle = Node.create({
   marks: '_', // Allow all marks
 
   parseHTML() {
-    return [{ tag: 'div[data-type="collapsible-title"]' }];
+    return [
+      { tag: 'div[data-type="collapsible-title"]' },
+      { tag: 'summary' }
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -127,7 +133,13 @@ export const CollapsibleContent = Node.create({
   isolating: true,
 
   parseHTML() {
-    return [{ tag: 'div[data-type="collapsible-content"]' }];
+    return [
+      { tag: 'div[data-type="collapsible-content"]' },
+      {
+        tag: 'details > *:not(summary)',
+        priority: 51,
+      }
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {
