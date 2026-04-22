@@ -19,50 +19,155 @@ import { Color } from '@tiptap/extension-color';
 import { Extension, InputRule } from '@tiptap/core';
 import { Plugin } from 'prosemirror-state';
 
-// Custom WordReplacer extension to replace "Odin" with "daurix"
-const WordReplacer = Extension.create({
-  name: 'wordReplacer',
+const PasteProcessor = Extension.create({
+  name: 'pasteProcessor',
   addProseMirrorPlugins() {
     return [
       new Plugin({
         props: {
-          transformPastedText(text) {
-            return text.replace(/\bodin\b/gi, 'daurix');
-          },
           transformPastedHTML(html) {
             if (typeof window === 'undefined') return html;
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
-            const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-            let node;
-            while ((node = walker.nextNode())) {
-              if (node.textContent) {
-                node.textContent = node.textContent.replace(/\bodin\b/gi, 'daurix');
+
+            // 1. Identify Assignment panels and convert to callout cards
+            const panels = doc.querySelectorAll('.lesson-content__panel, section[data-title="assignment"]');
+            panels.forEach(panel => {
+              const callout = document.createElement('div');
+              callout.setAttribute('data-type', 'callout');
+              callout.setAttribute('data-title', 'Assignment');
+              callout.setAttribute('data-color', 'green');
+              callout.setAttribute('data-icon', 'success');
+
+              // Move content to callout
+              const content = document.createElement('div');
+              content.innerHTML = panel.innerHTML;
+              // Remove the heading if it's already in the content to avoid duplication with the title attribute
+              const heading = content.querySelector('h3, h4');
+              if (heading && (heading.textContent?.toLowerCase().includes('assignment'))) {
+                heading.remove();
               }
+
+              callout.appendChild(content);
+              panel.replaceWith(callout);
+            });
+
+            // 2. Map TOP icons/bullets to callouts
+            // If a paragraph starts with an icon or emoji common in TOP, convert it
+            const paragraphs = doc.querySelectorAll('p');
+            paragraphs.forEach(p => {
+              const text = p.textContent?.trim() || '';
+              // Detect common TOP "icons" or prefixes
+              // TOP often uses <strong>NOTE:</strong> or similar
+              const strong = p.querySelector('strong');
+              if (strong && (strong.textContent?.toUpperCase().includes('NOTE') || strong.textContent?.includes('⚠️'))) {
+                const callout = document.createElement('div');
+                callout.setAttribute('data-type', 'callout');
+                callout.setAttribute('data-title', strong.textContent.replace(':', '').trim());
+                callout.setAttribute('data-color', 'orange');
+                callout.setAttribute('data-icon', 'warning');
+                const content = document.createElement('div');
+                content.innerHTML = p.innerHTML;
+                content.querySelector('strong')?.remove();
+                callout.appendChild(content);
+                p.replaceWith(callout);
+              }
+            });
+
+            // 3. Preserve colors. TOP often uses Tailwind classes or specific highlighted classes.
+            // We will convert common coloring patterns to inline styles so Tiptap's Color extension picks them up.
+            const allElements = doc.querySelectorAll('*');
+            allElements.forEach(el => {
+              const element = el as HTMLElement;
+
+              // Map common TOP/Tailwind color classes to inline styles
+              const colorMap: Record<string, string> = {
+                'text-rose-600': '#e11d48',
+                'text-red-600': '#dc2626',
+                'text-blue-600': '#2563eb',
+                'text-green-600': '#16a34a',
+                'text-orange-600': '#ea580c',
+                'text-purple-600': '#9333ea',
+                'hljs-keyword': '#e11d48',
+                'hljs-string': '#16a34a',
+                'hljs-comment': '#64748b',
+                'hljs-number': '#ea580c',
+                'hljs-function': '#2563eb',
+              };
+
+              Object.entries(colorMap).forEach(([className, colorValue]) => {
+                if (element.classList.contains(className)) {
+                  element.style.color = colorValue;
+                }
+              });
+
+              // Special case: TOP inline code (usually rose-600 in their curriculum)
+              if (element.tagName === 'CODE' && !element.closest('pre')) {
+                if (!element.style.color) {
+                  element.style.color = '#e11d48';
+                }
+              }
+
+              // Also check for standard color classes in case they are variations
+              element.classList.forEach(cls => {
+                if (cls.startsWith('text-rose-')) element.style.color = '#e11d48';
+                if (cls.startsWith('text-red-')) element.style.color = '#dc2626';
+              });
+            });
+
+            // 4. Handle Knowledge Check (map to collapsibles if they are questions)
+            const knowledgeCheck = doc.querySelector('section[data-title="knowledge-check"]');
+            if (knowledgeCheck) {
+              const listItems = knowledgeCheck.querySelectorAll('li');
+              listItems.forEach(li => {
+                const collapsible = document.createElement('div');
+                collapsible.setAttribute('data-type', 'collapsible');
+
+                const title = document.createElement('div');
+                title.setAttribute('data-type', 'collapsible-title');
+                title.innerHTML = `<strong>Question: ${li.innerHTML}</strong>`;
+
+                const content = document.createElement('div');
+                content.setAttribute('data-type', 'collapsible-content');
+                content.innerHTML = '<p>Click to see answer reference above.</p>';
+
+                collapsible.appendChild(title);
+                collapsible.appendChild(content);
+                li.replaceWith(collapsible);
+              });
             }
+
+            // 5. Refine <details> structure for Tiptap
+            // We convert native <details> to our custom collapsible structure here to ensure
+            // all children are properly wrapped in a single collapsible-content block.
+            const detailsElements = doc.querySelectorAll('details');
+            detailsElements.forEach(details => {
+              const summary = details.querySelector('summary');
+              // Collect all nodes that are not the summary
+              const contentNodes = Array.from(details.childNodes).filter(node => node !== summary);
+
+              const collapsible = document.createElement('div');
+              collapsible.setAttribute('data-type', 'collapsible');
+
+              const title = document.createElement('div');
+              title.setAttribute('data-type', 'collapsible-title');
+              title.innerHTML = summary?.innerHTML || 'Click to expand';
+              collapsible.appendChild(title);
+
+              const content = document.createElement('div');
+              content.setAttribute('data-type', 'collapsible-content');
+              contentNodes.forEach(node => content.appendChild(node.cloneNode(true)));
+              collapsible.appendChild(content);
+
+              details.replaceWith(collapsible);
+            });
+
+            // 6. Strip "Edit on GitHub", "Report issue" etc. (Lesson Footer)
+            const footerStuff = doc.querySelectorAll('.pt-10.flex.justify-between, .lesson-content__footer, aside, .button--secondary, [data-test-id="sign_in_button"]');
+            footerStuff.forEach(el => el.remove());
+
             return doc.body.innerHTML;
           },
-        },
-      }),
-    ];
-  },
-  addInputRules() {
-    return [
-      // Replaces "odin" with "daurix" when followed by a space or punctuation
-      new InputRule({
-        find: /\bodin([\s\.,!?;:])$/i,
-        handler: ({ state, range, match }) => {
-          const { tr } = state;
-          const punctuation = match[1];
-          tr.replaceWith(range.from, range.to, state.schema.text(`daurix${punctuation}`));
-        },
-      }),
-      // Also catch "odin" if it's the end of a line/block
-      new InputRule({
-        find: /\bodin$/i,
-        handler: ({ state, range }) => {
-          const { tr } = state;
-          tr.replaceWith(range.from, range.to, state.schema.text('daurix'));
         },
       }),
     ];
@@ -648,7 +753,7 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
     immediatelyRender: false,
     extensions: [
       StarterKit,
-      WordReplacer,
+      PasteProcessor,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
