@@ -1,4 +1,4 @@
-import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent, NodeViewProps } from '@tiptap/react';
+import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent, NodeViewProps, mergeAttributes } from '@tiptap/react';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import React, { useState, useMemo } from 'react';
 import { Copy, CheckCircle2 } from 'lucide-react';
@@ -97,14 +97,21 @@ const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
   );
 };
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const CommandBlock = CodeBlockLowlight.extend({
   name: 'commandBlock',
 
   addOptions() {
     return {
       ...this.parent?.(),
-      lowlight: null,
+      lowlight: null as any,
       defaultLanguage: 'bash',
+      languageClassPrefix: 'language-',
+      exitOnTripleEnter: true,
+      exitOnArrowDown: true,
+      enableTabIndentation: true,
+      tabSize: 2,
+      HTMLAttributes: {},
     }
   },
 
@@ -138,13 +145,17 @@ export const CommandBlock = CodeBlockLowlight.extend({
     ]
   },
 
+  addCommands() {
+    return {
+      toggleCommandBlock: () => ({ commands }: any) => {
+        return (commands as any).toggleNode(this.name);
+      },
+    } as any;
+  },
+
   addNodeView() {
     return ReactNodeViewRenderer(CommandBlockComponent);
   },
 }).configure({
-  lowlight: {},
+  lowlight: {} as any,
 });
-
-function mergeAttributes(...args: any[]) {
-    return args.reduce((acc, val) => ({ ...acc, ...val }), {});
-}

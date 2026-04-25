@@ -18,9 +18,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Extension } from '@tiptap/core';
 import { Plugin } from 'prosemirror-state';
-import { common, createLowlight } from 'lowlight';
-
-const lowlight = createLowlight(common);
+import { lowlight } from 'lowlight';
 
 const PasteProcessor = Extension.create({
   name: 'pasteProcessor',
@@ -257,7 +255,6 @@ import {
   Quote,
   Undo,
   Redo,
-  Code,
   Heading1,
   Heading2,
   Heading3,
@@ -603,7 +600,8 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => editor.chain().focus().toggleCommandBlock().run()}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onClick={() => (editor as any).chain().focus().toggleCommandBlock().run()}
           className={cn(editor.isActive('commandBlock') && 'bg-slate-200 dark:bg-slate-800')}
           title="Command Block (Terminal Style)"
         >
