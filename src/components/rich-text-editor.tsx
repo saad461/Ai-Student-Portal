@@ -16,8 +16,11 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { Underline } from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
-import { Extension, InputRule } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import { Plugin } from 'prosemirror-state';
+import { common, createLowlight } from 'lowlight';
+
+const lowlight = createLowlight(common);
 
 const PasteProcessor = Extension.create({
   name: 'pasteProcessor',
@@ -39,10 +42,8 @@ const PasteProcessor = Extension.create({
               callout.setAttribute('data-color', 'green');
               callout.setAttribute('data-icon', 'success');
 
-              // Move content to callout
               const content = document.createElement('div');
               content.innerHTML = panel.innerHTML;
-              // Remove the heading if it's already in the content to avoid duplication with the title attribute
               const heading = content.querySelector('h3, h4');
               if (heading && (heading.textContent?.toLowerCase().includes('assignment'))) {
                 heading.remove();
@@ -53,12 +54,8 @@ const PasteProcessor = Extension.create({
             });
 
             // 2. Map TOP icons/bullets to callouts
-            // If a paragraph starts with an icon or emoji common in TOP, convert it
             const paragraphs = doc.querySelectorAll('p');
             paragraphs.forEach(p => {
-              const text = p.textContent?.trim() || '';
-              // Detect common TOP "icons" or prefixes
-              // TOP often uses <strong>NOTE:</strong> or similar
               const strong = p.querySelector('strong');
               if (strong && (strong.textContent?.toUpperCase().includes('NOTE') || strong.textContent?.includes('⚠️'))) {
                 const callout = document.createElement('div');
@@ -74,13 +71,12 @@ const PasteProcessor = Extension.create({
               }
             });
 
-            // 3. Preserve colors. TOP often uses Tailwind classes or specific highlighted classes.
-            // We will convert common coloring patterns to inline styles so Tiptap's Color extension picks them up.
+            // 3. Preserve colors and identify code blocks
             const allElements = doc.querySelectorAll('*');
             allElements.forEach(el => {
               const element = el as HTMLElement;
 
-              // Map common TOP/Tailwind color classes to inline styles
+              // Color preservation logic
               const colorMap: Record<string, string> = {
                 'text-rose-600': '#e11d48',
                 'text-red-600': '#dc2626',
@@ -95,74 +91,91 @@ const PasteProcessor = Extension.create({
                 'hljs-function': '#2563eb',
               };
 
+              // Apply color from map if class exists
               Object.entries(colorMap).forEach(([className, colorValue]) => {
                 if (element.classList.contains(className)) {
                   element.style.color = colorValue;
                 }
               });
 
-              // Special case: TOP inline code (usually rose-600 in their curriculum)
+              // Apply Tailwind rose-x color variations
+              element.classList.forEach(cls => {
+                if (cls.startsWith('text-rose-')) element.style.color = '#e11d48';
+                if (cls.startsWith('text-red-')) element.style.color = '#dc2626';
+              });
+
+              // Special case: TOP inline code
               if (element.tagName === 'CODE' && !element.closest('pre')) {
                 if (!element.style.color) {
                   element.style.color = '#e11d48';
                 }
               }
 
-              // Also check for standard color classes in case they are variations
-              element.classList.forEach(cls => {
-                if (cls.startsWith('text-rose-')) element.style.color = '#e11d48';
-                if (cls.startsWith('text-red-')) element.style.color = '#dc2626';
-              });
+              // Auto-detection of Code/Command blocks
+              const isPre = element.tagName === 'PRE';
+              const hasCodeChild = element.querySelector('code');
+              const hasTerminalClass = element.classList.contains('terminal') ||
+                                     element.classList.contains('command-line') ||
+                                     element.classList.contains('hljs') ||
+                                     element.classList.contains('code-block');
+
+              if (isPre || (hasCodeChild && hasTerminalClass)) {
+                // We wrap it in a special div that our CommandBlock extension will recognize
+                const wrapper = document.createElement('div');
+                wrapper.setAttribute('data-type', 'commandBlock');
+                // Try to detect language
+                let lang = 'bash';
+                const codeEl = element.querySelector('code') || element;
+                const langMatch = codeEl.className.match(/language-(\w+)/) || codeEl.className.match(/hljs (\w+)/);
+                if (langMatch) lang = langMatch[1];
+
+                wrapper.setAttribute('data-language', lang);
+
+                // Use innerText for code to avoid double HTML parsing issues,
+                // but keep the original content if it was complex
+                wrapper.innerHTML = `<pre><code>${codeEl.innerHTML}</code></pre>`;
+                element.replaceWith(wrapper);
+              }
             });
 
-            // 4. Handle Knowledge Check (map to collapsibles if they are questions)
+            // 4. Handle Knowledge Check
             const knowledgeCheck = doc.querySelector('section[data-title="knowledge-check"]');
             if (knowledgeCheck) {
               const listItems = knowledgeCheck.querySelectorAll('li');
               listItems.forEach(li => {
                 const collapsible = document.createElement('div');
                 collapsible.setAttribute('data-type', 'collapsible');
-
                 const title = document.createElement('div');
                 title.setAttribute('data-type', 'collapsible-title');
                 title.innerHTML = `<strong>Question: ${li.innerHTML}</strong>`;
-
                 const content = document.createElement('div');
                 content.setAttribute('data-type', 'collapsible-content');
                 content.innerHTML = '<p>Click to see answer reference above.</p>';
-
                 collapsible.appendChild(title);
                 collapsible.appendChild(content);
                 li.replaceWith(collapsible);
               });
             }
 
-            // 5. Refine <details> structure for Tiptap
-            // We convert native <details> to our custom collapsible structure here to ensure
-            // all children are properly wrapped in a single collapsible-content block.
+            // 5. Refine <details> structure
             const detailsElements = doc.querySelectorAll('details');
             detailsElements.forEach(details => {
               const summary = details.querySelector('summary');
-              // Collect all nodes that are not the summary
               const contentNodes = Array.from(details.childNodes).filter(node => node !== summary);
-
               const collapsible = document.createElement('div');
               collapsible.setAttribute('data-type', 'collapsible');
-
               const title = document.createElement('div');
               title.setAttribute('data-type', 'collapsible-title');
               title.innerHTML = summary?.innerHTML || 'Click to expand';
               collapsible.appendChild(title);
-
               const content = document.createElement('div');
               content.setAttribute('data-type', 'collapsible-content');
               contentNodes.forEach(node => content.appendChild(node.cloneNode(true)));
               collapsible.appendChild(content);
-
               details.replaceWith(collapsible);
             });
 
-            // 6. Strip "Edit on GitHub", "Report issue" etc. (Lesson Footer)
+            // 6. Strip Lesson Footer
             const footerStuff = doc.querySelectorAll('.pt-10.flex.justify-between, .lesson-content__footer, aside, .button--secondary, [data-test-id="sign_in_button"]');
             footerStuff.forEach(el => el.remove());
 
@@ -174,7 +187,7 @@ const PasteProcessor = Extension.create({
   },
 });
 
-// Custom FontSize extension as it's not in the official package
+// Custom FontSize extension
 const FontSize = Extension.create({
   name: 'fontSize',
   addOptions() {
@@ -221,7 +234,6 @@ import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
 
-// Define explicit types for Markdown configuration to enable HTML tag preservation
 interface MarkdownOptions {
   html?: boolean;
   tightLists?: boolean;
@@ -259,7 +271,8 @@ import {
   Table as TableIcon,
   Upload,
   Zap,
-  Keyboard
+  Keyboard,
+  Terminal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -271,6 +284,7 @@ import { useConfirmation } from '@/components/ui/confirmation-provider';
 import { CalloutExtension } from './tiptap-callout';
 import { CollapsibleExtension, CollapsibleTitle, CollapsibleContent } from './tiptap-collapsible';
 import { Kbd } from './tiptap-kbd';
+import { CommandBlock } from './tiptap-command-block';
 import {
   Dialog,
   DialogContent,
@@ -328,7 +342,6 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
   return (
     <div className="flex flex-wrap gap-1 p-2 border-b bg-slate-50 dark:bg-slate-900 sticky top-[var(--editor-sticky-top,0px)] z-10">
-      {/* Text Styles */}
       <div className="flex gap-1">
         <Button
           variant="ghost"
@@ -370,7 +383,6 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
-      {/* Colors & Font */}
       <div className="flex gap-1 items-center">
         <div className="flex items-center relative group">
           <Input
@@ -455,7 +467,6 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
-      {/* Scripts */}
       <div className="flex gap-1">
         <Button
           variant="ghost"
@@ -479,7 +490,6 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
-      {/* Headings */}
       <div className="flex gap-1">
         <Button
           variant="ghost"
@@ -512,7 +522,6 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
-      {/* Alignment */}
       <div className="flex gap-1">
         <Button
           variant="ghost"
@@ -554,7 +563,6 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
-      {/* Lists & Blocks */}
       <div className="flex gap-1">
         <Button
           variant="ghost"
@@ -595,17 +603,16 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          className={cn(editor.isActive('codeBlock') && 'bg-slate-200 dark:bg-slate-800')}
-          title="Code Block"
+          onClick={() => editor.chain().focus().toggleCommandBlock().run()}
+          className={cn(editor.isActive('commandBlock') && 'bg-slate-200 dark:bg-slate-800')}
+          title="Command Block (Terminal Style)"
         >
-          <Code className="h-4 w-4" />
+          <Terminal className="h-4 w-4" />
         </Button>
       </div>
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
-      {/* Media & Links */}
       <div className="flex gap-1">
         <Button
           variant="ghost"
@@ -691,7 +698,6 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
 
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
-      {/* History */}
       <div className="flex gap-1">
         <Button
           variant="ghost"
@@ -752,7 +758,9 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        codeBlock: false,
+      }),
       PasteProcessor,
       Link.configure({
         openOnClick: false,
@@ -803,10 +811,12 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
       CollapsibleTitle,
       CollapsibleContent,
       Kbd,
+      CommandBlock.configure({
+        lowlight,
+      }),
     ],
     content: content,
     onUpdate: ({ editor }) => {
-      // Get the markdown content from Tiptap
       const markdown = (editor.storage as unknown as Record<string, { getMarkdown: () => string }>).markdown.getMarkdown();
       onChange(markdown);
     },
@@ -847,10 +857,8 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
     const node = (selection as unknown as { node?: { type: { name: string } } }).node;
 
     if (node && node.type.name === 'callout') {
-      // Update existing
       editor.chain().focus().updateAttributes('callout', editingCallout).run();
     } else {
-      // Insert new
       editor.chain().focus().insertContent({
         type: 'callout',
         attrs: editingCallout,
