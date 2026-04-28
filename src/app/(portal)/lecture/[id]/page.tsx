@@ -61,7 +61,7 @@ const CodeBlock = ({ language, value }: { language?: string; value: string }) =>
 
   return (
     <div className="relative my-8 group shadow-2xl rounded-2xl overflow-hidden border border-slate-800 bg-[#1e293b]">
-      <div className="absolute top-3 right-3 z-10">
+      <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
           variant="ghost"
           size="sm"
@@ -83,17 +83,19 @@ const CodeBlock = ({ language, value }: { language?: string; value: string }) =>
         lineNumberStyle={{
           minWidth: '2.5em',
           paddingRight: '1em',
-          color: '#64748b',
+          color: '#475569',
           textAlign: 'right',
           borderRight: '1px solid #334155',
           marginRight: '1em',
-          userSelect: 'none'
+          userSelect: 'none',
+          fontSize: '0.75rem',
         }}
         customStyle={{
           margin: 0,
           padding: '1.5rem',
+          paddingTop: '2.5rem',
           fontSize: '0.875rem',
-          lineHeight: '1.5',
+          lineHeight: '1.6',
           background: 'transparent',
         }}
         codeTagProps={{
