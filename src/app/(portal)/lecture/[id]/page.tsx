@@ -50,7 +50,7 @@ import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-const CodeBlock = ({ language, value }: { language?: string; value: string }) => {
+const CodeBlock = ({ language, value, isCompact }: { language?: string; value: string; isCompact?: boolean }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -60,13 +60,23 @@ const CodeBlock = ({ language, value }: { language?: string; value: string }) =>
   };
 
   return (
-    <div className="relative my-8 group shadow-2xl rounded-2xl overflow-hidden border border-slate-800 bg-[#1e293b]">
-      <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className={cn(
+      "relative my-4 group shadow-xl rounded-xl overflow-hidden border border-slate-800 bg-[#1e293b] transition-all duration-300",
+      isCompact ? "max-w-md mx-auto" : "w-full"
+    )}>
+      {/* Top Bar Header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-900/50 border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <div className="bg-slate-800 text-slate-400 text-[10px] uppercase font-bold px-2 py-1 rounded border border-slate-700">
+            {language || 'bash'}
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           size="sm"
           onClick={handleCopy}
-          className="h-7 px-2 text-[10px] font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-md transition-all"
+          className="h-6 px-2 text-[10px] font-bold uppercase bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded transition-all"
         >
           {copied ? (
             <><CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> Copied</>
@@ -80,32 +90,52 @@ const CodeBlock = ({ language, value }: { language?: string; value: string }) =>
         language={language || 'bash'}
         style={oneDark}
         showLineNumbers={true}
+        className="custom-scrollbar"
         lineNumberStyle={{
           minWidth: '2.5em',
-          paddingRight: '1em',
+          paddingRight: '0.75em',
           color: '#475569',
           textAlign: 'right',
           borderRight: '1px solid #334155',
-          marginRight: '1em',
+          marginRight: '0.75em',
           userSelect: 'none',
-          fontSize: '0.75rem',
+          fontSize: '0.875rem',
         }}
         customStyle={{
           margin: 0,
-          padding: '1.5rem',
-          paddingTop: '2.5rem',
+          padding: '0.75rem',
           fontSize: '0.875rem',
           lineHeight: '1.6',
           background: 'transparent',
+          overflowX: 'auto',
         }}
         codeTagProps={{
           style: {
             fontFamily: 'var(--font-geist-mono), monospace',
+            display: 'block',
+            whiteSpace: 'pre',
           }
         }}
       >
         {value.trim()}
       </SyntaxHighlighter>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          height: 6px;
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #334155;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #475569;
+        }
+      `}</style>
     </div>
   );
 };
@@ -561,16 +591,17 @@ export default function LecturePage({ params }: { params: Promise<{ id: string }
         {children}
       </a>
     ),
-    code: ({ inline, className, children }: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
+    code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
       const match = /language-(\w+)/.exec(className || '');
       const language = match ? match[1] : 'bash';
       const content = String(children).replace(/\n$/, '');
+      const isCompact = (props as Record<string, unknown>)?.[ 'data-compact'] === 'true';
 
       if (inline) {
         return <code className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm font-black font-mono">{children}</code>;
       }
 
-      return <CodeBlock language={language} value={content} />;
+      return <CodeBlock language={language} value={content} isCompact={isCompact} />;
     },
     blockquote: ({ children }: { children?: React.ReactNode }) => (
       <blockquote className="border-l-8 border-primary bg-primary/5 p-6 rounded-r-2xl italic my-8 text-xl text-slate-700 dark:text-slate-300 font-medium shadow-inner">
