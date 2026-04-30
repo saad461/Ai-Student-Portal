@@ -269,7 +269,9 @@ import {
   Upload,
   Zap,
   Keyboard,
-  Terminal
+  Terminal,
+  ChevronDown,
+  Eraser
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -289,6 +291,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { AlertTriangle, Info, CheckCircle2, HelpCircle, XCircle, LayoutPanelTop, Trash2 } from 'lucide-react';
 
@@ -381,43 +388,97 @@ const MenuBar = ({ editor, fileInputRef, isUploading, handleFileUpload, onAddCal
       <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1 self-center" />
 
       <div className="flex gap-1 items-center">
-        <div className="flex items-center relative group">
-          <Input
-            type="color"
-            className="w-8 h-8 p-0 border-none bg-transparent cursor-pointer z-10 opacity-0"
-            onChange={(e) => {
-              const color = (e.target as HTMLInputElement).value;
-              editor.chain().focus().setColor(color).run();
-            }}
-            title="Text Color"
-          />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <Baseline className="h-4 w-4" />
-            <div
-              className="absolute bottom-1 w-3 h-1 bg-black"
-              style={{ backgroundColor: editor.getAttributes('textStyle').color || 'black' }}
-            />
-          </div>
-        </div>
+        {/* Text Color Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-1.5 flex items-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+              title="Text Color"
+            >
+              <div className="flex flex-col items-center">
+                <Baseline className="h-4 w-4" />
+                <div
+                  className="w-3 h-0.5 mt-0.5 rounded-full shadow-[0_0_1px_rgba(0,0,0,0.5)]"
+                  style={{ backgroundColor: editor.getAttributes('textStyle').color || 'currentColor' }}
+                />
+              </div>
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-52 p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                '#000000', '#64748b', '#ef4444', '#f97316', '#f59e0b',
+                '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7',
+                '#ec4899', '#ffffff'
+              ].map((color) => (
+                <button
+                  key={color}
+                  className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700 hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: color }}
+                  onClick={() => {
+                    editor.chain().focus().setColor(color).run();
+                  }}
+                />
+              ))}
+              <button
+                className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700 hover:scale-110 transition-transform shadow-sm flex items-center justify-center bg-white dark:bg-slate-800"
+                onClick={() => editor.chain().focus().unsetColor().run()}
+                title="Clear Color"
+              >
+                <Eraser className="h-3 w-3 text-slate-400" />
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
 
-        <div className="flex items-center relative group">
-          <Input
-            type="color"
-            className="w-8 h-8 p-0 border-none bg-transparent cursor-pointer z-10 opacity-0"
-            onChange={(e) => {
-              const color = (e.target as HTMLInputElement).value;
-              editor.chain().focus().setHighlight({ color }).run();
-            }}
-            title="Highlight Color"
-          />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <Highlighter className="h-4 w-4" />
-            <div
-              className="absolute bottom-1 w-3 h-1 bg-yellow-400"
-              style={{ backgroundColor: editor.getAttributes('highlight').color || '#facc15' }}
-            />
-          </div>
-        </div>
+        {/* Highlight Color Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-1.5 flex items-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+              title="Highlight Color"
+            >
+              <div className="flex flex-col items-center">
+                <Highlighter className="h-4 w-4" />
+                <div
+                  className="w-3 h-0.5 mt-0.5 rounded-full shadow-[0_0_1px_rgba(0,0,0,0.5)]"
+                  style={{ backgroundColor: editor.getAttributes('highlight').color || '#facc15' }}
+                />
+              </div>
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-52 p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                '#facc15', '#fde047', '#bef264', '#86efac', '#67e8f9',
+                '#7dd3fc', '#a5b4fc', '#c084fc', '#f472b6', '#fda4af',
+                '#fcd34d', '#ffffff'
+              ].map((color) => (
+                <button
+                  key={color}
+                  className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700 hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: color }}
+                  onClick={() => {
+                    editor.chain().focus().setHighlight({ color }).run();
+                  }}
+                />
+              ))}
+              <button
+                className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700 hover:scale-110 transition-transform shadow-sm flex items-center justify-center bg-white dark:bg-slate-800"
+                onClick={() => editor.chain().focus().unsetHighlight().run()}
+                title="Clear Highlight"
+              >
+                <Eraser className="h-3 w-3 text-slate-400" />
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         <select
           className="h-8 text-xs bg-transparent border rounded px-1 w-24"
@@ -1033,19 +1094,34 @@ export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEdito
 
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
 
-            <div className="flex items-center relative h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
-              <Input
-                type="color"
-                className="absolute inset-0 w-full h-full p-0 border-none bg-transparent cursor-pointer z-10 opacity-0"
-                onChange={(e) => {
-                  const color = (e.target as HTMLInputElement).value;
-                  editor.chain().focus().setColor(color).run();
-                }}
-              />
-              <div className="flex items-center justify-center w-full h-full pointer-events-none">
-                <Baseline className="h-4 w-4" />
-              </div>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="Text Color"
+                >
+                  <Baseline className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-52 p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 z-[10000]">
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    '#000000', '#64748b', '#ef4444', '#f97316', '#f59e0b',
+                    '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7',
+                    '#ec4899', '#ffffff'
+                  ].map((color) => (
+                    <button
+                      key={color}
+                      className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700 hover:scale-110 transition-transform shadow-sm"
+                      style={{ backgroundColor: color }}
+                      onClick={() => editor.chain().focus().setColor(color).run()}
+                    />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
 
             <div className="flex gap-0.5">
               <Button
