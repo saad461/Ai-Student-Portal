@@ -1,12 +1,12 @@
 import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent, NodeViewProps, mergeAttributes } from '@tiptap/react';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import React, { useState, useMemo } from 'react';
-import { Copy, CheckCircle2 } from 'lucide-react';
+import { Copy, CheckCircle2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 import { Maximize2, Minimize2 } from 'lucide-react';
 
-const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
+const CommandBlockComponent = ({ node, updateAttributes, deleteNode }: NodeViewProps) => {
   const [copied, setCopied] = useState(false);
   const language = node.attrs.language || 'bash';
   const isCompact = node.attrs.isCompact || false;
@@ -59,19 +59,32 @@ const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
           </Button>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          contentEditable={false}
-          onClick={handleCopy}
-          className="h-6 px-2 text-[10px] font-bold uppercase bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded transition-all"
-        >
-          {copied ? (
-            <><CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> Copied</>
-          ) : (
-            <><Copy className="h-3 w-3 mr-1" /> Copy</>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            contentEditable={false}
+            onClick={handleCopy}
+            className="h-6 px-2 text-[10px] font-bold uppercase bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded transition-all"
+          >
+            {copied ? (
+              <><CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> Copied</>
+            ) : (
+              <><Copy className="h-3 w-3 mr-1" /> Copy</>
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            contentEditable={false}
+            onClick={() => deleteNode()}
+            className="h-6 px-2 text-[10px] font-bold uppercase bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-500 border border-red-500/20 rounded transition-all"
+            title="Delete Block"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex bg-[#1e293b] py-3">
@@ -86,9 +99,7 @@ const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
         </div>
 
         <pre className="p-0 px-4 m-0 font-mono text-sm leading-[1.6] text-slate-300 overflow-x-auto flex-1 custom-scrollbar">
-          <code className={`language-${language} block whitespace-pre`}>
-             <NodeViewContent />
-          </code>
+          <code className={`language-${language} block whitespace-pre`}><NodeViewContent /></code>
         </pre>
       </div>
 
