@@ -4,9 +4,12 @@ import React, { useState, useMemo } from 'react';
 import { Copy, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+import { Maximize2, Minimize2 } from 'lucide-react';
+
 const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
   const [copied, setCopied] = useState(false);
   const language = node.attrs.language || 'bash';
+  const isCompact = node.attrs.isCompact || false;
 
   const handleCopy = () => {
     const text = node.textContent;
@@ -16,18 +19,52 @@ const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
   };
 
   const lineCount = useMemo(() => {
-    return node.textContent.split('\n').length;
+    const lines = node.textContent.split('\n');
+    // If the last line is empty and it's not the only line, don't count it for numbering
+    // but Tiptap usually handles this. Let's just use the raw split.
+    return lines.length;
   }, [node.textContent]);
 
   return (
-    <NodeViewWrapper className="command-block-node relative my-8 group shadow-2xl rounded-2xl overflow-hidden border border-slate-800 bg-[#1e293b]">
-      {/* Header / Copy Button */}
-      <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+    <NodeViewWrapper
+      className={`command-block-node relative my-4 group shadow-xl rounded-xl overflow-hidden border border-slate-800 bg-[#1e293b] transition-all duration-300 ${isCompact ? 'max-w-md mx-auto' : 'w-full'}`}
+    >
+      {/* Top Bar Header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-900/50 border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <select
+            contentEditable={false}
+            defaultValue={language}
+            onChange={event => updateAttributes({ language: event.target.value })}
+            className="bg-slate-800 text-slate-400 text-[10px] uppercase font-bold px-2 py-1 rounded border border-slate-700 outline-none cursor-pointer hover:text-white transition-colors"
+          >
+            <option value="bash">Bash</option>
+            <option value="javascript">JS</option>
+            <option value="typescript">TS</option>
+            <option value="html">HTML</option>
+            <option value="css">CSS</option>
+            <option value="python">Python</option>
+          </select>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            contentEditable={false}
+            onClick={() => updateAttributes({ isCompact: !isCompact })}
+            className="h-6 px-2 text-[10px] font-bold uppercase bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 rounded transition-all"
+            title={isCompact ? "Set Full Width" : "Set Compact Width"}
+          >
+            {isCompact ? <Maximize2 className="h-3 w-3 mr-1" /> : <Minimize2 className="h-3 w-3 mr-1" />}
+            {isCompact ? 'Full' : 'Small'}
+          </Button>
+        </div>
+
         <Button
           variant="ghost"
           size="sm"
+          contentEditable={false}
           onClick={handleCopy}
-          className="h-7 px-2 text-[10px] font-bold uppercase tracking-widest bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded-md transition-all"
+          className="h-6 px-2 text-[10px] font-bold uppercase bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 rounded transition-all"
         >
           {copied ? (
             <><CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> Copied</>
@@ -37,36 +74,19 @@ const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
         </Button>
       </div>
 
-      {/* Language Selector */}
-      <div className="absolute top-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-        <select
-          contentEditable={false}
-          defaultValue={language}
-          onChange={event => updateAttributes({ language: event.target.value })}
-          className="bg-slate-800 text-slate-400 text-[10px] uppercase font-bold px-2 py-1 rounded border border-slate-700 outline-none"
-        >
-          <option value="bash">Bash</option>
-          <option value="javascript">JS</option>
-          <option value="typescript">TS</option>
-          <option value="html">HTML</option>
-          <option value="css">CSS</option>
-          <option value="python">Python</option>
-        </select>
-      </div>
-
-      <div className="flex pt-12">
+      <div className="flex bg-[#1e293b] py-3">
         {/* Line Numbers */}
         <div
-           className="select-none text-right px-4 text-[#475569] font-mono text-sm border-r border-slate-700 min-w-[3rem]"
+           className="select-none text-right px-3 text-slate-600 font-mono text-sm border-r border-slate-800/50 min-w-[2.5rem] leading-[1.6]"
            contentEditable={false}
         >
           {Array.from({ length: lineCount }).map((_, i) => (
-            <div key={i}>{i + 1}</div>
+            <div key={i} className="h-[1.6em]">{i + 1}</div>
           ))}
         </div>
 
-        <pre className="p-0 px-6 m-0 font-mono text-sm leading-relaxed text-slate-300 overflow-x-auto flex-1">
-          <code className={`language-${language}`}>
+        <pre className="p-0 px-4 m-0 font-mono text-sm leading-[1.6] text-slate-300 overflow-x-auto flex-1 custom-scrollbar">
+          <code className={`language-${language} block whitespace-pre`}>
              <NodeViewContent />
           </code>
         </pre>
@@ -78,6 +98,22 @@ const CommandBlockComponent = ({ node, updateAttributes }: NodeViewProps) => {
           padding: 0 !important;
           display: block;
           white-space: pre !important;
+          min-height: 1.6em;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+          height: 6px;
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #334155;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #475569;
         }
 
         /* Lowlight syntax colors - Matching One Dark style */
@@ -120,6 +156,13 @@ export const CommandBlock = CodeBlockLowlight.extend({
       ...this.parent?.(),
       language: {
         default: 'bash',
+      },
+      isCompact: {
+        default: false,
+        parseHTML: element => element.getAttribute('data-compact') === 'true',
+        renderHTML: attributes => {
+          return { 'data-compact': attributes.isCompact }
+        },
       },
     }
   },
