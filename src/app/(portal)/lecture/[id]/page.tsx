@@ -31,7 +31,8 @@ import {
   Info,
   HelpCircle,
   XCircle,
-  Copy
+  Copy,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
