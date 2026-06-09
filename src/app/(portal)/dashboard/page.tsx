@@ -40,7 +40,8 @@ import {
   Target,
   Flame,
   AlertTriangle,
-  FileUser
+  FileUser,
+  ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuizModule } from '@/components/quiz';
@@ -327,15 +328,32 @@ export default function DashboardPage() {
   const automatedTasks = useMemo(() => {
     const tasks: AutomatedTask[] = [];
 
-    // 1. Profile Task
+    // 1. Legal Compliance Task
+    if (profile && !profile.agreed_tc) {
+      tasks.push({
+        id: 'task-legal',
+        title: 'Legal Compliance',
+        description: 'Please read and agree to the Terms & Conditions to unlock your curriculum.',
+        icon: ShieldAlert,
+        href: '/curriculum',
+        actionLabel: 'Agree Now',
+        color: 'text-red-600',
+        bg: 'bg-red-500/5',
+        border: 'border-red-500/10',
+        isBounty: false,
+        isExtra: false
+      });
+    }
+
+    // 2. Profile Task
     if (!profile?.github_link) {
       tasks.push({
         id: 'task-profile',
-        title: 'Complete your profile',
-        description: 'Add your GitHub link to your profile to enable assignment submissions.',
+        title: 'Add your GitHub Link',
+        description: 'Set up your professional repository link to enable assignment submissions.',
         icon: Github,
         href: '/career',
-        actionLabel: 'Go to Profile',
+        actionLabel: 'Setup Link',
         color: 'text-blue-600',
         bg: 'bg-blue-500/5',
         border: 'border-blue-500/10',
@@ -344,15 +362,15 @@ export default function DashboardPage() {
       });
     }
 
-    // 2. Daily Bounty Task
+    // 3. Daily Bounty Task
     if (!hasBountyToday) {
       tasks.push({
         id: 'task-bounty',
-        title: 'Daily Bounty',
+        title: 'Finish Daily Bounty',
         description: 'Complete today\'s technical challenge and earn bonus XP.',
         icon: Target,
         href: '',
-        actionLabel: 'Claim Now',
+        actionLabel: 'Go to Bounty',
         color: 'text-orange-600',
         bg: 'bg-orange-500/5',
         border: 'border-orange-500/10',
@@ -361,15 +379,15 @@ export default function DashboardPage() {
       });
     }
 
-    // 3. Next Lecture Task
+    // 4. Next Lecture Task
     if (nextAvailableItem) {
       tasks.push({
         id: 'task-next-lecture',
-        title: 'Next Lesson',
-        description: `Continue your journey with: ${nextAvailableItem.title}`,
+        title: `Start ${nextAvailableItem.title}`,
+        description: 'Your next scheduled lecture is ready for you.',
         icon: Video,
         href: `/lecture/${nextAvailableItem.id}`,
-        actionLabel: 'Start Now',
+        actionLabel: 'Open Lecture',
         color: 'text-purple-600',
         bg: 'bg-purple-500/5',
         border: 'border-purple-500/10',
@@ -378,12 +396,12 @@ export default function DashboardPage() {
       });
     }
 
-    // 4. Wellness Task
+    // 5. Wellness Task
     if (!hasWellnessToday) {
       tasks.push({
         id: 'task-wellness',
-        title: 'Mindful Moment',
-        description: 'Take a break and read a wellness story to recharge your mind.',
+        title: 'Read a Wellness Story',
+        description: 'Take a quick break and earn a small amount of XP.',
         icon: Sparkles,
         href: '/wellness',
         actionLabel: 'Read Story',
@@ -395,7 +413,7 @@ export default function DashboardPage() {
       });
     }
 
-    // 5. Admin Extra Tasks
+    // 6. Admin Extra Tasks
     extraTasks.filter(t => !t.is_completed).forEach(t => {
       tasks.push({
         id: t.id,
@@ -404,9 +422,9 @@ export default function DashboardPage() {
         icon: AlertTriangle,
         href: '',
         actionLabel: 'Done',
-        color: 'text-red-600',
-        bg: 'bg-red-500/5',
-        border: 'border-red-500/10',
+        color: 'text-amber-600',
+        bg: 'bg-amber-500/5',
+        border: 'border-amber-500/10',
         isBounty: false,
         isExtra: true
       });

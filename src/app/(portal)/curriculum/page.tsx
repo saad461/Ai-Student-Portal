@@ -68,6 +68,7 @@ function CurriculumContent() {
 
       if (profile) {
         setAgreedTC(profile.agreed_tc);
+        if (!profile.agreed_tc) setShowTerms(true);
       }
 
       const { data: subs } = await supabase

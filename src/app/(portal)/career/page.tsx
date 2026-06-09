@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useConfirmation } from '@/components/ui/confirmation-provider';
 import {
   Briefcase,
   Target,
@@ -35,7 +36,8 @@ interface Job {
 }
 
 export default function CareerPage() {
-  const { error: toastError } = useToast();
+  const { success, error: toastError } = useToast();
+  const { prompt: customPrompt } = useConfirmation();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [bossProjectsCount, setBossProjectsCount] = useState(0);
@@ -144,10 +146,35 @@ export default function CareerPage() {
                  <Button
                    className="w-full h-12 rounded-xl font-black uppercase tracking-tighter"
                    variant="outline"
-                   disabled={!profile?.github_link}
-                   onClick={() => window.open(profile?.github_link as string || '#', '_blank')}
+                   onClick={async () => {
+                      if (!profile?.github_link) {
+                         const link = await customPrompt({
+                            title: 'GitHub Profile',
+                            description: 'Please enter your GitHub profile URL (e.g., https://github.com/yourusername). This is required for assignment submissions.',
+                            placeholder: 'https://github.com/...',
+                            confirmText: 'Save Link'
+                         });
+
+                         if (link && link.includes('github.com')) {
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (user) {
+                               const { error } = await supabase.from('profiles').update({ github_link: link }).eq('id', user.id);
+                               if (!error) {
+                                  success('GitHub link updated!');
+                                  fetchData();
+                               } else {
+                                  toastError('Failed to update: ' + error.message);
+                               }
+                            }
+                         } else if (link) {
+                            toastError('Please enter a valid GitHub URL');
+                         }
+                      } else {
+                         window.open(profile.github_link as string, '_blank');
+                      }
+                   }}
                  >
-                   {profile?.github_link ? 'Update Resume' : 'GitHub Link Required'}
+                   {profile?.github_link ? 'Update Resume' : 'Set GitHub Link'}
                  </Button>
               </CardContent>
            </Card>
