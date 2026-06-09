@@ -110,7 +110,7 @@ AI Student Portal/
 - **Name:** Saad Nadeem
 - **Email:** [saadnadeem157@gmail.com](mailto:saadnadeem157@gmail.com)
 - **GitHub:** [https://github.com/saad461](https://github.com/saad461)
-- **Portfolio:** [https://saadnadeem.vercel.app](https://saadnadeem.vercel.app)
+- **Portfolio:** [https://saadnadeem.vercel.app](https://saad--nadeem.vercel.app)
 
 ## 📄 License
 This project is licensed under the **MIT License**.
