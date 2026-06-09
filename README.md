@@ -26,9 +26,6 @@ The **AI Student Portal** is a high-performance educational ecosystem designed f
 - **URL:** [https://student-website-pearl.vercel.app/](https://student-website-pearl.vercel.app/)
 - *Experience the full suite of AI-enhanced learning tools and technical roadmaps in action.*
 
-## 📸 Screenshot
-![Portfolio Preview](./public/preview.png)
-> **Note:** Replace with actual screenshot
 
 ## ✨ Features
 - **🤖 AI Peer Reviewer:** Instant, line-by-line code reviews powered by agentic AI architects to ensure logic and quality.
